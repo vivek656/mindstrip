@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ComicWorld, ComicCharacter, ArtStyle } from '@/types/comic';
+import {
+  ComicWorld,
+  ComicCharacter,
+  ArtStyle,
+  WorldLaw,
+  WorldLocation,
+  CustomWorldAttribute
+} from '@/types/comic';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -14,7 +21,11 @@ import {
   Check, 
   Shield, 
   Zap,
-  HelpCircle
+  HelpCircle,
+  Scale,
+  MapPin,
+  Tag,
+  Scroll
 } from 'lucide-react';
 
 interface UniverseBuilderStudioProps {
@@ -68,6 +79,81 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
   const [charCatchphrase, setCharCatchphrase] = useState('');
   const [charDescription, setCharDescription] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Universe lore & ongoing conflict state
+  const [worldLore, setWorldLore] = useState('');
+
+  // World laws state
+  const [worldLaws, setWorldLaws] = useState<WorldLaw[]>([]);
+  const [draftLawTitle, setDraftLawTitle] = useState('');
+  const [draftLawRule, setDraftLawRule] = useState('');
+  const [draftLawCategory, setDraftLawCategory] = useState<'physics' | 'magic' | 'social' | 'taboo' | 'custom'>('physics');
+
+  // World locations state
+  const [worldLocations, setWorldLocations] = useState<WorldLocation[]>([]);
+  const [draftLocName, setDraftLocName] = useState('');
+  const [draftLocDesc, setDraftLocDesc] = useState('');
+
+  // Custom world parameters state
+  const [worldCustomAttrs, setWorldCustomAttrs] = useState<CustomWorldAttribute[]>([]);
+  const [draftAttrKey, setDraftAttrKey] = useState('');
+  const [draftAttrVal, setDraftAttrVal] = useState('');
+
+  const handleAddLaw = () => {
+    if (!draftLawTitle.trim() || !draftLawRule.trim()) return;
+    setWorldLaws((prev) => [
+      ...prev,
+      {
+        id: `law-${Date.now()}`,
+        title: draftLawTitle.trim(),
+        rule: draftLawRule.trim(),
+        category: draftLawCategory,
+      },
+    ]);
+    setDraftLawTitle('');
+    setDraftLawRule('');
+  };
+
+  const handleAddLocation = () => {
+    if (!draftLocName.trim() || !draftLocDesc.trim()) return;
+    setWorldLocations((prev) => [
+      ...prev,
+      {
+        id: `loc-${Date.now()}`,
+        name: draftLocName.trim(),
+        description: draftLocDesc.trim(),
+      },
+    ]);
+    setDraftLocName('');
+    setDraftLocDesc('');
+  };
+
+  const handleAddCustomAttr = () => {
+    if (!draftAttrKey.trim() || !draftAttrVal.trim()) return;
+    setWorldCustomAttrs((prev) => [
+      ...prev,
+      {
+        id: `attr-${Date.now()}`,
+        key: draftAttrKey.trim(),
+        value: draftAttrVal.trim(),
+      },
+    ]);
+    setDraftAttrKey('');
+    setDraftAttrVal('');
+  };
+
+  const handleQuickAddLawPreset = (title: string, rule: string, category: 'physics' | 'magic' | 'social' | 'taboo' | 'custom') => {
+    if (worldLaws.some((l) => l.title === title)) return;
+    setWorldLaws((prev) => [
+      ...prev,
+      {
+        id: `law-${Date.now()}`,
+        title,
+        rule,
+        category,
+      },
+    ]);
+  };
 
   const handleAddCharacter = () => {
     if (!charName.trim()) {
@@ -123,6 +209,10 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
       characters,
       episodes: [],
       createdAt: new Date().toISOString(),
+      lore: worldLore.trim() || tagline.trim(),
+      laws: worldLaws,
+      locations: worldLocations,
+      customAttributes: worldCustomAttrs,
     };
 
     onCreateWorld(newWorld);
@@ -501,6 +591,240 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                 </div>
               </div>
 
+            </section>
+
+            {/* Step 3: Universal Laws, Locations & Custom Quirks */}
+            <section className="bg-white rounded-3xl p-6 sm:p-8 border border-black/[0.08] shadow-sm space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-black/[0.06]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-zinc-100 text-zinc-900 font-bold flex items-center justify-center text-xs">
+                    3
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg text-zinc-950">Universal Laws, Locations & Custom Quirks</h2>
+                    <p className="text-xs text-zinc-500">
+                      Define the physical laws, magic constraints, staging locations, and arbitrary parameters governing this world.
+                    </p>
+                  </div>
+                </div>
+
+                <span className="text-xs font-mono font-semibold text-zinc-500 bg-zinc-100 px-2.5 py-1 rounded-full">
+                  {worldLaws.length} Laws • {worldLocations.length} Sets
+                </span>
+              </div>
+
+              {/* 3A: Quick Inspiration Pills for Universal Laws */}
+              <div className="space-y-2">
+                <label className="block text-[11px] font-mono font-semibold uppercase text-zinc-600">
+                  Quick Law Inspiration (Click to Add):
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { title: '24-Hour Time Loop', rule: 'Every midnight, the timeline resets while only protagonists retain memories.', category: 'physics' as const },
+                    { title: 'Law of Equivalent Exchange', rule: 'Any magic or power used requires burning an equivalent tangible resource.', category: 'magic' as const },
+                    { title: 'Forbidden AGI Taboo', rule: 'Any autonomous neural computer past 1999 is outlawed under capital penalty.', category: 'taboo' as const },
+                    { title: 'Coffee as Currency', rule: 'Global paper currency has collapsed; unground coffee beans are the legal tender.', category: 'social' as const },
+                    { title: 'Low-Gravity Skies', rule: 'Atmospheric gravity drops to 0.4G above the second story of any building.', category: 'physics' as const },
+                    { title: 'Perpetual Electric Rain', rule: 'Heavy neon-tinged rain falls continuously, powering street grid conduits.', category: 'physics' as const },
+                  ].map((preset) => (
+                    <button
+                      key={preset.title}
+                      type="button"
+                      onClick={() => handleQuickAddLawPreset(preset.title, preset.rule, preset.category)}
+                      className="px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 border border-black/[0.06] text-zinc-800 text-xs font-medium cursor-pointer transition-colors"
+                    >
+                      + {preset.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3B: Custom Universal Laws Form */}
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-black/[0.06] space-y-3">
+                <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                  <Scale className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Define Universal Law or Constraint</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="sm:col-span-2">
+                    <input
+                      type="text"
+                      value={draftLawTitle}
+                      onChange={(e) => setDraftLawTitle(e.target.value)}
+                      placeholder="Law Title (e.g. The Silence Decree, The 1000ml Ceiling)"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
+                    />
+                  </div>
+                  <div>
+                    <select
+                      value={draftLawCategory}
+                      onChange={(e) => setDraftLawCategory(e.target.value as any)}
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none"
+                    >
+                      <option value="physics">Physics ⚛️</option>
+                      <option value="magic">Magic / Super 🔮</option>
+                      <option value="social">Social Law ⚖️</option>
+                      <option value="taboo">Strict Taboo 🚫</option>
+                      <option value="custom">Custom Quirk 📜</option>
+                    </select>
+                  </div>
+                </div>
+
+                <textarea
+                  value={draftLawRule}
+                  onChange={(e) => setDraftLawRule(e.target.value)}
+                  placeholder="Describe the exact constraint and what happens if broken (Strictly enforced by Meta AI)..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950 leading-relaxed"
+                />
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAddLaw}
+                    disabled={!draftLawTitle.trim() || !draftLawRule.trim()}
+                    className="px-4 py-1.5 rounded-xl bg-zinc-950 text-white text-xs font-semibold hover:bg-zinc-800 disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    + Add Law
+                  </button>
+                </div>
+
+                {worldLaws.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-zinc-200/80">
+                    {worldLaws.map((law) => (
+                      <div key={law.id} className="p-2.5 rounded-xl bg-white border border-black/[0.06] flex items-start justify-between gap-2 text-xs">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 font-bold">
+                              {law.category}
+                            </span>
+                            <span className="font-bold text-zinc-900">{law.title}</span>
+                          </div>
+                          <p className="text-zinc-600 text-[11px] mt-0.5">{law.rule}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setWorldLaws((prev) => prev.filter((l) => l.id !== law.id))}
+                          className="text-zinc-400 hover:text-red-600 p-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 3C: Locations & Landmarks Form */}
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-black/[0.06] space-y-3">
+                <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Canon Locations & Staging Sets</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <input
+                    type="text"
+                    value={draftLocName}
+                    onChange={(e) => setDraftLocName(e.target.value)}
+                    placeholder="Location Name (e.g. Neon Citadel, Dialysis Bay 4)"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
+                  />
+                  <input
+                    type="text"
+                    value={draftLocDesc}
+                    onChange={(e) => setDraftLocDesc(e.target.value)}
+                    placeholder="Visual Details (e.g. glass spire with steam vents & magenta rain)"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAddLocation}
+                    disabled={!draftLocName.trim() || !draftLocDesc.trim()}
+                    className="px-4 py-1.5 rounded-xl bg-zinc-950 text-white text-xs font-semibold hover:bg-zinc-800 disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    + Add Location
+                  </button>
+                </div>
+
+                {worldLocations.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-zinc-200/80">
+                    {worldLocations.map((loc) => (
+                      <div key={loc.id} className="p-2.5 rounded-xl bg-white border border-black/[0.06] flex items-start justify-between gap-2 text-xs">
+                        <div>
+                          <span className="font-bold text-zinc-900">📍 {loc.name}</span>
+                          <p className="text-zinc-600 text-[11px] italic mt-0.5">&ldquo;{loc.description}&rdquo;</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setWorldLocations((prev) => prev.filter((l) => l.id !== loc.id))}
+                          className="text-zinc-400 hover:text-red-600 p-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 3D: Custom World Parameters Form */}
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-black/[0.06] space-y-3">
+                <span className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Custom World Parameters (Currency, Weather, Tech Level)</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <input
+                    type="text"
+                    value={draftAttrKey}
+                    onChange={(e) => setDraftAttrKey(e.target.value)}
+                    placeholder="Parameter Name (e.g. Currency, Forbidden Item)"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
+                  />
+                  <input
+                    type="text"
+                    value={draftAttrVal}
+                    onChange={(e) => setDraftAttrVal(e.target.value)}
+                    placeholder="Value (e.g. Nitro Cold Brew, Ancient SSDs)"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAddCustomAttr}
+                    disabled={!draftAttrKey.trim() || !draftAttrVal.trim()}
+                    className="px-4 py-1.5 rounded-xl bg-zinc-950 text-white text-xs font-semibold hover:bg-zinc-800 disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    + Add Parameter
+                  </button>
+                </div>
+
+                {worldCustomAttrs.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-200/80">
+                    {worldCustomAttrs.map((attr) => (
+                      <div key={attr.id} className="px-3 py-1.5 rounded-xl bg-white border border-black/[0.06] flex items-center gap-2 text-xs">
+                        <span className="font-mono text-[10px] uppercase font-bold text-zinc-400">{attr.key}:</span>
+                        <span className="font-bold text-zinc-900">{attr.value}</span>
+                        <button
+                          type="button"
+                          onClick={() => setWorldCustomAttrs((prev) => prev.filter((a) => a.id !== attr.id))}
+                          className="text-zinc-400 hover:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </section>
 
           </div>

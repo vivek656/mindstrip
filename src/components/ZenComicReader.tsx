@@ -1,7 +1,16 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ComicWorld, ComicStrip, ComicCharacter, PerspectiveLens, CreatorProfile } from '@/types/comic';
+import {
+  ComicWorld,
+  ComicStrip,
+  ComicCharacter,
+  PerspectiveLens,
+  CreatorProfile,
+  WorldLaw,
+  WorldLocation,
+  CustomWorldAttribute
+} from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import {
@@ -28,6 +37,12 @@ import {
   Layers,
   Shield,
   Zap,
+  Scale,
+  MapPin,
+  Tag,
+  Scroll,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -101,6 +116,27 @@ export function ZenComicReader({
   const [newCharPersonality, setNewCharPersonality] = useState('');
   const [newCharCatchphrase, setNewCharCatchphrase] = useState('');
 
+  // World Laws state
+  const [isAddLawOpen, setIsAddLawOpen] = useState(false);
+  const [newLawTitle, setNewLawTitle] = useState('');
+  const [newLawRule, setNewLawRule] = useState('');
+  const [newLawCategory, setNewLawCategory] = useState<'physics' | 'magic' | 'social' | 'taboo' | 'custom'>('physics');
+
+  // World Locations state
+  const [isAddLocOpen, setIsAddLocOpen] = useState(false);
+  const [newLocName, setNewLocName] = useState('');
+  const [newLocDesc, setNewLocDesc] = useState('');
+  const [newLocSig, setNewLocSig] = useState('');
+
+  // Custom World Attributes state
+  const [isAddAttrOpen, setIsAddAttrOpen] = useState(false);
+  const [newAttrKey, setNewAttrKey] = useState('');
+  const [newAttrVal, setNewAttrVal] = useState('');
+
+  // Lore editing state
+  const [isEditingLore, setIsEditingLore] = useState(false);
+  const [draftLore, setDraftLore] = useState(world.lore || '');
+
   const stripRef = useRef<HTMLDivElement>(null);
 
   const handleExportPng = async () => {
@@ -168,6 +204,93 @@ export function ZenComicReader({
     setNewCharAppearance('');
     setNewCharPersonality('');
     setNewCharCatchphrase('');
+  };
+
+  const handleSaveLaw = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLawTitle.trim() || !newLawRule.trim() || !onUpdateWorld) return;
+    const newLaw: WorldLaw = {
+      id: `law-${Date.now()}`,
+      title: newLawTitle.trim(),
+      rule: newLawRule.trim(),
+      category: newLawCategory,
+    };
+    onUpdateWorld({
+      ...world,
+      laws: [...(world.laws || []), newLaw],
+    });
+    setIsAddLawOpen(false);
+    setNewLawTitle('');
+    setNewLawRule('');
+  };
+
+  const handleDeleteLaw = (id: string) => {
+    if (!onUpdateWorld) return;
+    onUpdateWorld({
+      ...world,
+      laws: (world.laws || []).filter((l) => l.id !== id),
+    });
+  };
+
+  const handleSaveLocation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLocName.trim() || !newLocDesc.trim() || !onUpdateWorld) return;
+    const newLoc: WorldLocation = {
+      id: `loc-${Date.now()}`,
+      name: newLocName.trim(),
+      description: newLocDesc.trim(),
+      significance: newLocSig.trim() || undefined,
+    };
+    onUpdateWorld({
+      ...world,
+      locations: [...(world.locations || []), newLoc],
+    });
+    setIsAddLocOpen(false);
+    setNewLocName('');
+    setNewLocDesc('');
+    setNewLocSig('');
+  };
+
+  const handleDeleteLocation = (id: string) => {
+    if (!onUpdateWorld) return;
+    onUpdateWorld({
+      ...world,
+      locations: (world.locations || []).filter((loc) => loc.id !== id),
+    });
+  };
+
+  const handleSaveCustomAttr = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAttrKey.trim() || !newAttrVal.trim() || !onUpdateWorld) return;
+    const newAttr: CustomWorldAttribute = {
+      id: `attr-${Date.now()}`,
+      key: newAttrKey.trim(),
+      value: newAttrVal.trim(),
+    };
+    onUpdateWorld({
+      ...world,
+      customAttributes: [...(world.customAttributes || []), newAttr],
+    });
+    setIsAddAttrOpen(false);
+    setNewAttrKey('');
+    setNewAttrVal('');
+  };
+
+  const handleDeleteCustomAttr = (id: string) => {
+    if (!onUpdateWorld) return;
+    onUpdateWorld({
+      ...world,
+      customAttributes: (world.customAttributes || []).filter((a) => a.id !== id),
+    });
+  };
+
+  const handleSaveLore = () => {
+    if (!onUpdateWorld) return;
+    onUpdateWorld({
+      ...world,
+      lore: draftLore.trim(),
+    });
+    setIsEditingLore(false);
   };
 
   // Reusable Sidebar Content
@@ -605,30 +728,239 @@ export function ZenComicReader({
                   </button>
                 </div>
 
-                {/* Lore Backstory & Environmental Rules */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                {/* Lore Backstory & Conflict */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">
                       Universe Lore & Ongoing Conflict
                     </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingLore(!isEditingLore);
+                        setDraftLore(world.lore || '');
+                      }}
+                      className="text-xs font-mono text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      <span>{isEditingLore ? 'Cancel' : 'Edit Lore'}</span>
+                    </button>
+                  </div>
+
+                  {isEditingLore ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={draftLore}
+                        onChange={(e) => setDraftLore(e.target.value)}
+                        rows={3}
+                        className="w-full p-3 bg-zinc-50 border border-zinc-300 rounded-xl text-xs text-zinc-900 font-serif leading-relaxed outline-none focus:border-zinc-950"
+                        placeholder="Describe the universe setting, history, and core ongoing friction..."
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveLore}
+                        className="px-4 py-1.5 rounded-full bg-zinc-950 text-white font-bold text-xs hover:bg-blue-600 cursor-pointer"
+                      >
+                        Save Lore Changes
+                      </button>
+                    </div>
+                  ) : (
                     <p className="text-sm text-zinc-800 leading-relaxed font-serif">
                       {world.lore || `${world.title} is an ongoing episodic universe where recurring characters confront evolving challenges in a distinctive ${world.artStyle} world.`}
                     </p>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION: UNIVERSAL LAWS & CONSTRAINTS */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-black text-zinc-950 flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-indigo-600" />
+                      <span>Universal Laws & Physics Rules ({(world.laws || []).length})</span>
+                    </h2>
+                    <p className="text-xs text-zinc-500">
+                      Canon rules strictly obeyed by Meta AI across all episodes and conflicts
+                    </p>
                   </div>
 
-                  {world.environmentRules && world.environmentRules.length > 0 && (
-                    <div className="pt-2">
-                      <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                        Universe Canon Rules
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {world.environmentRules.map((rule, idx) => (
-                          <div key={idx} className="bg-zinc-50 border border-black/[0.06] rounded-xl px-3.5 py-2 text-xs text-zinc-700 flex items-start gap-2">
-                            <span className="font-bold text-blue-600 font-mono mt-0.5">•</span>
-                            <span>{rule}</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddLawOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-zinc-50 text-zinc-900 border border-black/15 font-bold text-xs shadow-2xs cursor-pointer transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Law / Rule</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(world.laws || []).map((law) => {
+                    const badgeBg =
+                      law.category === 'physics' ? 'bg-blue-100 text-blue-900' :
+                      law.category === 'magic' ? 'bg-purple-100 text-purple-900' :
+                      law.category === 'taboo' ? 'bg-red-100 text-red-900' :
+                      law.category === 'social' ? 'bg-amber-100 text-amber-900' :
+                      'bg-zinc-100 text-zinc-900';
+
+                    return (
+                      <div
+                        key={law.id}
+                        className="bg-white border-2 border-zinc-950 rounded-2xl p-4 shadow-2xs space-y-2 relative group hover:border-indigo-600 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full ${badgeBg}`}>
+                              {law.category}
+                            </span>
+                            <h3 className="font-bold text-sm text-zinc-950">{law.title}</h3>
                           </div>
-                        ))}
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLaw(law.id)}
+                            className="text-zinc-400 hover:text-red-600 p-1 cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                            title="Delete law"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <p className="text-xs text-zinc-700 leading-relaxed font-sans">
+                          {law.rule}
+                        </p>
                       </div>
+                    );
+                  })}
+
+                  {(world.laws || []).length === 0 && (
+                    <div className="col-span-full p-6 text-center border-2 border-dashed border-zinc-200 rounded-2xl text-zinc-400 text-xs">
+                      No custom laws defined yet. Click &ldquo;Add Law / Rule&rdquo; to define physics, magic constraints, or societal taboos for this world.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION: CANON LOCATIONS & STAGING LANDMARKS */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-black text-zinc-950 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-emerald-600" />
+                      <span>Canon Locations & Landmarks ({(world.locations || []).length})</span>
+                    </h2>
+                    <p className="text-xs text-zinc-500">
+                      Visual environments and recurring staging sets used by the AI Director
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddLocOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-zinc-50 text-zinc-900 border border-black/15 font-bold text-xs shadow-2xs cursor-pointer transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Location</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(world.locations || []).map((loc) => (
+                    <div
+                      key={loc.id}
+                      className="bg-white border-2 border-zinc-950 rounded-2xl p-4 shadow-2xs space-y-2 relative group hover:border-emerald-600 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">📍</span>
+                          <h3 className="font-bold text-sm text-zinc-950">{loc.name}</h3>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLocation(loc.id)}
+                          className="text-zinc-400 hover:text-red-600 p-1 cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                          title="Delete location"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-zinc-600 leading-relaxed font-serif italic">
+                        &ldquo;{loc.description}&rdquo;
+                      </p>
+
+                      {loc.significance && (
+                        <div className="pt-1">
+                          <span className="text-[10px] font-mono font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            Role: {loc.significance}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {(world.locations || []).length === 0 && (
+                    <div className="col-span-full p-6 text-center border-2 border-dashed border-zinc-200 rounded-2xl text-zinc-400 text-xs">
+                      No landmarks defined yet. Click &ldquo;Add Location&rdquo; to give your characters distinct environments to inhabit.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION: CUSTOM WORLD PARAMETERS & QUIRKS */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-black text-zinc-950 flex items-center gap-2">
+                      <Tag className="w-5 h-5 text-amber-600" />
+                      <span>Custom World Parameters & Quirks ({(world.customAttributes || []).length})</span>
+                    </h2>
+                    <p className="text-xs text-zinc-500">
+                      Arbitrary lore parameters (currency, tech level, weather anomalies, sacred items)
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddAttrOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-zinc-50 text-zinc-900 border border-black/15 font-bold text-xs shadow-2xs cursor-pointer transition-all"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Custom Parameter</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {(world.customAttributes || []).map((attr) => (
+                    <div
+                      key={attr.id}
+                      className="bg-white border-2 border-zinc-950 rounded-2xl p-3.5 shadow-2xs flex items-start justify-between gap-2 group hover:border-amber-600 transition-colors"
+                    >
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+                          {attr.key}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-900 block">
+                          {attr.value}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCustomAttr(attr.id)}
+                        className="text-zinc-400 hover:text-red-600 p-1 cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                        title="Delete parameter"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {(world.customAttributes || []).length === 0 && (
+                    <div className="col-span-full p-6 text-center border-2 border-dashed border-zinc-200 rounded-2xl text-zinc-400 text-xs">
+                      No custom parameters defined yet. Add currency, climate anomalies, or sacred items.
                     </div>
                   )}
                 </div>
@@ -839,6 +1171,230 @@ export function ZenComicReader({
                           className="px-6 py-2 rounded-full bg-zinc-950 text-white font-bold text-xs hover:bg-blue-600 transition-all cursor-pointer disabled:opacity-50"
                         >
                           Save Character
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Universal Law Modal Overlay */}
+              {isAddLawOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+                  <div className="relative w-full max-w-lg bg-white border-2 border-zinc-950 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.08]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">⚖️</span>
+                        <h3 className="font-bold text-lg text-zinc-950">Add Universal Law or Rule</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddLawOpen(false)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveLaw} className="space-y-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-xs font-bold text-zinc-800">Law / Rule Title *</label>
+                          <input
+                            type="text"
+                            value={newLawTitle}
+                            onChange={(e) => setNewLawTitle(e.target.value)}
+                            placeholder="e.g. Law of Gravitational Shift"
+                            required
+                            className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-zinc-800">Category</label>
+                          <select
+                            value={newLawCategory}
+                            onChange={(e) => setNewLawCategory(e.target.value as any)}
+                            className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-2 py-2 text-xs text-zinc-900 outline-none"
+                          >
+                            <option value="physics">Physics ⚛️</option>
+                            <option value="magic">Magic / Super 🔮</option>
+                            <option value="social">Social Law ⚖️</option>
+                            <option value="taboo">Strict Taboo 🚫</option>
+                            <option value="custom">Custom Quirk 📜</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-800">
+                          Rule Description & Consequence (Strictly Obeyed by AI) *
+                        </label>
+                        <textarea
+                          value={newLawRule}
+                          onChange={(e) => setNewLawRule(e.target.value)}
+                          placeholder="e.g. Every day at sunset, gravity is cut by 50% across the city. Violating this law causes instant physical anomaly..."
+                          rows={3}
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-3 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-end gap-2 border-t border-zinc-100">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddLawOpen(false)}
+                          className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!newLawTitle.trim() || !newLawRule.trim()}
+                          className="px-6 py-2 rounded-full bg-zinc-950 text-white font-bold text-xs hover:bg-blue-600 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          Save Universal Law
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Location Modal Overlay */}
+              {isAddLocOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+                  <div className="relative w-full max-w-lg bg-white border-2 border-zinc-950 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.08]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">📍</span>
+                        <h3 className="font-bold text-lg text-zinc-950">Add Canon Landmark / Location</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddLocOpen(false)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveLocation} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-800">Location Name *</label>
+                        <input
+                          type="text"
+                          value={newLocName}
+                          onChange={(e) => setNewLocName(e.target.value)}
+                          placeholder="e.g. The Neon Citadel / Dialysis Bay 4"
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-800">
+                          Visual Environment Description (Used in Comic Panel Prompts) *
+                        </label>
+                        <textarea
+                          value={newLocDesc}
+                          onChange={(e) => setNewLocDesc(e.target.value)}
+                          placeholder="e.g. Towering black glass spire wrapped in magenta holographic rain, steam vents at street level..."
+                          rows={2}
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl p-3 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-800">Story Role or Significance</label>
+                        <input
+                          type="text"
+                          value={newLocSig}
+                          onChange={(e) => setNewLocSig(e.target.value)}
+                          placeholder="e.g. Primary headquarters / Safe haven"
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none"
+                        />
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-end gap-2 border-t border-zinc-100">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddLocOpen(false)}
+                          className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!newLocName.trim() || !newLocDesc.trim()}
+                          className="px-6 py-2 rounded-full bg-zinc-950 text-white font-bold text-xs hover:bg-blue-600 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          Save Location
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Custom Attribute Modal Overlay */}
+              {isAddAttrOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+                  <div className="relative w-full max-w-md bg-white border-2 border-zinc-950 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
+                    <div className="flex items-center justify-between pb-3 border-b border-black/[0.08]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🏷️</span>
+                        <h3 className="font-bold text-lg text-zinc-950">Add Custom World Parameter</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddAttrOpen(false)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveCustomAttr} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-800">Parameter Key / Name *</label>
+                        <input
+                          type="text"
+                          value={newAttrKey}
+                          onChange={(e) => setNewAttrKey(e.target.value)}
+                          placeholder="e.g. Currency, Forbidden Weapon, Weather"
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-800">Parameter Value / Rule *</label>
+                        <input
+                          type="text"
+                          value={newAttrVal}
+                          onChange={(e) => setNewAttrVal(e.target.value)}
+                          placeholder="e.g. Nitro Cold Brew, Perpetual Electric Fog"
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-end gap-2 border-t border-zinc-100">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddAttrOpen(false)}
+                          className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!newAttrKey.trim() || !newAttrVal.trim()}
+                          className="px-6 py-2 rounded-full bg-zinc-950 text-white font-bold text-xs hover:bg-blue-600 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          Save Parameter
                         </button>
                       </div>
                     </form>

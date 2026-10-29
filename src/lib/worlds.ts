@@ -59,7 +59,40 @@ export const INITIAL_WORLDS: ComicWorld[] = [
         title: 'The 2 AM Refactor Trap'
       }
     ],
-    createdAt: '2026-10-28T10:00:00.000Z'
+    createdAt: '2026-10-28T10:00:00.000Z',
+    lore: 'An indie engineering lab where simple bug fixes spiral into full microservice rewrites at 2 AM, haunted by premature optimization demons.',
+    laws: [
+      {
+        id: 'law-1',
+        title: 'The 2 AM Refactor Law',
+        rule: 'Any 1-line bug fix touched after midnight inevitably triggers a debate on distributed consensus, Redis locks, and Apache Kafka.',
+        category: 'social'
+      },
+      {
+        id: 'law-2',
+        title: 'The Friday Deploy Taboo',
+        rule: 'Deploying to production on Friday afternoon without a cold brew sacrifice causes instant webhook deadlock.',
+        category: 'taboo'
+      }
+    ],
+    locations: [
+      {
+        id: 'loc-1',
+        name: 'The Dual-Monitor War Room',
+        description: 'A dark room lit by mechanical keyboard LEDs, cold brew cans, and 47 open tabs on Martin Kleppmann quotes.',
+        significance: 'Primary command center'
+      },
+      {
+        id: 'loc-2',
+        name: 'The Microservice Void',
+        description: 'A surreal digital space where orphaned containers and split-brain Redis clusters float like dark nebulae.',
+        significance: 'Where overengineering fears manifest'
+      }
+    ],
+    customAttributes: [
+      { id: 'attr-1', key: 'Primary Fuel', value: 'Nitro Cold Brew Coffee' },
+      { id: 'attr-2', key: 'Default Coping Strategy', value: 'Tweaking font sizes in VS Code' }
+    ]
   },
   {
     id: 'world-clinic-care',
@@ -117,7 +150,40 @@ export const INITIAL_WORLDS: ComicWorld[] = [
         title: 'The Caregiver’s Compass'
       }
     ],
-    createdAt: '2026-10-28T09:00:00.000Z'
+    createdAt: '2026-10-28T09:00:00.000Z',
+    lore: 'A tender, grounded universe following a caregiver and family navigating chronic kidney illness, strict fluid allowances, and moments of quiet grace.',
+    laws: [
+      {
+        id: 'clinic-law-1',
+        title: 'The 1000ml Ceiling',
+        rule: 'Daily fluid intake cannot exceed 1000ml — every sip of tea, water, and broth is measured down to the milliliter.',
+        category: 'physics'
+      },
+      {
+        id: 'clinic-law-2',
+        title: 'The Dialysis Bell',
+        rule: 'Three days a week, four hours in the clinic chair — non-negotiable rhythm of survival.',
+        category: 'social'
+      }
+    ],
+    locations: [
+      {
+        id: 'loc-clinic-1',
+        name: 'Dialysis Station Bay 4',
+        description: 'Warm blankets, humming dialysis filtration pump, digital blood pressure cuff, and comforting cups of warm chamomile tea.',
+        significance: 'Where family resilience meets clinical reality'
+      },
+      {
+        id: 'loc-clinic-2',
+        name: 'The Kitchen Measurement Lab',
+        description: 'A kitchen counter crowded with medication organizers, digital gram scale, and color-coded lab binder.',
+        significance: 'The daily command center for home health tracking'
+      }
+    ],
+    customAttributes: [
+      { id: 'attr-c-1', key: 'Essential Companion', value: 'The Overstuffed Medical Binder' },
+      { id: 'attr-c-2', key: 'Guiding Mantram', value: 'One day, one lab report, one breath at a time' }
+    ]
   },
   {
     id: 'world-zero-launch',
@@ -163,6 +229,33 @@ export const INITIAL_WORLDS: ComicWorld[] = [
         title: 'The Pre-Launch Panic Orbit'
       }
     ],
-    createdAt: '2026-10-28T08:00:00.000Z'
+    createdAt: '2026-10-28T08:00:00.000Z',
+    lore: 'A fast-paced comedy tracking a solo software founder spiraling into obsessive CSS micro-adjustments 48 hours before public launch.',
+    laws: [
+      {
+        id: 'launch-law-1',
+        title: 'The CSS Avoidance Law',
+        rule: 'The closer a launch date approaches, the more urgent tweaking border-radius from 8px to 12px becomes compared to acquiring paying customers.',
+        category: 'social'
+      },
+      {
+        id: 'launch-law-2',
+        title: 'The Stripe Sandbox Delusion',
+        rule: 'A payment webhook that worked in test mode will always encounter an edge case the second real money is involved.',
+        category: 'taboo'
+      }
+    ],
+    locations: [
+      {
+        id: 'loc-launch-1',
+        name: 'The Launch Bunker',
+        description: 'Single desk surrounded by discarded sticky notes, cold pizza crusts, a white noise machine, and 3 open Stripe dashboards.',
+        significance: 'Ground zero of the launch'
+      }
+    ],
+    customAttributes: [
+      { id: 'attr-l-1', key: 'Countdown', value: '48 Hours to Product Hunt' },
+      { id: 'attr-l-2', key: 'Coping Mechanism', value: 'Changing button colors instead of emailing investors' }
+    ]
   }
 ];

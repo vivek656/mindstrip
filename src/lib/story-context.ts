@@ -78,13 +78,54 @@ export function buildWorldBible(world: ComicWorld): string {
       return c.catchphrase ? `${line} Catchphrase: "${c.catchphrase}"` : line;
     })
     .join('\n');
-  return [
+
+  const lawsList: string[] = [];
+  if (world.laws && world.laws.length > 0) {
+    world.laws.forEach((l) => {
+      lawsList.push(`• [${l.category.toUpperCase()}] ${l.title}: ${l.rule}`);
+    });
+  }
+  if (world.environmentRules && world.environmentRules.length > 0) {
+    world.environmentRules.forEach((r) => {
+      if (!lawsList.some((existing) => existing.includes(r))) {
+        lawsList.push(`• ${r}`);
+      }
+    });
+  }
+
+  const locationsList = (world.locations || [])
+    .map((loc) => `• ${loc.name}: ${loc.description}${loc.significance ? ` (${loc.significance})` : ''}`)
+    .join('\n');
+
+  const customAttrsList = (world.customAttributes || [])
+    .map((attr) => `• ${attr.key}: ${attr.value}`)
+    .join('\n');
+
+  const sections = [
     'WORLD BIBLE — canonical, never contradict:',
-    `World: ${world.title} (${world.tagline}) Genre: ${world.genre}`,
-    'Cast (appearance locked — repeat verbatim in art):',
-    cast || '(no cast defined)',
-    `Style lock: ${world.artStyle} comic art, bold ink outlines.`,
-  ].join('\n');
+    `World: ${world.title} (${world.tagline}) | Genre: ${world.genre}`,
+    `Art Style: ${world.artStyle} comic art, bold ink outlines.`,
+  ];
+
+  if (world.lore) {
+    sections.push(`WORLD LORE & BACKSTORY:\n${world.lore.trim()}`);
+  }
+
+  if (lawsList.length > 0) {
+    sections.push(`UNIVERSAL LAWS & RULES (must strictly govern all physics, logic & plot stakes):\n${lawsList.join('\n')}`);
+  }
+
+  if (locationsList) {
+    sections.push(`CANON LOCATIONS (stage scenes & backgrounds in these settings):\n${locationsList}`);
+  }
+
+  if (customAttrsList) {
+    sections.push(`WORLD PARAMETERS & DETAILS:\n${customAttrsList}`);
+  }
+
+  sections.push(`CAST (appearance locked — repeat verbatim in art):\n${cast || '(no cast defined)'}`);
+
+  return sections.join('\n\n');
 }
 
 /**

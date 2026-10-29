@@ -104,6 +104,26 @@ export interface CreatorProfile {
   createdAt: string;
 }
 
+export interface WorldLocation {
+  id: string;
+  name: string; // e.g. "The Neon Citadel", "Desk 4B", "The Dialysis Suite"
+  description: string; // Visual details for comic panels & background setting
+  significance?: string; // Story significance or faction hub
+}
+
+export interface WorldLaw {
+  id: string;
+  title: string; // e.g. "Law of Equivalent Exchange", "The Friday Deploy Taboo"
+  rule: string; // The exact rule, constraint, physics, or magic law
+  category: 'physics' | 'magic' | 'social' | 'taboo' | 'custom';
+}
+
+export interface CustomWorldAttribute {
+  id: string;
+  key: string; // e.g. "Currency", "Weather Quirk", "Forbidden Technology"
+  value: string; // e.g. "Cold brew", "Perpetual neon rain", "Uncontrolled AGI"
+}
+
 export interface ComicWorld {
   id: string;
   userId?: string; // Creator profile ID owning this universe
@@ -115,8 +135,11 @@ export interface ComicWorld {
   characters: ComicCharacter[];
   episodes: ComicStrip[];
   createdAt: string;
-  lore?: string; // Rich world backstory & rules
-  environmentRules?: string[]; // Physics, magic, or tech rules in this universe
+  lore?: string; // Rich world backstory & ongoing conflict
+  environmentRules?: string[]; // Legacy compatibility
+  laws?: WorldLaw[]; // Universal Laws & Constraints (Physics, Magic, Social, Taboo)
+  locations?: WorldLocation[]; // Canonical locations & staging landmarks
+  customAttributes?: CustomWorldAttribute[]; // Custom world parameters (Currency, Weather, Tech level, etc.)
 }
 
 export interface PresetScenario {
