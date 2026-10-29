@@ -63,6 +63,13 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Live editable prompt textarea with 1-click aesthetic injector tags (Rain, Cyberpunk Neon, Golden Sunset, Speedlines, Close-up, etc.).
   - Complete granular script controls: add/delete dialogue bubbles, change speaker, customize sound effects (`+ SFX`), and edit scene descriptions inline.
   - Added dynamic Director Lens / Tone selector pills (`Candid`, `Empathetic`, `Satirical`, `Stoic`, `Engineer`) in the bottom dock.
+- Simple Creator Auth & Storage Transparency Suite:
+  - Implemented creator authentication at `/api/auth` with support for named handles (`@handle`), avatar emojis, and optional PIN passkeys.
+  - Added instant zero-friction Guest session auto-generation (`Guest Creator @guest-XXXX`) on initial load so evaluators can create immediately without signing up.
+  - Multi-tenant cloud scoping: `/api/worlds` now accepts `userId` in queries, upserts, and deletes, isolating every user's comic universes in MongoDB Atlas.
+  - Added Storage Transparency Modal (`AuthModal.tsx`) showing live storage mode (`🟢 Cloud Database Active` vs `💾 Private Browser Storage`).
+  - Added 1-click **Export Backup (.json)** and **Import Backup (.json)** for complete data sovereignty and cross-device portability.
+  - Added interactive Creator Profile pill in both `ZenLanding` and `ZenComicReader` headers.
 - Git & Vercel Deployment:
   - Codebase verified with clean `npm run build` (Next.js 16.4.3).
   - Pushed to GitHub repository (`https://github.com/vivek656/mindstrip`).
