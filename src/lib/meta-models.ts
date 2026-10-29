@@ -56,6 +56,16 @@ export const META_PRESETS: MetaPreset[] = [
     placeholderKey: 'Paste your Groq API Key (gsk_...)'
   },
   {
+    id: 'groq-llama-8b',
+    name: 'Groq Free Tier (Meta Llama 3.1 8B)',
+    provider: 'groq',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    modelName: 'llama-3.1-8b-instant',
+    description: 'Blazing fast inference on Groq Free Tier (thousands of requests/day at $0.00 zero cost)',
+    badge: '100% Free Tier ($0.00)',
+    placeholderKey: 'Paste your Groq API Key (gsk_...)'
+  },
+  {
     id: 'baseten-llama',
     name: 'Baseten (Meta Llama 3.3)',
     provider: 'baseten',

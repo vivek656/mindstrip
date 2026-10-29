@@ -67,9 +67,9 @@ const LAYOUT_FORMATS: { id: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-pane
 ];
 
 const MODEL_ENGINES = [
-  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image 1.0', badge: 'Official Meta AI' },
-  { id: 'flux-1-schnell', provider: 'fireworks', name: 'Fireworks FLUX.1', badge: 'Meta Partner' },
-  { id: 'simulation', provider: 'simulation', name: 'Free Preview Engine', badge: 'Instant / $0.00' },
+  { id: 'simulation', provider: 'simulation', name: 'Free Preview', badge: 'Free • $0.00' },
+  { id: 'flux-1-schnell', provider: 'fireworks', name: 'FLUX.1 Schnell', badge: 'Ultra-Low • ~$0.003' },
+  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image', badge: 'Studio • ~$0.015' },
 ];
 
 const PROMPT_TAGS = [
