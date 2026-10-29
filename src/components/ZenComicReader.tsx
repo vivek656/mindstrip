@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ComicWorld, ComicStrip, ComicCharacter } from '@/types/comic';
+import { ComicWorld, ComicStrip, ComicCharacter, PerspectiveLens } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
-import { ComicPageSpread } from './ComicPageSpread';
+import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import {
   ArrowLeft,
   Menu,
@@ -35,14 +35,21 @@ interface ZenComicReaderProps {
   world: ComicWorld;
   episode: ComicStrip;
   onBackToWorlds: () => void;
-  onGenerateNextEpisode: (storyPremise: string, layoutPreference?: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel') => void;
+  onGenerateNextEpisode: (
+    storyPremise: string,
+    layoutPreference?: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel',
+    lens?: PerspectiveLens
+  ) => void;
   isLoading: boolean;
   onUpdateDialogue: (panelNumber: number, bubbleId: string, text: string) => void;
+  onAddDialogue?: (panelNumber: number, speaker: string, text: string, type: 'speech' | 'thought' | 'shout' | 'caption') => void;
+  onDeleteDialogue?: (panelNumber: number, bubbleId: string) => void;
+  onUpdatePanelScene?: (panelNumber: number, newDescription: string, newSoundEffect?: string) => void;
   onOpenSettings: () => void;
   onSelectEpisode?: (episode: ComicStrip) => void;
   onUpdatePanelPrompt?: (panelNumber: number, newPrompt: string) => void;
   onRegenerateEpisode?: () => void;
-  onGenerateArtwork?: () => void;
+  onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
   isGeneratingArtwork?: boolean;
   artworkError?: string | null;
   onUpdateWorld?: (updatedWorld: ComicWorld) => void;
@@ -57,6 +64,9 @@ export function ZenComicReader({
   onGenerateNextEpisode,
   isLoading,
   onUpdateDialogue,
+  onAddDialogue,
+  onDeleteDialogue,
+  onUpdatePanelScene,
   onOpenSettings,
   onSelectEpisode,
   onRegenerateEpisode,
@@ -69,6 +79,7 @@ export function ZenComicReader({
 }: ZenComicReaderProps) {
   const [activeTab, setActiveTab] = useState<'comic' | 'universe' | 'agent'>('comic');
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>('auto');
+  const [selectedLens, setSelectedLens] = useState<PerspectiveLens>('candid');
   const [prompt, setPrompt] = useState('');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -115,7 +126,7 @@ export function ZenComicReader({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || isLoading) return;
-    onGenerateNextEpisode(prompt.trim(), selectedLayout);
+    onGenerateNextEpisode(prompt.trim(), selectedLayout, selectedLens);
     setPrompt('');
   };
 
@@ -431,7 +442,7 @@ export function ZenComicReader({
             {onGenerateArtwork && !episode.pageImageUrl && (
               <button
                 type="button"
-                onClick={onGenerateArtwork}
+                onClick={() => onGenerateArtwork()}
                 disabled={isGeneratingArtwork}
                 className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 title="Synthesize comic page artwork with Meta Muse Image"
@@ -522,6 +533,9 @@ export function ZenComicReader({
                 episode={episode}
                 showBubbles={true}
                 onUpdateDialogue={onUpdateDialogue}
+                onAddDialogue={onAddDialogue}
+                onDeleteDialogue={onDeleteDialogue}
+                onUpdatePanelScene={onUpdatePanelScene}
                 onGenerateArtwork={onGenerateArtwork}
                 isGeneratingArtwork={isGeneratingArtwork}
                 artworkError={artworkError}
@@ -911,11 +925,11 @@ export function ZenComicReader({
                 <span className="text-[10px] font-mono font-bold uppercase text-zinc-500 px-2">Layout:</span>
                 {(
                   [
-                    { id: 'auto', label: '🤖 Auto (AI Decides)' },
-                    { id: '1-panel', label: '1-Panel Splash' },
-                    { id: '2-panel', label: '2-Panel Faceoff' },
-                    { id: '3-panel', label: '3-Panel Strip' },
-                    { id: '4-panel', label: '4-Panel Spread' },
+                    { id: 'auto', label: '🤖 Auto' },
+                    { id: '1-panel', label: '1-Panel' },
+                    { id: '2-panel', label: '2-Panel' },
+                    { id: '3-panel', label: '3-Panel' },
+                    { id: '4-panel', label: '4-Panel' },
                   ] as const
                 ).map((opt) => (
                   <button
@@ -925,6 +939,33 @@ export function ZenComicReader({
                     className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
                       selectedLayout === opt.id
                         ? 'bg-zinc-950 text-white shadow-xs'
+                        : 'text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Dynamic Tone / Narrative Lens Selector Pills */}
+              <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/15 rounded-full p-1 shadow-2xs">
+                <span className="text-[10px] font-mono font-bold uppercase text-zinc-500 px-2">Tone:</span>
+                {(
+                  [
+                    { id: 'candid', label: '🎯 Candid' },
+                    { id: 'empathetic', label: '🤝 Empathetic' },
+                    { id: 'satirical', label: '🎭 Satirical' },
+                    { id: 'stoic', label: '🏛️ Stoic' },
+                    { id: 'engineer', label: '⚙️ Engineer' },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSelectedLens(opt.id)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                      selectedLens === opt.id
+                        ? 'bg-blue-600 text-white shadow-xs'
                         : 'text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04]'
                     }`}
                   >

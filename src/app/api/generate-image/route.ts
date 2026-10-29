@@ -13,8 +13,19 @@ export async function POST(req: NextRequest) {
       apiKey,
       baseUrl,
       layoutStyle = '4-panel',
-      imageModel
+      imageModel,
+      customPrompt,
+      aspectRatio: userAspectRatio
     } = body;
+
+    // Simulation / Free Preview Provider
+    if (provider === 'simulation') {
+      const cleanPrompt = encodeURIComponent(
+        (customPrompt || prompt || episodeTitle || 'dynamic comic scene').slice(0, 100)
+      );
+      const mockUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20${artStyle}%20comic%20strip%20graphic%20novel?width=1024&height=1365&nologo=true&seed=${Date.now()}`;
+      return NextResponse.json({ pageImageUrl: mockUrl, provider: 'Instant Preview Engine (Free)' });
+    }
 
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
@@ -38,20 +49,22 @@ export async function POST(req: NextRequest) {
     const charsList = (characters || []).map((c: { name: string; appearance?: string; role?: string }) => `${c.name} (${c.appearance || c.role})`).join(' and ');
     
     let layoutDescriptor = '4-panel sequential graphic novel comic page spread, 2x2 grid with authentic gutters';
-    let aspectRatio = '3:4';
+    let calculatedAspect = userAspectRatio || '3:4';
 
     if (layoutStyle === '1-panel') {
       layoutDescriptor = 'cinematic full-page dramatic graphic novel splash art, single epic panoramic frame, borderless composition, dramatic lighting';
-      aspectRatio = '16:9';
+      calculatedAspect = userAspectRatio || '16:9';
     } else if (layoutStyle === '2-panel') {
       layoutDescriptor = 'two-panel split graphic novel page spread, vertical comic gutter, two progressive confrontation and reaction panels';
-      aspectRatio = '3:4';
+      calculatedAspect = userAspectRatio || '3:4';
     } else if (layoutStyle === '3-panel') {
       layoutDescriptor = 'three-panel sequential webtoon comic strip, three progressive action frames with clean gutters';
-      aspectRatio = '3:4';
+      calculatedAspect = userAspectRatio || '3:4';
     }
 
-    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential art, depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${prompt || episodeTitle || worldTitle || 'epic confrontation'}. Dynamic composition, expressive graphic novel panel layout, cinematic lighting.`;
+    const pagePrompt = customPrompt && customPrompt.trim().length > 10
+      ? customPrompt.trim()
+      : `${artStyle} ${layoutDescriptor}, high resolution sequential art, depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${prompt || episodeTitle || worldTitle || 'epic confrontation'}. Dynamic composition, expressive graphic novel panel layout, cinematic lighting.`;
 
     if (provider === 'fireworks') {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
@@ -62,7 +75,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           prompt: pagePrompt,
-          aspect_ratio: '3:4',
+          aspect_ratio: calculatedAspect === '16:9' ? '16:9' : calculatedAspect === '1:1' ? '1:1' : '3:4',
           output_format: 'jpeg'
         })
       });

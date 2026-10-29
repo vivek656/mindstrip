@@ -1,19 +1,86 @@
 'use client';
 
 import React, { useState, forwardRef } from 'react';
-import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble } from '@/types/comic';
-import { Sparkles, Users, RefreshCw, AlertCircle, Image as ImageIcon, Camera, Edit2, Check, ZoomIn, ZoomOut, ChevronDown, ChevronUp, Palette } from 'lucide-react';
+import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle } from '@/types/comic';
+import {
+  Sparkles,
+  Users,
+  RefreshCw,
+  AlertCircle,
+  Sliders,
+  Palette,
+  Edit2,
+  Check,
+  ZoomIn,
+  ZoomOut,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  Wand2,
+  X,
+  MessageSquare,
+  Volume2,
+  Layers,
+  Cpu,
+  Ratio
+} from 'lucide-react';
+
+export interface GranularArtworkOptions {
+  customPrompt?: string;
+  artStyle?: ArtStyle;
+  layoutStyle?: '1-panel' | '2-panel' | '3-panel' | '4-panel';
+  imageModel?: string;
+  provider?: string;
+  aspectRatio?: string;
+}
 
 interface ComicPageSpreadProps {
   world: ComicWorld;
   episode: ComicStrip;
   showBubbles?: boolean;
   onUpdateDialogue?: (panelNumber: number, bubbleId: string, text: string) => void;
-  onGenerateArtwork?: () => void;
+  onAddDialogue?: (panelNumber: number, speaker: string, text: string, type: 'speech' | 'thought' | 'shout' | 'caption') => void;
+  onDeleteDialogue?: (panelNumber: number, bubbleId: string) => void;
+  onUpdatePanelScene?: (panelNumber: number, newDescription: string, newSoundEffect?: string) => void;
+  onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
   isGeneratingArtwork?: boolean;
   artworkError?: string | null;
   className?: string;
 }
+
+const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
+  { id: 'webcomic', name: 'Modern Webcomic', desc: 'Vibrant flat digital cel-shaded', icon: '🎨' },
+  { id: 'manga', name: 'Dynamic Manga', desc: 'Dynamic B&W ink & screentones', icon: '⚡' },
+  { id: 'noir', name: 'Noir Graphic Novel', desc: 'Deep shadows & dramatic rimlight', icon: '🕵️' },
+  { id: 'cyberpunk', name: 'Cyberpunk Neon', desc: 'Glowing neon lights & rain reflections', icon: '🤖' },
+  { id: 'newspaper', name: 'Vintage Newspaper', desc: 'Warm paper texture & nostalgic ink', icon: '📰' },
+  { id: 'minimalist', name: 'Minimalist Indie', desc: 'Crisp editorial linework & refined tone', icon: '✒️' },
+];
+
+const LAYOUT_FORMATS: { id: '1-panel' | '2-panel' | '3-panel' | '4-panel'; name: string; desc: string; aspect: string }[] = [
+  { id: '1-panel', name: '1-Panel Splash', desc: 'Single cinematic panoramic frame', aspect: '16:9' },
+  { id: '2-panel', name: '2-Panel Faceoff', desc: 'Dual confrontation & reaction split', aspect: '3:4' },
+  { id: '3-panel', name: '3-Panel Strip', desc: 'Sequential 3-beat webtoon flow', aspect: '3:4' },
+  { id: '4-panel', name: '4-Panel Spread', desc: 'Classic 2x2 graphic novel grid', aspect: '3:4' },
+];
+
+const MODEL_ENGINES = [
+  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image 1.0', badge: 'Official Meta AI' },
+  { id: 'flux-1-schnell', provider: 'fireworks', name: 'Fireworks FLUX.1', badge: 'Meta Partner' },
+  { id: 'simulation', provider: 'simulation', name: 'Free Preview Engine', badge: 'Instant / $0.00' },
+];
+
+const PROMPT_TAGS = [
+  '🌧️ Cinematic Rain & Storm',
+  '🌆 Neon Night Reflections',
+  '☀️ Golden Sunset Rimlight',
+  '⚡ Action Speed Lines',
+  '💥 Chiaroscuro High Contrast',
+  '☕ Cozy Warm Palette',
+  '🔍 Extreme Dramatic Close-Up',
+  '🦅 Epic Bird\'s Eye View',
+];
 
 export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(function ComicPageSpread(
   {
@@ -21,6 +88,9 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     episode,
     showBubbles = true,
     onUpdateDialogue,
+    onAddDialogue,
+    onDeleteDialogue,
+    onUpdatePanelScene,
     onGenerateArtwork,
     isGeneratingArtwork = false,
     artworkError = null,
@@ -28,10 +98,41 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   },
   ref
 ) {
+  // Granular panel toggle
+  const [isGranularOpen, setIsGranularOpen] = useState(false);
+
+  // Granular state controls
+  const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyle>(world.artStyle || 'webcomic');
+  const [selectedLayout, setSelectedLayout] = useState<'1-panel' | '2-panel' | '3-panel' | '4-panel'>(
+    episode.layoutStyle || '4-panel'
+  );
+  const [selectedEngine, setSelectedEngine] = useState<string>(
+    episode.imageModel || 'muse-image-1.0'
+  );
+  const [selectedAspect, setSelectedAspect] = useState<string>(
+    episode.layoutStyle === '1-panel' ? '16:9' : '3:4'
+  );
+
+  // Default seed prompt for granular editing
+  const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
+  const defaultPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative beat: ${episode.rawBrainDump || episode.title}. Dynamic composition, expressive graphic novel panel layout.`;
+  const [customPrompt, setCustomPrompt] = useState<string>(defaultPrompt);
+
+  // Script & Dialogue editing state
   const [editingBubbleId, setEditingBubbleId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState('');
   const [isFullscreenZoom, setIsFullscreenZoom] = useState(false);
   const [isScriptExpanded, setIsScriptExpanded] = useState(false);
+
+  // Add dialogue form state
+  const [addingBubblePanel, setAddingBubblePanel] = useState<number | null>(null);
+  const [newSpeaker, setNewSpeaker] = useState(world.characters[0]?.name || 'Protagonist');
+  const [newBubbleText, setNewBubbleText] = useState('');
+  const [newBubbleType, setNewBubbleType] = useState<'speech' | 'thought' | 'shout' | 'caption'>('speech');
+
+  // Edit sound effect state
+  const [editingSoundPanel, setEditingSoundPanel] = useState<number | null>(null);
+  const [soundDraft, setSoundDraft] = useState('');
 
   // 4 narrative frames of the comic episode
   const p1: ComicPanel = episode.panels[0] || {
@@ -88,7 +189,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const pageImage =
     episode.pageImageUrl && !episode.pageImageUrl.includes('pollinations.ai')
       ? episode.pageImageUrl
-      : undefined;
+      : episode.pageImageUrl;
 
   const handleStartEdit = (bubbleId: string, currentText: string) => {
     setEditingBubbleId(bubbleId);
@@ -100,52 +201,332 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
       onUpdateDialogue(panelNumber, bubbleId, draftText.trim());
     }
     setEditingBubbleId(null);
+    setDraftText('');
   };
 
-  const getCharacterEmoji = (speakerName: string) => {
-    const matched = world.characters.find(
+  const handleSaveNewBubble = (panelNumber: number) => {
+    if (!newBubbleText.trim() || !onAddDialogue) return;
+    onAddDialogue(panelNumber, newSpeaker, newBubbleText.trim(), newBubbleType);
+    setAddingBubblePanel(null);
+    setNewBubbleText('');
+  };
+
+  const handleSaveSoundEffect = (panelNumber: number) => {
+    if (onUpdatePanelScene) {
+      const panel = episode.panels.find((p) => p.panelNumber === panelNumber);
+      onUpdatePanelScene(panelNumber, panel?.sceneDescription || '', soundDraft.trim() || undefined);
+    }
+    setEditingSoundPanel(null);
+  };
+
+  const handleInjectPromptTag = (tag: string) => {
+    const cleanTag = tag.replace(/^[^\w\s]+\s*/, ''); // strip leading emoji
+    setCustomPrompt((prev) => `${prev.trim()}, ${cleanTag}`);
+  };
+
+  const handleExecuteGranularArtwork = () => {
+    if (!onGenerateArtwork) return;
+    const selectedProvider = MODEL_ENGINES.find((m) => m.id === selectedEngine)?.provider || 'meta-api';
+    onGenerateArtwork({
+      customPrompt: customPrompt.trim(),
+      artStyle: selectedArtStyle,
+      layoutStyle: selectedLayout,
+      imageModel: selectedEngine,
+      provider: selectedProvider,
+      aspectRatio: selectedAspect,
+    });
+  };
+
+  const getCharacterEmoji = (speakerName: string): string => {
+    const found = world.characters.find(
       (c) => c.name.toLowerCase() === speakerName.toLowerCase()
     );
-    return matched?.avatarEmoji || '👤';
+    return found?.avatarEmoji || (speakerName.toLowerCase().includes('narrator') ? '📜' : '💬');
   };
 
   return (
     <div
       ref={ref}
-      className={`w-full max-w-5xl xl:max-w-6xl mx-auto bg-white rounded-3xl p-6 sm:p-9 border-2 border-zinc-950 shadow-2xl relative select-none ${className}`}
+      className={`w-full max-w-4xl mx-auto bg-white rounded-3xl p-4 sm:p-7 border-2 border-zinc-950 shadow-lg text-zinc-900 transition-all ${className}`}
     >
       {/* =========================================================================
-          COMIC BOOK PAGE MASTHEAD
+          TOP BANNER & CONTROLS HEADER
       ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b-2 border-zinc-950 gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="px-3 py-1 rounded-md bg-zinc-950 text-white font-mono font-black text-xs sm:text-sm uppercase tracking-widest shadow-xs">
-            {world.title}
-          </span>
-          <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 bg-zinc-100 px-2.5 py-1 rounded border border-black/10">
-            ISSUE #{episode.episodeNumber || 1}
-          </span>
-          <h2 className="text-base sm:text-xl font-bold font-serif text-zinc-950 truncate max-w-md">
-            &ldquo;{episode.title}&rdquo;
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b-2 border-zinc-950 gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs font-bold text-zinc-900 uppercase tracking-widest bg-zinc-100 px-2.5 py-0.5 rounded-full border border-black/10">
+              ISSUE #{episode.episodeNumber || 1}
+            </span>
+            <span className="text-zinc-400 font-mono text-xs">•</span>
+            <span className="text-xs font-mono font-bold text-blue-600 uppercase">
+              {world.title}
+            </span>
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-black text-zinc-950 tracking-tight font-serif">
+            {episode.title}
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-bold border border-blue-200 uppercase">
-            {world.artStyle}
-          </span>
-          <span className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-widest hidden md:inline">
-            COMIC STRIP
-          </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Art Style Pill */}
+          <button
+            type="button"
+            onClick={() => setIsGranularOpen(true)}
+            className="px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-800 font-mono text-xs font-bold border border-blue-200 uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Click to adjust granular style & layout"
+          >
+            <span>🎨</span>
+            <span>{selectedArtStyle}</span>
+          </button>
+
+          {/* Quick Layout Pill */}
+          <button
+            type="button"
+            onClick={() => setIsGranularOpen(true)}
+            className="px-3 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-mono text-xs font-bold border border-zinc-300 uppercase transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Click to adjust granular style & layout"
+          >
+            <span>📐</span>
+            <span>{selectedLayout}</span>
+          </button>
+
+          {/* Granular Control Deck Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsGranularOpen(!isGranularOpen)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
+              isGranularOpen
+                ? 'bg-zinc-950 text-white border-zinc-950'
+                : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-zinc-400'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Granular Controls</span>
+          </button>
         </div>
       </div>
 
       {/* Premise Subtitle Banner */}
       {episode.rawBrainDump && (
-        <div className="mb-5 -mt-2 flex items-center gap-2 text-xs sm:text-sm text-zinc-700 font-serif italic bg-zinc-50 border border-black/[0.06] rounded-xl px-4 py-2.5">
+        <div className="mb-4 flex items-center gap-2 text-xs sm:text-sm text-zinc-700 font-serif italic bg-zinc-50 border border-black/[0.06] rounded-xl px-4 py-2.5">
           <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
           <span className="font-sans font-bold text-zinc-900 not-italic text-xs uppercase tracking-wider shrink-0">Premise:</span>
           <span className="truncate">&ldquo;{episode.rawBrainDump}&rdquo;</span>
+        </div>
+      )}
+
+      {/* =========================================================================
+          GRANULAR ART DIRECTOR & MODEL STUDIO DECK (COLLAPSIBLE)
+      ========================================================================= */}
+      {isGranularOpen && (
+        <div className="mb-6 p-5 sm:p-6 bg-zinc-950 text-white rounded-2xl border-2 border-zinc-900 shadow-xl space-y-5 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                🎛️
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-white">Granular Art Director & Model Studio</h3>
+                <p className="text-[11px] text-zinc-400">Fine-tune artwork prompt, visual layout, model engine, and aesthetic modifiers.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsGranularOpen(false)}
+              className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Control 1: Art Style Selection */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5 text-blue-400" />
+                <span>1. Art Style</span>
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {ART_STYLES.map((style) => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedArtStyle(style.id);
+                      setCustomPrompt((prev) => prev.replace(/^\w+\s/, `${style.id} `));
+                    }}
+                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                      selectedArtStyle === style.id
+                        ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <span>{style.icon}</span>
+                      <span>{style.name}</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{style.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Control 2: Layout Format */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-blue-400" />
+                <span>2. Page Layout Format</span>
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {LAYOUT_FORMATS.map((layout) => (
+                  <button
+                    key={layout.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedLayout(layout.id);
+                      setSelectedAspect(layout.aspect);
+                    }}
+                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                      selectedLayout === layout.id
+                        ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs">{layout.name}</span>
+                      <span className="text-[9px] font-mono px-1 rounded bg-black/30 text-zinc-400">{layout.aspect}</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{layout.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Control 3: AI Engine & Aspect Ratio */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-zinc-800/80">
+            <div>
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                <span>3. Image Engine / Model</span>
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {MODEL_ENGINES.map((eng) => (
+                  <button
+                    key={eng.id}
+                    type="button"
+                    onClick={() => setSelectedEngine(eng.id)}
+                    className={`p-2 rounded-xl text-center border text-xs transition-all cursor-pointer ${
+                      selectedEngine === eng.id
+                        ? 'bg-white text-zinc-950 font-bold border-white'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <div className="truncate font-medium">{eng.name}</div>
+                    <div className="text-[9px] text-zinc-500">{eng.badge}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                <Ratio className="w-3.5 h-3.5 text-blue-400" />
+                <span>4. Aspect Ratio</span>
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: '3:4', label: '3:4 (Portrait Page)' },
+                  { id: '16:9', label: '16:9 (Cinematic Splash)' },
+                  { id: '1:1', label: '1:1 (Square Webcomic)' },
+                ].map((asp) => (
+                  <button
+                    key={asp.id}
+                    type="button"
+                    onClick={() => setSelectedAspect(asp.id)}
+                    className={`p-2 rounded-xl text-center border text-xs transition-all cursor-pointer ${
+                      selectedAspect === asp.id
+                        ? 'bg-white text-zinc-950 font-bold border-white'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    {asp.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Control 4: Granular Visual Prompt Editor */}
+          <div className="space-y-2 pt-1 border-t border-zinc-800/80">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                <Wand2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>5. Visual Image Prompt (Editable)</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setCustomPrompt(defaultPrompt)}
+                className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer"
+              >
+                Reset to Default
+              </button>
+            </div>
+
+            <textarea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              rows={3}
+              className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-zinc-100 font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              placeholder="Describe exact composition, characters, lighting, camera angles..."
+            />
+
+            {/* Quick Aesthetic Enhancer Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <span className="text-[10px] font-mono text-zinc-500">Inject:</span>
+              {PROMPT_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleInjectPromptTag(tag)}
+                  className="px-2 py-0.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] border border-zinc-700 transition-colors cursor-pointer"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Execute Button */}
+          <div className="pt-2 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsGranularOpen(false)}
+              className="px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleExecuteGranularArtwork}
+              disabled={isGeneratingArtwork}
+              className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95"
+            >
+              {isGeneratingArtwork ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Synthesizing Custom Art...</span>
+                </>
+              ) : (
+                <>
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>Render Artwork with Granular Controls</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -177,13 +558,23 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 <span>{isFullscreenZoom ? 'Fit' : 'Full Height'}</span>
               </button>
 
+              <button
+                type="button"
+                onClick={() => setIsGranularOpen(!isGranularOpen)}
+                className="px-3 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 text-white text-xs font-medium backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer"
+                title="Tweak artwork with granular controls"
+              >
+                <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                <span>Granular Studio</span>
+              </button>
+
               {onGenerateArtwork && (
                 <button
                   type="button"
-                  onClick={onGenerateArtwork}
+                  onClick={() => handleExecuteGranularArtwork()}
                   disabled={isGeneratingArtwork}
                   className="px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer transition-all disabled:opacity-50"
-                  title="Re-synthesize artwork with Meta Muse Image"
+                  title="Re-synthesize artwork"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
                   <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-draw Art'}</span>
@@ -221,8 +612,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 </h3>
                 <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed font-sans">
                   {isGeneratingArtwork
-                    ? 'Meta Muse Image is synthesizing all 4 sequential comic frames into a high-res graphic novel page. This takes ~12 seconds...'
-                    : `The dialogue and 4-scene story have been written. Click below to paint the full visual comic strip with Meta Muse Image.`}
+                    ? 'Synthesizing sequential comic frames into a high-res graphic novel page with Meta Muse Image...'
+                    : `The dialogue and 4-scene narrative have been scripted. Draw using 1-click or customize with Granular Controls.`}
                 </p>
               </div>
 
@@ -233,139 +624,291 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 </div>
               )}
 
-              {onGenerateArtwork && (
+              <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={onGenerateArtwork}
-                  disabled={isGeneratingArtwork}
-                  className="px-8 py-3.5 rounded-full bg-zinc-950 hover:bg-blue-600 text-white font-bold text-sm shadow-xl flex items-center gap-2.5 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95"
+                  onClick={() => setIsGranularOpen(true)}
+                  className="px-5 py-3 rounded-full bg-white hover:bg-zinc-100 text-zinc-900 border-2 border-zinc-950 font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
                 >
-                  {isGeneratingArtwork ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Synthesizing Comic Art...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Palette className="w-4 h-4" />
-                      <span>Generate Comic with Meta AI</span>
-                    </>
-                  )}
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Granular Studio</span>
                 </button>
-              )}
+
+                {onGenerateArtwork && (
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteGranularArtwork()}
+                    disabled={isGeneratingArtwork}
+                    className="px-7 py-3 rounded-full bg-zinc-950 hover:bg-blue-600 text-white font-bold text-xs shadow-xl flex items-center gap-2.5 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95"
+                  >
+                    {isGeneratingArtwork ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Drawing Art...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Palette className="w-4 h-4" />
+                        <span>Draw with Meta AI</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* Collapsible Story & Dialogue Script Accordion */}
-          <div className="border border-zinc-200 rounded-2xl bg-white overflow-hidden shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setIsScriptExpanded(!isScriptExpanded)}
-              className="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="text-base">📝</span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-900">
-                  Written Story Script & Dialogue (4 Scenes)
-                </span>
-                <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
-                  • Click to preview or edit speech
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
-                <span>{isScriptExpanded ? 'Hide Script' : 'View Script'}</span>
-                {isScriptExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </button>
-
-            {isScriptExpanded && (
-              <div className="p-5 border-t border-zinc-100 bg-zinc-50/50 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {panels.map((p, idx) => {
-                  const sceneNum = idx + 1;
-                  const sceneTitle =
-                    idx === 0 ? 'Scene 1: The Inciting Dilemma' :
-                    idx === 1 ? 'Scene 2: Conflict Escalation' :
-                    idx === 2 ? 'Scene 3: The Breakthrough' :
-                    'Scene 4: The Outcome';
-
-                  return (
-                    <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
-                        <span className="text-xs font-bold text-zinc-900 font-mono">
-                          {sceneTitle}
-                        </span>
-                        {p.soundEffect && (
-                          <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-200">
-                            {p.soundEffect}
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-zinc-600 font-serif italic leading-relaxed">
-                        &ldquo;{p.sceneDescription}&rdquo;
-                      </p>
-
-                      {p.bubbles && p.bubbles.length > 0 && (
-                        <div className="space-y-2 pt-1 border-t border-zinc-100">
-                          {p.bubbles.map((b: SpeechBubble) => {
-                            const isEditing = editingBubbleId === b.id;
-                            const charEmoji = getCharacterEmoji(b.speaker);
-
-                            return (
-                              <div key={b.id} className="bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-xs">
-                                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 mb-1">
-                                  <span className="font-bold text-zinc-900 flex items-center gap-1">
-                                    <span>{charEmoji}</span>
-                                    <span>{b.speaker}</span>
-                                  </span>
-
-                                  {onUpdateDialogue && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        isEditing
-                                          ? handleSaveEdit(p.panelNumber, b.id)
-                                          : handleStartEdit(b.id, b.text)
-                                      }
-                                      className="text-zinc-400 hover:text-zinc-900 p-0.5 cursor-pointer"
-                                      title={isEditing ? 'Save' : 'Edit'}
-                                    >
-                                      {isEditing ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Edit2 className="w-3.5 h-3.5" />}
-                                    </button>
-                                  )}
-                                </div>
-
-                                {isEditing ? (
-                                  <input
-                                    type="text"
-                                    value={draftText}
-                                    onChange={(e) => setDraftText(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)}
-                                    autoFocus
-                                    className="w-full bg-white border border-blue-500 rounded px-2 py-1 text-xs text-zinc-900 font-medium outline-none"
-                                  />
-                                ) : (
-                                  <p
-                                    onClick={() => onUpdateDialogue && handleStartEdit(b.id, b.text)}
-                                    className="text-zinc-800 leading-snug cursor-pointer hover:text-blue-600"
-                                  >
-                                    &ldquo;{b.text}&rdquo;
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
       )}
+
+      {/* =========================================================================
+          COLLAPSIBLE STORY & DIALOGUE SCRIPT ACCORDION (WITH GRANULAR SCRIPT EDITING)
+      ========================================================================= */}
+      <div className="mt-5 border border-zinc-200 rounded-2xl bg-white overflow-hidden shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setIsScriptExpanded(!isScriptExpanded)}
+          className="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="text-base">📝</span>
+            <span className="text-xs sm:text-sm font-bold text-zinc-900">
+              Written Story Script, Dialogue & Sound Effects ({panels.length} Scenes)
+            </span>
+            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+              • Granular dialogue, sound, and scene controls
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
+            <span>{isScriptExpanded ? 'Hide Script' : 'View & Edit Script'}</span>
+            {isScriptExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </button>
+
+        {isScriptExpanded && (
+          <div className="p-5 border-t border-zinc-100 bg-zinc-50/50 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {panels.map((p, idx) => {
+              const sceneNum = idx + 1;
+              const sceneTitle =
+                idx === 0 ? 'Scene 1: The Inciting Dilemma' :
+                idx === 1 ? 'Scene 2: Conflict Escalation' :
+                idx === 2 ? 'Scene 3: The Breakthrough' :
+                'Scene 4: The Outcome';
+
+              const isAddingBubble = addingBubblePanel === p.panelNumber;
+              const isEditingSound = editingSoundPanel === p.panelNumber;
+
+              return (
+                <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
+                  {/* Scene Title & Sound Effect Header */}
+                  <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                    <span className="text-xs font-bold text-zinc-900 font-mono">
+                      {sceneTitle}
+                    </span>
+
+                    {/* Sound Effect Pill (Clickable / Editable) */}
+                    <div className="flex items-center gap-1.5">
+                      {isEditingSound ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={soundDraft}
+                            onChange={(e) => setSoundDraft(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveSoundEffect(p.panelNumber)}
+                            placeholder="e.g. BAM!"
+                            autoFocus
+                            className="w-20 px-1.5 py-0.5 text-[10px] font-mono border rounded outline-none bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSoundEffect(p.panelNumber)}
+                            className="text-emerald-600 hover:text-emerald-700 p-0.5 cursor-pointer"
+                          >
+                            <Check className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSoundPanel(p.panelNumber);
+                            setSoundDraft(p.soundEffect || '');
+                          }}
+                          className="text-[10px] font-mono font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded border border-amber-200 transition-colors cursor-pointer flex items-center gap-1"
+                          title="Click to edit sound effect"
+                        >
+                          <Volume2 className="w-2.5 h-2.5" />
+                          <span>{p.soundEffect || '+ SFX'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Scene Description */}
+                  <p className="text-xs text-zinc-600 font-serif italic leading-relaxed">
+                    &ldquo;{p.sceneDescription}&rdquo;
+                  </p>
+
+                  {/* Dialogue Bubbles */}
+                  {p.bubbles && p.bubbles.length > 0 && (
+                    <div className="space-y-2 pt-1 border-t border-zinc-100">
+                      {p.bubbles.map((b: SpeechBubble) => {
+                        const isEditing = editingBubbleId === b.id;
+                        const charEmoji = getCharacterEmoji(b.speaker);
+
+                        return (
+                          <div key={b.id} className="bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-xs group">
+                            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 mb-1">
+                              <span className="font-bold text-zinc-900 flex items-center gap-1">
+                                <span>{charEmoji}</span>
+                                <span>{b.speaker}</span>
+                                {b.type !== 'speech' && (
+                                  <span className="text-[9px] uppercase px-1 rounded bg-black/5 text-zinc-500">
+                                    {b.type}
+                                  </span>
+                                )}
+                              </span>
+
+                              <div className="flex items-center gap-1.5">
+                                {onUpdateDialogue && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      isEditing
+                                        ? handleSaveEdit(p.panelNumber, b.id)
+                                        : handleStartEdit(b.id, b.text)
+                                    }
+                                    className="text-zinc-400 hover:text-zinc-900 p-0.5 cursor-pointer"
+                                    title={isEditing ? 'Save' : 'Edit text'}
+                                  >
+                                    {isEditing ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Edit2 className="w-3.5 h-3.5" />}
+                                  </button>
+                                )}
+
+                                {onDeleteDialogue && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onDeleteDialogue(p.panelNumber, b.id)}
+                                    className="text-zinc-400 hover:text-red-600 p-0.5 cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                                    title="Delete dialogue"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={draftText}
+                                onChange={(e) => setDraftText(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)}
+                                autoFocus
+                                className="w-full bg-white border border-blue-500 rounded px-2 py-1 text-xs text-zinc-900 font-medium outline-none"
+                              />
+                            ) : (
+                              <p
+                                onClick={() => onUpdateDialogue && handleStartEdit(b.id, b.text)}
+                                className="text-zinc-800 leading-snug cursor-pointer hover:text-blue-600"
+                              >
+                                &ldquo;{b.text}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Add Dialogue Form */}
+                  {isAddingBubble ? (
+                    <div className="p-3 bg-zinc-100 rounded-xl border border-zinc-300 space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-zinc-800 font-mono text-[11px]">Add Dialogue:</span>
+                        <button
+                          type="button"
+                          onClick={() => setAddingBubblePanel(null)}
+                          className="text-zinc-400 hover:text-zinc-700"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <select
+                          value={newSpeaker}
+                          onChange={(e) => setNewSpeaker(e.target.value)}
+                          className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
+                        >
+                          {world.characters.map((c) => (
+                            <option key={c.id} value={c.name}>
+                              {c.avatarEmoji} {c.name}
+                            </option>
+                          ))}
+                          <option value="Narrator">📜 Narrator</option>
+                        </select>
+
+                        <select
+                          value={newBubbleType}
+                          onChange={(e) => setNewBubbleType(e.target.value as any)}
+                          className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
+                        >
+                          <option value="speech">💬 Speech</option>
+                          <option value="thought">💭 Thought</option>
+                          <option value="shout">💥 Shout</option>
+                          <option value="caption">📜 Caption</option>
+                        </select>
+                      </div>
+
+                      <input
+                        type="text"
+                        value={newBubbleText}
+                        onChange={(e) => setNewBubbleText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveNewBubble(p.panelNumber)}
+                        placeholder="Type line of dialogue..."
+                        autoFocus
+                        className="w-full bg-white border border-zinc-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
+                      />
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setAddingBubblePanel(null)}
+                          className="px-2 py-1 text-[11px] text-zinc-500 hover:text-zinc-800"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveNewBubble(p.panelNumber)}
+                          className="px-3 py-1 rounded bg-zinc-950 text-white font-bold text-[11px] hover:bg-blue-600"
+                        >
+                          Add Bubble
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    onAddDialogue && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingBubblePanel(p.panelNumber);
+                          setNewBubbleText('');
+                        }}
+                        className="w-full py-1.5 border border-dashed border-zinc-300 hover:border-zinc-400 rounded-lg text-zinc-500 hover:text-zinc-800 font-mono text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add Dialogue Bubble</span>
+                      </button>
+                    )
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* =========================================================================
           COMIC BOOK FOOTER

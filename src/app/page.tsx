@@ -5,7 +5,8 @@ import { ZenLanding } from '@/components/ZenLanding';
 import { ZenComicReader } from '@/components/ZenComicReader';
 import { UniverseBuilderStudio } from '@/components/UniverseBuilderStudio';
 import { SettingsModal } from '@/components/SettingsModal';
-import { ComicWorld, ComicStrip } from '@/types/comic';
+import { ComicWorld, ComicStrip, SpeechBubble, ArtStyle, PerspectiveLens } from '@/types/comic';
+import { GranularArtworkOptions } from '@/components/ComicPageSpread';
 import { INITIAL_WORLDS } from '@/lib/worlds';
 import { generateMindStrip, ApiConfig } from '@/lib/meta-models';
 import { generateComicStripMock } from '@/lib/comic-generator';
@@ -226,7 +227,8 @@ export default function Home() {
 
   const handleGenerateNextEpisode = async (
     storyPremise: string,
-    layoutPreference: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel' = 'auto'
+    layoutPreference: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel' = 'auto',
+    lens: PerspectiveLens = 'candid'
   ) => {
     if (!activeWorld) return;
     setIsLoading(true);
@@ -236,7 +238,7 @@ export default function Home() {
       const generated = await generateMindStrip(
         storyPremise,
         activeWorld.artStyle,
-        'candid',
+        lens,
         apiConfig,
         activeWorld.characters,
         activeWorld.title,
@@ -345,25 +347,32 @@ export default function Home() {
     }
   };
 
-  const handleGenerateArtwork = async () => {
+  const handleGenerateArtwork = async (options?: GranularArtworkOptions) => {
     if (!activeWorld || !activeEpisode) return;
     setIsGeneratingArtwork(true);
     setArtworkError(null);
     try {
+      const targetLayoutStyle = options?.layoutStyle || activeEpisode.layoutStyle || '4-panel';
+      const targetArtStyle = options?.artStyle || activeWorld.artStyle || 'webcomic';
+      const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel;
+      const targetProvider = options?.provider || apiConfig?.provider;
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: activeEpisode.rawBrainDump || activeEpisode.title,
-          artStyle: activeWorld.artStyle,
+          customPrompt: options?.customPrompt,
+          artStyle: targetArtStyle,
           characters: activeWorld.characters,
           worldTitle: activeWorld.title,
           episodeTitle: activeEpisode.title,
-          provider: apiConfig?.provider,
+          provider: targetProvider,
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
-          imageModel: activeEpisode.imageModel || activeWorld.imageModel,
-          layoutStyle: activeEpisode.layoutStyle || '4-panel'
+          imageModel: targetImageModel,
+          layoutStyle: targetLayoutStyle,
+          aspectRatio: options?.aspectRatio
         })
       });
 
@@ -376,12 +385,18 @@ export default function Home() {
         const updatedEpisode: ComicStrip = {
           ...activeEpisode,
           pageImageUrl: data.pageImageUrl,
-          generationNotice: `Synthesized with Meta Muse Image 1.0 (${activeWorld.artStyle})`
+          layoutStyle: targetLayoutStyle,
+          imageModel: targetImageModel,
+          generationNotice: `Synthesized with ${data.provider || 'Meta Muse Image 1.0'} (${targetArtStyle}, ${targetLayoutStyle})`
         };
         const updatedEpisodes = activeWorld.episodes.map((ep) =>
           ep.id === activeEpisode.id ? updatedEpisode : ep
         );
-        const updatedWorld = { ...activeWorld, episodes: updatedEpisodes };
+        const updatedWorld = {
+          ...activeWorld,
+          artStyle: targetArtStyle,
+          episodes: updatedEpisodes
+        };
         const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
         setWorlds(updatedWorlds);
         syncWorldToDb(updatedWorld);
@@ -556,6 +571,81 @@ export default function Home() {
     const updatedWorld = { ...activeWorld, episodes: updatedEpisodes };
     const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
     setWorlds(updatedWorlds);
+    syncWorldToDb(updatedWorld);
+  };
+
+  const handleAddDialogue = (
+    panelNumber: number,
+    speaker: string,
+    text: string,
+    type: 'speech' | 'thought' | 'shout' | 'caption' = 'speech'
+  ) => {
+    if (!activeWorld || !activeEpisode) return;
+    const newBubble: SpeechBubble = {
+      id: `bubble-${Date.now()}`,
+      speaker,
+      text,
+      type,
+      position: 'top-left'
+    };
+
+    const updatedPanels = activeEpisode.panels.map((p) => {
+      if (p.panelNumber === panelNumber) {
+        return { ...p, bubbles: [...(p.bubbles || []), newBubble] };
+      }
+      return p;
+    });
+
+    const updatedEpisode = { ...activeEpisode, panels: updatedPanels };
+    const updatedEpisodes = activeWorld.episodes.map((ep) =>
+      ep.id === activeEpisode.id ? updatedEpisode : ep
+    );
+    const updatedWorld = { ...activeWorld, episodes: updatedEpisodes };
+    const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
+    setWorlds(updatedWorlds);
+    syncWorldToDb(updatedWorld);
+  };
+
+  const handleDeleteDialogue = (panelNumber: number, bubbleId: string) => {
+    if (!activeWorld || !activeEpisode) return;
+    const updatedPanels = activeEpisode.panels.map((p) => {
+      if (p.panelNumber === panelNumber) {
+        return { ...p, bubbles: p.bubbles.filter((b) => b.id !== bubbleId) };
+      }
+      return p;
+    });
+
+    const updatedEpisode = { ...activeEpisode, panels: updatedPanels };
+    const updatedEpisodes = activeWorld.episodes.map((ep) =>
+      ep.id === activeEpisode.id ? updatedEpisode : ep
+    );
+    const updatedWorld = { ...activeWorld, episodes: updatedEpisodes };
+    const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
+    setWorlds(updatedWorlds);
+    syncWorldToDb(updatedWorld);
+  };
+
+  const handleUpdatePanelScene = (panelNumber: number, newDescription: string, newSoundEffect?: string) => {
+    if (!activeWorld || !activeEpisode) return;
+    const updatedPanels = activeEpisode.panels.map((p) => {
+      if (p.panelNumber === panelNumber) {
+        return {
+          ...p,
+          sceneDescription: newDescription,
+          ...(newSoundEffect !== undefined ? { soundEffect: newSoundEffect } : {})
+        };
+      }
+      return p;
+    });
+
+    const updatedEpisode = { ...activeEpisode, panels: updatedPanels };
+    const updatedEpisodes = activeWorld.episodes.map((ep) =>
+      ep.id === activeEpisode.id ? updatedEpisode : ep
+    );
+    const updatedWorld = { ...activeWorld, episodes: updatedEpisodes };
+    const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
+    setWorlds(updatedWorlds);
+    syncWorldToDb(updatedWorld);
   };
 
   return (
@@ -581,6 +671,9 @@ export default function Home() {
           onGenerateNextEpisode={handleGenerateNextEpisode}
           isLoading={isLoading}
           onUpdateDialogue={handleUpdateDialogue}
+          onAddDialogue={handleAddDialogue}
+          onDeleteDialogue={handleDeleteDialogue}
+          onUpdatePanelScene={handleUpdatePanelScene}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onSelectEpisode={(ep) => setActiveEpisodeId(ep.id)}
           onUpdatePanelPrompt={handleUpdatePanelPrompt}
