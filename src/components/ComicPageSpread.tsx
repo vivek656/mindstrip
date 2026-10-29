@@ -2,6 +2,7 @@
 
 import React, { useState, forwardRef } from 'react';
 import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle } from '@/types/comic';
+import { ApiConfig } from '@/lib/meta-models';
 import {
   Sparkles,
   Users,
@@ -46,6 +47,7 @@ interface ComicPageSpreadProps {
   onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
   isGeneratingArtwork?: boolean;
   artworkError?: string | null;
+  apiConfig?: ApiConfig;
   className?: string;
 }
 
@@ -95,6 +97,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     onGenerateArtwork,
     isGeneratingArtwork = false,
     artworkError = null,
+    apiConfig,
     className = '',
   },
   ref
@@ -107,9 +110,13 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>(
     'auto'
   );
-  const [selectedEngine, setSelectedEngine] = useState<string>(
-    episode.imageModel || 'muse-image-1.0'
-  );
+  // Default to ultra-low cost $0.003 or Free $0.00 intelligently
+  const resolveInitialEngine = () => {
+    if (episode.imageModel) return episode.imageModel;
+    if (apiConfig?.mode === 'free' || apiConfig?.provider === 'simulation') return 'simulation';
+    return 'flux-1-schnell';
+  };
+  const [selectedEngine, setSelectedEngine] = useState<string>(resolveInitialEngine);
   const [selectedAspect, setSelectedAspect] = useState<string>(
     episode.layoutStyle === '1-panel' ? '16:9' : '3:4'
   );
@@ -676,7 +683,33 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 </div>
               )}
 
-              <div className="flex items-center gap-3 pt-2">
+              {/* Cost & Engine Quick Switcher Pill Deck */}
+              <div className="flex items-center gap-1.5 p-1 bg-white border border-zinc-200 rounded-full shadow-2xs">
+                <span className="text-[10px] font-mono font-bold uppercase text-zinc-400 px-2 flex items-center gap-1">
+                  <span>Engine:</span>
+                </span>
+                {MODEL_ENGINES.map((eng) => (
+                  <button
+                    key={eng.id}
+                    type="button"
+                    onClick={() => setSelectedEngine(eng.id)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      selectedEngine === eng.id
+                        ? eng.id === 'simulation'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : eng.id === 'flux-1-schnell'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-zinc-950 text-white shadow-xs'
+                        : 'text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04]'
+                    }`}
+                  >
+                    <span>{eng.name}</span>
+                    <span className="text-[10px] opacity-80 font-mono">({eng.badge.split('•')[1]?.trim() || eng.badge})</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsGranularOpen(true)}
@@ -691,7 +724,13 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     type="button"
                     onClick={() => handleExecuteGranularArtwork()}
                     disabled={isGeneratingArtwork}
-                    className="px-7 py-3 rounded-full bg-zinc-950 hover:bg-blue-600 text-white font-bold text-xs shadow-xl flex items-center gap-2.5 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95"
+                    className={`px-7 py-3 rounded-full font-bold text-xs shadow-xl flex items-center gap-2.5 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95 ${
+                      selectedEngine === 'simulation'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : selectedEngine === 'flux-1-schnell'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-zinc-950 hover:bg-zinc-800 text-white'
+                    }`}
                   >
                     {isGeneratingArtwork ? (
                       <>
@@ -701,7 +740,13 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     ) : (
                       <>
                         <Palette className="w-4 h-4" />
-                        <span>Draw with Meta AI</span>
+                        <span>
+                          {selectedEngine === 'simulation'
+                            ? 'Draw Free Preview ($0.00)'
+                            : selectedEngine === 'flux-1-schnell'
+                            ? 'Draw with FLUX (~$0.003)'
+                            : 'Draw with Muse Image (~$0.015)'}
+                        </span>
                       </>
                     )}
                   </button>

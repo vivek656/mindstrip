@@ -105,6 +105,13 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Interactive Creative Fork Card (`directorQuestion`): AI Co-Director asks the creator "What should happen next?" with 2-3 one-click clickable decision branches (e.g. `⚔️ Confront`, `🕵️ Investigate`, `🤝 Seek Alliance`) displayed directly above the prompt input dock and in the Agent tab.
   - `🎲 Roll Ideas` feature: One-click button dynamically generates fresh context-aware beats leveraging established characters, universal laws, and locations on the fly.
   - Cost Optimization & Documentation: Total cost per serialized episode is ~$0.015 - $0.02 total (~$0.0006 text via `muse-spark-1.3`/`llama-3.3-70b`, ~$0.003 - $0.015 image via Fireworks FLUX or `muse-image-1.0`), with 100% free modes via Instant Simulation Engine and local Ollama. Unified full-page generation reduces image API calls by 75%.
+  - Cost Optimization Suite Deployed (2026-10-29):
+    - Added Groq Free Tier (`llama-3.1-8b-instant`) to 1-click presets in `META_PRESETS` for 100% free cloud text generation.
+    - Updated image generation routing in `/api/generate-image`: allows on-the-fly selection of `simulation` ($0.00) or `flux-1-schnell` (~$0.003) regardless of root provider.
+    - Added live Cost & Engine Quick Switcher directly on the drafting canvas in `ComicPageSpread.tsx` (`Free Preview ($0.00)`, `FLUX.1 Schnell (~$0.003)`, `Meta Muse Image (~$0.015)`).
+    - Intelligent initial engine resolution: defaults to `simulation` ($0.00) in Free Mode, and `flux-1-schnell` (~$0.003) in paid mode, slashing image costs by 80% out of the box.
+    - Dynamic Draw button label displaying the exact cost before synthesizing artwork.
+    - Added Cost Optimization tip banner in `SettingsModal.tsx`.
   - Full-Screen Universe & Character Studio ([`UniverseBuilderStudio.tsx`](src/components/UniverseBuilderStudio.tsx)): Replaced cramped modal with full-page workspace featuring Gender, Visual Appearance & Clothing anchors, Personality, Catchphrases, and live Universe Bible preview.
   - Dynamic Story & Episode Prompt Engine:
     - Completely decoupled story generation from hardcoded CBT templates; stories are now dynamically generated around the user's premise, characters, genre, and action arc.

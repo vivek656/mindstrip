@@ -158,6 +158,14 @@ export function SettingsModal({ isOpen, onClose, config, onSaveConfig }: Setting
                   <span className="text-[10px] text-zinc-400">Click to auto-configure</span>
                 </div>
 
+                {/* Cost Optimization Tip Banner */}
+                <div className="mb-3 p-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 rounded-xl flex items-center gap-2 text-xs text-emerald-950">
+                  <span className="text-base shrink-0">💡</span>
+                  <div className="leading-tight">
+                    <span className="font-bold">Lowest Cost Tip:</span> Pair <span className="font-semibold underline">Groq Free Tier</span> or <span className="font-semibold underline">Local Ollama</span> ($0.00) with <span className="font-semibold underline">FLUX.1 Schnell</span> (~$0.003/page) for 330+ episodes per $1!
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {META_PRESETS.map((preset) => {
                     const isSelected = provider === preset.provider && modelName === preset.modelName;

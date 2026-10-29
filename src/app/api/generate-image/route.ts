@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
       effectiveLayout = layoutStyle;
     }
 
-    // Simulation / Free Preview Provider
-    if (provider === 'simulation') {
+    // Simulation / Free Preview Provider ($0.00 Zero Cost)
+    if (provider === 'simulation' || imageModel === 'simulation') {
       const cleanPrompt = encodeURIComponent(
         (customPrompt || prompt || episodeTitle || 'dynamic comic scene').slice(0, 100)
       );
@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
 
-    if (provider === 'fireworks') {
+    const isFireworks = provider === 'fireworks' || imageModel === 'flux-1-schnell';
+
+    if (isFireworks) {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
       targetApiKey = apiKey || process.env.FIREWORKS_API_KEY || '';
     } else {
@@ -56,8 +58,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (!targetApiKey) {
+      const providerName = isFireworks ? 'Fireworks AI' : 'Meta Model';
       return NextResponse.json(
-        { error: 'Meta Model API Key not detected. Please add META_MODEL_API_KEY in .env.local or configure in Settings.' },
+        { error: `${providerName} API Key not detected. Add your key in Settings, or select "Free Preview ($0.00)" for instant zero-cost artwork.` },
         { status: 401 }
       );
     }
@@ -83,7 +86,7 @@ export async function POST(req: NextRequest) {
       ? customPrompt.trim()
       : `${artStyle} ${layoutDescriptor}, high resolution sequential art, depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${prompt || episodeTitle || worldTitle || 'epic confrontation'}. Dynamic composition, expressive graphic novel panel layout, cinematic lighting.`;
 
-    if (provider === 'fireworks') {
+    if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
         method: 'POST',
         headers: {

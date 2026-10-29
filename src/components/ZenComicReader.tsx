@@ -765,6 +765,7 @@ export function ZenComicReader({
                     onGenerateArtwork={onGenerateArtwork}
                     isGeneratingArtwork={isGeneratingArtwork}
                     artworkError={artworkError}
+                    apiConfig={apiConfig}
                   />
 
                   {/* Minimal Core Truth Reflection Banner */}
