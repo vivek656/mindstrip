@@ -35,12 +35,19 @@ export async function POST(req: NextRequest) {
       effectiveLayout = layoutStyle;
     }
 
+    // Sanitize any accidental "panel 1", "panel 2" mentions from user or episode prompt to prevent models from drawing text labels
+    const sanitizedPrompt = (customPrompt || prompt || episodeTitle || 'epic confrontation')
+      .replace(/panel\s*\d+/gi, 'story beat')
+      .replace(/panel\s*(one|two|three|four)/gi, 'story beat')
+      .replace(/\bpanel\b/gi, 'frame')
+      .trim();
+
     // Simulation / Free Preview Provider ($0.00 Zero Cost)
     if (provider === 'simulation' || imageModel === 'simulation') {
       const cleanPrompt = encodeURIComponent(
-        (customPrompt || prompt || episodeTitle || 'dynamic comic scene').slice(0, 100)
+        `${sanitizedPrompt} ${artStyle} graphic novel spread pure visual art textless no text no numbers no labels`.slice(0, 140)
       );
-      const mockUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}%20${artStyle}%20comic%20strip%20graphic%20novel?width=1024&height=1365&nologo=true&seed=${Date.now()}`;
+      const mockUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=1024&height=1365&nologo=true&seed=${Date.now()}`;
       return NextResponse.json({ pageImageUrl: mockUrl, provider: 'Instant Preview Engine (Free)', layoutStyle: effectiveLayout });
     }
 
@@ -68,23 +75,24 @@ export async function POST(req: NextRequest) {
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
     const charsList = (characters || []).map((c: { name: string; appearance?: string; role?: string }) => `${c.name} (${c.appearance || c.role})`).join(' and ');
 
-    let layoutDescriptor = '4-panel sequential graphic novel comic page spread, 2x2 grid with authentic gutters';
+    // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
+    let layoutDescriptor = 'multi-frame graphic novel comic page spread, sequential visual storytelling divided by clean white gutters, borderless frame compositions';
     let calculatedAspect = userAspectRatio || '3:4';
 
     if (effectiveLayout === '1-panel') {
-      layoutDescriptor = 'cinematic full-page dramatic graphic novel splash art, single epic panoramic frame, borderless composition, dramatic lighting';
+      layoutDescriptor = 'cinematic full-page dramatic graphic novel splash illustration, single panoramic widescreen frame, borderless dynamic composition, atmospheric lighting';
       calculatedAspect = userAspectRatio || '16:9';
     } else if (effectiveLayout === '2-panel') {
-      layoutDescriptor = 'two-panel split graphic novel page spread, vertical comic gutter, two progressive confrontation and reaction panels';
+      layoutDescriptor = 'two-frame split graphic novel page spread, vertical white comic gutter, two progressive confrontation and reaction frames';
       calculatedAspect = userAspectRatio || '3:4';
     } else if (effectiveLayout === '3-panel') {
-      layoutDescriptor = 'three-panel sequential webtoon comic strip, three progressive action frames with clean gutters';
+      layoutDescriptor = 'three-frame sequential vertical strip, progressive visual action frames with clean white gutters';
       calculatedAspect = userAspectRatio || '3:4';
     }
 
-    const pagePrompt = customPrompt && customPrompt.trim().length > 10
-      ? customPrompt.trim()
-      : `${artStyle} ${layoutDescriptor}, high resolution sequential art, depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${prompt || episodeTitle || worldTitle || 'epic confrontation'}. Dynamic composition, expressive graphic novel panel layout, cinematic lighting.`;
+    const textlessDirective = 'STRICTLY TEXTLESS ARTWORK: pure visual sequential illustration, absolutely NO printed text, NO numbers, NO panel titles, NO "Panel 1" or "Panel 2" labels, NO watermarks, NO captions, NO speech bubbles, professional published comic book art.';
+
+    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${sanitizedPrompt}. ${textlessDirective} Dynamic composition, cinematic lighting.`;
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {

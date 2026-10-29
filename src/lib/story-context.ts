@@ -74,7 +74,9 @@ export function buildWorldBible(world: ComicWorld): string {
   const cast = world.characters
     .map((c) => {
       const anchor = (c.appearance || c.description || '').trim();
-      const roleAndGender = [c.role, c.gender && c.gender !== 'unspecified' ? c.gender : null]
+      const isAntagonist = c.role.toLowerCase().includes('antagonist') || c.role.toLowerCase().includes('villain') || c.role.toLowerCase().includes('nemesis');
+      const roleDisplay = isAntagonist ? `${c.role.toUpperCase()} (SWORN ADVERSARY / ENEMY - MUST OPPOSE PROTAGONIST)` : c.role;
+      const roleAndGender = [roleDisplay, c.gender && c.gender !== 'unspecified' ? c.gender : null]
         .filter(Boolean)
         .join(', ');
       let line = anchor ? `${c.name} (${roleAndGender}): ${anchor}` : `${c.name} (${roleAndGender})`;

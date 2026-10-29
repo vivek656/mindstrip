@@ -80,23 +80,25 @@ export function generateComicStripMock(
 
   // Panel 2: The Complication / Rising Tension
   const p2Desc = antagonistName
-    ? `${antagonistName} enters the scene, escalating the conflict and testing ${protagonistName}.`
+    ? `${antagonistName} ambushes the scene, sabotaging ${protagonistName}'s plan and escalating the hostility.`
     : `The pressure mounts as an unexpected obstacle complicates the situation.`;
   const p2ImagePrompt = antagonistName
-    ? `${stylePrefix}. ${antagonistName} ${antagonistGender ? `(${antagonistGender})` : ''} (${antagonistAppearance}) confronting ${protagonistName}, dramatic high-tension comic faceoff.`
-    : `${stylePrefix}. High tension comic panel, intense challenge confronting ${protagonistName}, dramatic lighting.`;
+    ? `${stylePrefix}. ${antagonistName} ${antagonistGender ? `(${antagonistGender})` : ''} (${antagonistAppearance}) confronting ${protagonistName}, dramatic high-tension confrontation, pure visual art.`
+    : `${stylePrefix}. High tension scene, intense challenge confronting ${protagonistName}, dramatic lighting, pure visual art.`;
 
   // Panel 3: The Turning Point / Breakthrough
   const p3Desc = sidekickName
-    ? `${sidekickName} steps in alongside ${protagonistName} with a breakthrough strategy.`
-    : `${protagonistName} discovers a decisive counter-move to turn the tables.`;
+    ? `${sidekickName} rushes in to support ${protagonistName}, executing a coordinated tactical counter-move against ${antagonistName || 'the opposition'}.`
+    : `${protagonistName} discovers a decisive counter-move to outmaneuver the enemy's trap.`;
   const p3ImagePrompt = sidekickName
-    ? `${stylePrefix}. ${sidekickName} ${sidekickGender ? `(${sidekickGender})` : ''} (${sidekickAppearance}) collaborating with ${protagonistName}, energetic breakthrough moment, dynamic angle.`
-    : `${stylePrefix}. ${protagonistName} executing a bold tactical plan, radiant energy, triumphant breakthrough angle.`;
+    ? `${stylePrefix}. ${sidekickName} ${sidekickGender ? `(${sidekickGender})` : ''} (${sidekickAppearance}) aiding ${protagonistName}, dynamic tactical maneuver, high energy, pure visual art.`
+    : `${stylePrefix}. ${protagonistName} executing a bold tactical plan against the adversary, radiant energy, dynamic angle, pure visual art.`;
 
   // Panel 4: The Outcome / Pacing Cliffhanger
-  const p4Desc = `The immediate conflict resolves with a lasting impact on ${worldTitle || 'this world'}.`;
-  const p4ImagePrompt = `${stylePrefix}. ${protagonistName} standing in the aftermath, cinematic wide angle, thoughtful resolution, evocative atmosphere.`;
+  const p4Desc = antagonistName
+    ? `${antagonistName} is forced to retreat into the shadows, leaving a sinister warning as ${protagonistName} braces for the next move.`
+    : `The immediate conflict resolves with forward momentum for ${worldTitle || 'this world'}.`;
+  const p4ImagePrompt = `${stylePrefix}. ${protagonistName} standing resolute in the aftermath, cinematic wide angle, high stakes cliffhanger atmosphere, pure visual art.`;
 
   const panels: ComicPanel[] = [
     {
@@ -236,18 +238,18 @@ export function generateComicStripMock(
     cognitiveAnalysis,
     metaModelUsed: modelUsed,
     nextSuggestions: [
-      `${protagonistName} investigates the secret hidden in this chapter's climax`,
+      `${protagonistName} investigates the secret weapon hidden during the clash`,
       antagonistName
-        ? `${antagonistName} retaliates with an unexpected countermeasure`
-        : `A new complication challenges the laws of this world`,
-      `A surprise ally emerges with high-stakes intelligence`
+        ? `${antagonistName} prepares a ruthless retaliatory strike from the shadows`
+        : `A dangerous complication challenges the laws of this world`,
+      `A critical breakthrough reveals the enemy's hidden objective`
     ],
     directorQuestion: {
-      question: `What should ${protagonistName} do after this encounter?`,
+      question: `How should ${protagonistName} counter ${antagonistName ? `${antagonistName}'s` : "the enemy's"} next scheme?`,
       options: [
-        { label: '⚔️ Direct Confrontation', beat: `${protagonistName} refuses to back down and initiates a direct confrontation` },
-        { label: '🕵️ Covert Investigation', beat: `${protagonistName} slips away into the shadows to gather crucial intel first` },
-        { label: '🤝 Seek an Alliance', beat: `${protagonistName} reaches out to an unexpected contact to form a temporary truce` }
+        { label: '⚔️ Direct Offensive', beat: `${protagonistName} takes the fight directly to ${antagonistName || 'the adversary'}'s stronghold` },
+        { label: '🕵️ Covert Interception', beat: `${protagonistName} tracks ${antagonistName || 'the enemy'}'s supply chain to cut off their resources` },
+        { label: '🛡️ Fortified Ambush', beat: `${protagonistName} anticipates the next strike and sets a defensive ambush` }
       ]
     }
   };

@@ -123,7 +123,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
   // Default seed prompt for granular editing
   const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
-  const defaultPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative beat: ${episode.rawBrainDump || episode.title}. Dynamic composition, expressive graphic novel panel layout.`;
+  const defaultPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative beat: ${episode.rawBrainDump || episode.title}. Dynamic composition, expressive graphic novel layout with clean gutters, strictly textless artwork without printed labels or panel numbers.`;
   const [customPrompt, setCustomPrompt] = useState<string>(defaultPrompt);
 
   // Script & Dialogue editing state

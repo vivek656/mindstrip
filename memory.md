@@ -119,6 +119,11 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Built `/api/expand-character`: Meta AI-powered 1-click `✨ Flesh Out with Meta AI` assistant that auto-generates multidimensional flaws, backstories, and cast dynamics based on universe genre.
     - Connected Dossier access across the entire app: from Tab 2 ("World Bible & Cast"), the sidebar/drawer Cast list, and `UniverseBuilderStudio.tsx`.
     - Upgraded `buildWorldBible` in `story-context.ts` so character drives, flaws, wardrobe anchors, and relationship ties are injected into Meta AI's reasoning context.
+  - Antagonist Role Enforcement & Textless Artwork Sanitation (2026-10-29):
+    - Hardened `/api/generate/route.ts` with strict Character Alignment Directives: antagonists MUST actively oppose, sabotage, menace, or fight the hero, strictly forbidding unprompted buddying up, alliances, or friendly aid unless explicitly commanded.
+    - Tagged antagonists with `[SWORN ADVERSARY / ENEMY - MUST OPPOSE PROTAGONIST]` directly in `buildWorldBible` context brief.
+    - Sanitized image prompts in `/api/generate-image/route.ts`: replaced diffusion-triggering words like "4-panel" and "panel 1" with visual terms ("multi-frame graphic novel spread with clean white gutters"), and enforced `STRICTLY TEXTLESS ARTWORK: NO words, NO numbers, NO panel titles, NO 'Panel 1' labels, NO captions`.
+    - Updated `defaultPrompt` in `ComicPageSpread.tsx` and adversarial options in `comic-generator.ts`.
   - Full-Screen Universe & Character Studio ([`UniverseBuilderStudio.tsx`](src/components/UniverseBuilderStudio.tsx)): Replaced cramped modal with full-page workspace featuring Gender, Visual Appearance & Clothing anchors, Personality, Catchphrases, and live Universe Bible preview.
   - Dynamic Story & Episode Prompt Engine:
     - Completely decoupled story generation from hardcoded CBT templates; stories are now dynamically generated around the user's premise, characters, genre, and action arc.
