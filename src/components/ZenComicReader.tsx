@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { ComicWorld, ComicStrip, ComicCharacter, PerspectiveLens } from '@/types/comic';
+import { ComicWorld, ComicStrip, ComicCharacter, PerspectiveLens, CreatorProfile } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import {
@@ -55,6 +55,9 @@ interface ZenComicReaderProps {
   onUpdateWorld?: (updatedWorld: ComicWorld) => void;
   apiConfig?: ApiConfig;
   onToggleMode?: () => void;
+  currentProfile?: CreatorProfile | null;
+  isDbConnected?: boolean;
+  onOpenAuth?: () => void;
 }
 
 export function ZenComicReader({
@@ -76,6 +79,9 @@ export function ZenComicReader({
   onUpdateWorld,
   apiConfig,
   onToggleMode,
+  currentProfile,
+  isDbConnected = false,
+  onOpenAuth,
 }: ZenComicReaderProps) {
   const [activeTab, setActiveTab] = useState<'comic' | 'universe' | 'agent'>('comic');
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>('auto');
@@ -473,6 +479,24 @@ export function ZenComicReader({
               <Share2 className="w-3.5 h-3.5" />
               <span>{copied ? 'Copied!' : 'Share'}</span>
             </button>
+
+            {/* Creator Profile & Storage Status Badge */}
+            {onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white hover:bg-zinc-100 border border-black/15 shadow-2xs transition-all cursor-pointer"
+                title={isDbConnected ? 'Synced to MongoDB Atlas' : 'Saved locally in browser'}
+              >
+                <span>{currentProfile?.avatarEmoji || '👤'}</span>
+                <span className="font-mono text-[11px] font-bold text-zinc-900">
+                  @{currentProfile?.handle || 'guest'}
+                </span>
+                <span
+                  className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-500 shadow-xs' : 'bg-amber-400'}`}
+                />
+              </button>
+            )}
 
             <button
               onClick={handleExportPng}

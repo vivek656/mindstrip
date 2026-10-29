@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb, isMongoConfigured } from '@/lib/mongodb';
 import { ComicWorld } from '@/types/comic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const userId = req.nextUrl.searchParams.get('userId') || req.headers.get('x-user-id');
+
     if (!isMongoConfigured()) {
       return NextResponse.json({ connected: false, worlds: [] });
     }
@@ -14,13 +16,15 @@ export async function GET() {
     }
 
     const worldsCollection = db.collection<ComicWorld>('worlds');
+    const query = userId ? { userId } : {};
+
     const worlds = await worldsCollection
-      .find({})
+      .find(query)
       .sort({ createdAt: -1 })
       .project<ComicWorld>({ _id: 0 })
       .toArray();
 
-    return NextResponse.json({ connected: true, worlds });
+    return NextResponse.json({ connected: true, worlds, userId });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn('MongoDB GET /api/worlds fallback:', msg);
@@ -31,7 +35,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { world, worlds } = body;
+    const { world, worlds, userId } = body;
 
     if (!isMongoConfigured()) {
       return NextResponse.json({ connected: false, saved: false, message: 'Local mode active' });
@@ -45,14 +49,16 @@ export async function POST(req: NextRequest) {
     const worldsCollection = db.collection<ComicWorld>('worlds');
 
     if (world && world.id) {
-      await worldsCollection.replaceOne({ id: world.id }, world, { upsert: true });
+      const worldToSave = { ...world, userId: world.userId || userId };
+      await worldsCollection.replaceOne({ id: world.id }, worldToSave, { upsert: true });
       return NextResponse.json({ connected: true, saved: true, id: world.id });
     }
 
     if (Array.isArray(worlds)) {
       for (const w of worlds) {
         if (w.id) {
-          await worldsCollection.replaceOne({ id: w.id }, w, { upsert: true });
+          const worldToSave = { ...w, userId: w.userId || userId };
+          await worldsCollection.replaceOne({ id: w.id }, worldToSave, { upsert: true });
         }
       }
       return NextResponse.json({ connected: true, saved: true, count: worlds.length });
@@ -70,6 +76,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
+    const userId = searchParams.get('userId') || req.headers.get('x-user-id');
 
     if (!id) {
       return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
@@ -84,7 +91,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ connected: false, deleted: false });
     }
 
-    await db.collection('worlds').deleteOne({ id });
+    const query: Record<string, string> = { id };
+    if (userId) {
+      query.userId = userId;
+    }
+
+    await db.collection('worlds').deleteOne(query);
     return NextResponse.json({ connected: true, deleted: true, id });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

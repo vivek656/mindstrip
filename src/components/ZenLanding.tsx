@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ComicWorld } from '@/types/comic';
+import { ComicWorld, CreatorProfile } from '@/types/comic';
 import { 
   Plus, 
   ArrowRight, 
@@ -31,6 +31,9 @@ interface ZenLandingProps {
   isAutoBuilding?: boolean;
   apiConfig?: ApiConfig;
   onToggleMode?: () => void;
+  currentProfile?: CreatorProfile | null;
+  isDbConnected?: boolean;
+  onOpenAuth?: () => void;
 }
 
 export function ZenLanding({
@@ -43,6 +46,9 @@ export function ZenLanding({
   isAutoBuilding = false,
   apiConfig,
   onToggleMode,
+  currentProfile,
+  isDbConnected = false,
+  onOpenAuth,
 }: ZenLandingProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -167,6 +173,25 @@ export function ZenLanding({
                   <span>Meta AI</span>
                 </button>
               </div>
+            )}
+
+            {/* Creator Profile & Storage Status Badge */}
+            {onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white hover:bg-zinc-100 border border-black/15 shadow-2xs transition-all cursor-pointer"
+                title={isDbConnected ? 'Synced to MongoDB Atlas' : 'Saved locally in browser'}
+              >
+                <span>{currentProfile?.avatarEmoji || '👤'}</span>
+                <span className="font-mono text-[11px] font-bold text-zinc-900">
+                  @{currentProfile?.handle || 'guest'}
+                </span>
+                <span
+                  className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-500 shadow-xs' : 'bg-amber-400'}`}
+                  title={isDbConnected ? 'Cloud DB Connected' : 'Local Storage Mode'}
+                />
+              </button>
             )}
 
             <button

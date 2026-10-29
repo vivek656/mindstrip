@@ -94,8 +94,19 @@ export interface ComicStrip {
   imageModel?: string; // Model used to synthesize page artwork (e.g. muse-image-1.0)
 }
 
+export interface CreatorProfile {
+  id: string; // e.g. "usr_alex_84f2" or "guest_9x72"
+  handle: string; // e.g. "alex"
+  displayName: string; // e.g. "Alex"
+  avatarEmoji: string; // e.g. "🎨"
+  isGuest: boolean;
+  pin?: string; // Optional simple passkey/PIN
+  createdAt: string;
+}
+
 export interface ComicWorld {
   id: string;
+  userId?: string; // Creator profile ID owning this universe
   title: string;
   tagline: string;
   genre: string;

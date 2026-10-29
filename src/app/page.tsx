@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ZenLanding } from '@/components/ZenLanding';
 import { ZenComicReader } from '@/components/ZenComicReader';
 import { UniverseBuilderStudio } from '@/components/UniverseBuilderStudio';
 import { SettingsModal } from '@/components/SettingsModal';
-import { ComicWorld, ComicStrip, SpeechBubble, ArtStyle, PerspectiveLens } from '@/types/comic';
+import { AuthModal } from '@/components/AuthModal';
+import { ComicWorld, ComicStrip, SpeechBubble, ArtStyle, PerspectiveLens, CreatorProfile } from '@/types/comic';
 import { GranularArtworkOptions } from '@/components/ComicPageSpread';
 import { INITIAL_WORLDS } from '@/lib/worlds';
 import { generateMindStrip, ApiConfig } from '@/lib/meta-models';
@@ -55,63 +56,141 @@ export default function Home() {
   const [activeEpisodeId, setActiveEpisodeId] = useState<string | null>(null);
   const [isBuilderOpen, setIsBuilderOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGeneratingArtwork, setIsGeneratingArtwork] = useState<boolean>(false);
   const [artworkError, setArtworkError] = useState<string | null>(null);
   const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
   const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
 
-  const syncWorldToDb = (world: ComicWorld) => {
+  // Helper to persist worlds locally (both user-scoped and global primary)
+  const saveWorldsLocally = (updatedWorlds: ComicWorld[], profile?: CreatorProfile | null) => {
+    const prof = profile !== undefined ? profile : creatorProfile;
+    try {
+      if (prof?.id) {
+        localStorage.setItem(`mindstrip_worlds_${prof.id}`, JSON.stringify(updatedWorlds));
+      }
+      localStorage.setItem('mindstrip_worlds', JSON.stringify(updatedWorlds));
+    } catch {
+      // ignore
+    }
+  };
+
+  // Sync a single universe to MongoDB Atlas tagged with creator profile
+  const syncWorldToDb = (world: ComicWorld, profileOverride?: CreatorProfile | null) => {
+    const prof = profileOverride !== undefined ? profileOverride : creatorProfile;
+    const userId = prof?.id;
+    const worldToSync = { ...world, userId: world.userId || userId };
     fetch('/api/worlds', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ world })
+      body: JSON.stringify({ world: worldToSync, userId })
     }).catch((e) => console.warn('Cloud DB sync notice:', e));
   };
 
-  // Safely hydrate from localStorage on client mount, then sync with MongoDB Atlas
-  useEffect(() => {
+  // Load and isolate worlds belonging to a specific creator profile
+  const loadWorldsForProfile = useCallback(async (profile: CreatorProfile) => {
+    const userId = profile.id;
     try {
-      const savedWorlds = localStorage.getItem('mindstrip_worlds');
-      if (savedWorlds) {
-        const parsed = JSON.parse(savedWorlds);
+      // 1. Try user-scoped localStorage first
+      const userKey = `mindstrip_worlds_${userId}`;
+      const localData = localStorage.getItem(userKey) || localStorage.getItem('mindstrip_worlds');
+      if (localData) {
+        const parsed = JSON.parse(localData);
         if (Array.isArray(parsed) && parsed.length > 0) {
           const upgraded = upgradeWorlds(parsed);
           setWorlds(upgraded);
-          try {
-            localStorage.setItem('mindstrip_worlds', JSON.stringify(upgraded));
-          } catch {
-            // ignore
-          }
         }
       }
 
-      // Check MongoDB Atlas synchronization
-      fetch('/api/worlds')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.connected) {
-            setIsDbConnected(true);
-            if (Array.isArray(data.worlds) && data.worlds.length > 0) {
-              const upgraded = upgradeWorlds(data.worlds);
-              setWorlds(upgraded);
-              try {
-                localStorage.setItem('mindstrip_worlds', JSON.stringify(upgraded));
-              } catch {
-                // ignore
-              }
-            } else {
-              // First time MongoDB connected: push local/initial worlds to Atlas
-              const current = savedWorlds ? JSON.parse(savedWorlds) : INITIAL_WORLDS;
-              fetch('/api/worlds', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ worlds: current })
-              }).catch(() => {});
-            }
-          }
-        })
-        .catch(() => {});
+      // 2. Fetch from MongoDB Atlas scoped by userId
+      const res = await fetch(`/api/worlds?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      if (data.connected) {
+        setIsDbConnected(true);
+        if (Array.isArray(data.worlds) && data.worlds.length > 0) {
+          const upgraded = upgradeWorlds(data.worlds);
+          setWorlds(upgraded);
+          saveWorldsLocally(upgraded, profile);
+        } else {
+          // If first time this user connects and no worlds in DB, seed with initial or local
+          const currentLocal = localData ? JSON.parse(localData) : INITIAL_WORLDS;
+          const seeded = currentLocal.map((w: ComicWorld) => ({ ...w, userId }));
+          fetch('/api/worlds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ worlds: seeded, userId })
+          }).catch(() => {});
+        }
+      } else {
+        setIsDbConnected(false);
+      }
+    } catch (e) {
+      console.warn('Failed to load worlds for profile:', e);
+    }
+  }, []);
+
+  // Handle switching creator profile
+  const handleLoginProfile = (newProfile: CreatorProfile) => {
+    setCreatorProfile(newProfile);
+    try {
+      localStorage.setItem('mindstrip_creator', JSON.stringify(newProfile));
+    } catch {
+      // ignore
+    }
+    loadWorldsForProfile(newProfile);
+  };
+
+  // Handle importing a JSON backup of worlds
+  const handleImportWorlds = (imported: ComicWorld[]) => {
+    const upgraded = upgradeWorlds(imported).map((w) => ({
+      ...w,
+      userId: creatorProfile?.id
+    }));
+    setWorlds(upgraded);
+    saveWorldsLocally(upgraded, creatorProfile);
+    if (creatorProfile?.id) {
+      fetch('/api/worlds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ worlds: upgraded, userId: creatorProfile.id })
+      }).catch(() => {});
+    }
+  };
+
+  // Safely hydrate creator profile and settings on client mount
+  useEffect(() => {
+    try {
+      let activeProfile: CreatorProfile | null = null;
+      const savedCreator = localStorage.getItem('mindstrip_creator');
+      if (savedCreator) {
+        try {
+          activeProfile = JSON.parse(savedCreator);
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!activeProfile) {
+        const guestNum = Math.floor(1000 + Math.random() * 9000);
+        activeProfile = {
+          id: `guest_${Date.now()}_${guestNum}`,
+          handle: `guest_${guestNum}`,
+          displayName: `Guest Creator #${guestNum}`,
+          avatarEmoji: '🎨',
+          isGuest: true,
+          createdAt: new Date().toISOString()
+        };
+        try {
+          localStorage.setItem('mindstrip_creator', JSON.stringify(activeProfile));
+        } catch {
+          // ignore
+        }
+      }
+
+      setCreatorProfile(activeProfile);
+      loadWorldsForProfile(activeProfile);
 
       const savedConfig = localStorage.getItem('mindstrip_api_config');
       if (savedConfig) {
@@ -132,7 +211,7 @@ export default function Home() {
     } catch (e) {
       console.warn('Failed to load local storage state:', e);
     }
-  }, []);
+  }, [loadWorldsForProfile]);
 
   const handleToggleMode = () => {
     if (apiConfig.mode === 'free') {
@@ -684,6 +763,9 @@ export default function Home() {
           onUpdateWorld={handleUpdateWorld}
           apiConfig={apiConfig}
           onToggleMode={handleToggleMode}
+          currentProfile={creatorProfile}
+          isDbConnected={isDbConnected}
+          onOpenAuth={() => setIsAuthOpen(true)}
         />
       ) : (
         /* Widescreen Desktop Editorial Landing Screen */
@@ -697,6 +779,9 @@ export default function Home() {
           isAutoBuilding={isAutoBuilding}
           apiConfig={apiConfig}
           onToggleMode={handleToggleMode}
+          currentProfile={creatorProfile}
+          isDbConnected={isDbConnected}
+          onOpenAuth={() => setIsAuthOpen(true)}
         />
       )}
 
@@ -713,6 +798,17 @@ export default function Home() {
             // ignore
           }
         }}
+      />
+
+      {/* Creator Profile, Auth & Storage Backup Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        currentProfile={creatorProfile}
+        onLoginProfile={handleLoginProfile}
+        isDbConnected={isDbConnected}
+        worlds={worlds}
+        onImportWorlds={handleImportWorlds}
       />
     </>
   );
