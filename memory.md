@@ -70,6 +70,12 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Added Storage Transparency Modal (`AuthModal.tsx`) showing live storage mode (`🟢 Cloud Database Active` vs `💾 Private Browser Storage`).
   - Added 1-click **Export Backup (.json)** and **Import Backup (.json)** for complete data sovereignty and cross-device portability.
   - Added interactive Creator Profile pill in both `ZenLanding` and `ZenComicReader` headers.
+- Universe Laws, Canon Locations & Custom World Attributes:
+  - Extended `ComicWorld` schema with `laws?: WorldLaw[]`, `locations?: WorldLocation[]`, and `customAttributes?: CustomWorldAttribute[]`.
+  - Upgraded `buildWorldBible` in `story-context.ts`: all universal laws (physics, magic, taboos, social laws), staging locations, and arbitrary custom parameters are injected as canonical constraints into Meta's `muse-spark-1.3` context.
+  - Built interactive management UI in `ZenComicReader.tsx` (Tab 2: World Bible) allowing creators to add, edit, and delete laws, locations, parameters, and lore in real time.
+  - Added Step 3 ("Universal Laws, Locations & Custom Quirks") to `UniverseBuilderStudio.tsx` with 1-click inspiration pills (Time Loop, Equivalent Exchange, Low Gravity, Coffee Currency, etc.).
+  - Enriched initial starter worlds with concrete lore, laws, landmarks, and parameters.
 - Git & Vercel Deployment:
   - Codebase verified with clean `npm run build` (Next.js 16.4.3).
   - Pushed to GitHub repository (`https://github.com/vivek656/mindstrip`).
