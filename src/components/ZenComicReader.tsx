@@ -739,8 +739,8 @@ export function ZenComicReader({
                   {episode.directorReasoning && (
                     <div className="w-full mb-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200/80 rounded-2xl px-5 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs">
                       <div className="flex items-center gap-2.5">
-                        <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-mono font-bold text-[10px] uppercase tracking-wider">
-                          AI Pacing Decision
+                        <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-mono font-bold text-[10px] uppercase tracking-wider shrink-0">
+                          Episode #{episode.episodeNumber || 1} Pacing
                         </span>
                         <span className="text-zinc-800 font-medium italic">
                           &ldquo;{episode.directorReasoning}&rdquo;
