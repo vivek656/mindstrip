@@ -361,7 +361,9 @@ export default function Home() {
           episodeTitle: activeEpisode.title,
           provider: apiConfig?.provider,
           apiKey: apiConfig?.apiKey,
-          baseUrl: apiConfig?.baseUrl
+          baseUrl: apiConfig?.baseUrl,
+          imageModel: activeEpisode.imageModel || activeWorld.imageModel,
+          layoutStyle: activeEpisode.layoutStyle || '4-panel'
         })
       });
 

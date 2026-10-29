@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
       worldTitle,
       genre,
       storyContext,
-      layoutPreference = 'auto' // 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'
+      layoutPreference = 'auto', // 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'
+      imageModel
     } = body;
 
     if (!rawDump) {
@@ -203,7 +204,7 @@ Episode Premise / Prompt: "${rawDump}"`
                       'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                      model: process.env.META_IMAGE_MODEL || 'muse-image-1.0',
+                      model: imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0',
                       prompt: pagePrompt,
                       n: 1,
                       size: '1024x1024'

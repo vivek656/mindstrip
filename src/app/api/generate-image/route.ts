@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
       provider = 'meta-api',
       apiKey,
       baseUrl,
-      layoutStyle = '4-panel'
+      layoutStyle = '4-panel',
+      imageModel
     } = body;
 
     let targetBaseUrl = 'https://api.meta.ai/v1';
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: process.env.META_IMAGE_MODEL || 'muse-image-1.0',
+          model: imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0',
           prompt: pagePrompt,
           n: 1,
           size: '1024x1024'
