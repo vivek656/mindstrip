@@ -40,7 +40,7 @@ interface ComicPageSpreadProps {
   episode: ComicStrip;
   showBubbles?: boolean;
   onUpdateDialogue?: (panelNumber: number, bubbleId: string, text: string) => void;
-  onAddDialogue?: (panelNumber: number, speaker: string, text: string, type: 'speech' | 'thought' | 'shout' | 'caption') => void;
+  onAddDialogue?: (panelNumber: number, speaker: string, text: string, type: SpeechBubble['type']) => void;
   onDeleteDialogue?: (panelNumber: number, bubbleId: string) => void;
   onUpdatePanelScene?: (panelNumber: number, newDescription: string, newSoundEffect?: string) => void;
   onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
@@ -124,11 +124,19 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [isFullscreenZoom, setIsFullscreenZoom] = useState(false);
   const [isScriptExpanded, setIsScriptExpanded] = useState(false);
 
+  // Granular art custom style state
+  const [isCustomArtStyle, setIsCustomArtStyle] = useState(false);
+  const [customArtStyleText, setCustomArtStyleText] = useState('');
+
   // Add dialogue form state
   const [addingBubblePanel, setAddingBubblePanel] = useState<number | null>(null);
   const [newSpeaker, setNewSpeaker] = useState(world.characters[0]?.name || 'Protagonist');
+  const [isCustomSpeaker, setIsCustomSpeaker] = useState(false);
+  const [customSpeakerText, setCustomSpeakerText] = useState('');
   const [newBubbleText, setNewBubbleText] = useState('');
-  const [newBubbleType, setNewBubbleType] = useState<'speech' | 'thought' | 'shout' | 'caption'>('speech');
+  const [newBubbleType, setNewBubbleType] = useState<SpeechBubble['type']>('speech');
+  const [isCustomBubbleType, setIsCustomBubbleType] = useState(false);
+  const [customBubbleTypeText, setCustomBubbleTypeText] = useState('');
 
   // Edit sound effect state
   const [editingSoundPanel, setEditingSoundPanel] = useState<number | null>(null);
@@ -206,9 +214,15 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
   const handleSaveNewBubble = (panelNumber: number) => {
     if (!newBubbleText.trim() || !onAddDialogue) return;
-    onAddDialogue(panelNumber, newSpeaker, newBubbleText.trim(), newBubbleType);
+    const finalSpeaker = isCustomSpeaker && customSpeakerText.trim() ? customSpeakerText.trim() : newSpeaker;
+    const finalType = isCustomBubbleType && customBubbleTypeText.trim() ? customBubbleTypeText.trim() : newBubbleType;
+    onAddDialogue(panelNumber, finalSpeaker, newBubbleText.trim(), finalType);
     setAddingBubblePanel(null);
     setNewBubbleText('');
+    setIsCustomSpeaker(false);
+    setCustomSpeakerText('');
+    setIsCustomBubbleType(false);
+    setCustomBubbleTypeText('');
   };
 
   const handleSaveSoundEffect = (panelNumber: number) => {
@@ -355,10 +369,11 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     type="button"
                     onClick={() => {
                       setSelectedArtStyle(style.id);
+                      setIsCustomArtStyle(false);
                       setCustomPrompt((prev) => prev.replace(/^\w+\s/, `${style.id} `));
                     }}
                     className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
-                      selectedArtStyle === style.id
+                      !isCustomArtStyle && selectedArtStyle === style.id
                         ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
                         : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
                     }`}
@@ -370,7 +385,41 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{style.desc}</p>
                   </button>
                 ))}
+
+                {/* Custom Art Style Option */}
+                <button
+                  type="button"
+                  onClick={() => setIsCustomArtStyle(true)}
+                  className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                    isCustomArtStyle
+                      ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
+                      : 'bg-zinc-900 border-dashed border-zinc-700 text-zinc-300 hover:border-zinc-500'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs">
+                    <span>✨</span>
+                    <span>Custom Art Style</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">Define your own medium</p>
+                </button>
               </div>
+
+              {isCustomArtStyle && (
+                <input
+                  type="text"
+                  value={customArtStyleText}
+                  onChange={(e) => {
+                    setCustomArtStyleText(e.target.value);
+                    if (e.target.value.trim()) {
+                      setSelectedArtStyle(e.target.value.trim());
+                      setCustomPrompt((prev) => `${e.target.value.trim()} ${prev}`);
+                    }
+                  }}
+                  placeholder="e.g. Charcoal & Pastel, 1980s Retro Anime Cel..."
+                  className="w-full mt-1.5 p-2 bg-zinc-900 border border-zinc-700 rounded-lg text-xs text-zinc-100 font-mono outline-none focus:border-blue-500"
+                  autoFocus
+                />
+              )}
             </div>
 
             {/* Control 2: Layout Format */}
@@ -837,8 +886,15 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
                       <div className="grid grid-cols-2 gap-2">
                         <select
-                          value={newSpeaker}
-                          onChange={(e) => setNewSpeaker(e.target.value)}
+                          value={isCustomSpeaker ? '__custom__' : newSpeaker}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') {
+                              setIsCustomSpeaker(true);
+                            } else {
+                              setIsCustomSpeaker(false);
+                              setNewSpeaker(e.target.value);
+                            }
+                          }}
                           className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
                         >
                           {world.characters.map((c) => (
@@ -847,19 +903,52 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                             </option>
                           ))}
                           <option value="Narrator">📜 Narrator</option>
+                          <option value="__custom__">✨ Custom Speaker...</option>
                         </select>
 
                         <select
-                          value={newBubbleType}
-                          onChange={(e) => setNewBubbleType(e.target.value as any)}
+                          value={isCustomBubbleType ? '__custom__' : newBubbleType}
+                          onChange={(e) => {
+                            if (e.target.value === '__custom__') {
+                              setIsCustomBubbleType(true);
+                            } else {
+                              setIsCustomBubbleType(false);
+                              setNewBubbleType(e.target.value as any);
+                            }
+                          }}
                           className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
                         >
                           <option value="speech">💬 Speech</option>
                           <option value="thought">💭 Thought</option>
                           <option value="shout">💥 Shout</option>
                           <option value="caption">📜 Caption</option>
+                          <option value="whisper">🤫 Whisper</option>
+                          <option value="radio">📻 Comm / Radio</option>
+                          <option value="__custom__">✨ Custom Type...</option>
                         </select>
                       </div>
+
+                      {isCustomSpeaker && (
+                        <input
+                          type="text"
+                          value={customSpeakerText}
+                          onChange={(e) => setCustomSpeakerText(e.target.value)}
+                          placeholder="Type custom speaker name..."
+                          className="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs outline-none font-mono"
+                          autoFocus
+                        />
+                      )}
+
+                      {isCustomBubbleType && (
+                        <input
+                          type="text"
+                          value={customBubbleTypeText}
+                          onChange={(e) => setCustomBubbleTypeText(e.target.value)}
+                          placeholder="Type custom bubble type (e.g. telepathy, digital-chime)..."
+                          className="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs outline-none font-mono"
+                          autoFocus
+                        />
+                      )}
 
                       <input
                         type="text"

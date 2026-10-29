@@ -4,7 +4,8 @@ export type ArtStyle =
   | 'newspaper'     // Classic warm vintage newspaper
   | 'noir'          // High contrast moody graphic novel
   | 'minimalist'    // Crisp editorial ink linework
-  | 'cyberpunk';
+  | 'cyberpunk'     // Glowing neon cyber
+  | (string & {});  // Fully open for creator-defined custom art styles!
 
 export type PerspectiveLens = 'candid' | 'stoic' | 'satirical' | 'empathetic' | 'engineer';
 
@@ -13,8 +14,8 @@ export type LayoutMode = 'page' | 'strip' | 'grid' | 'webtoon';
 export interface ComicCharacter {
   id: string;
   name: string;
-  role: 'protagonist' | 'sidekick' | 'antagonist' | 'supporting';
-  gender?: 'male' | 'female' | 'non-binary' | 'robot-ai' | 'creature-other' | 'unspecified';
+  role: 'protagonist' | 'sidekick' | 'antagonist' | 'supporting' | (string & {}); // Custom roles allowed!
+  gender?: 'male' | 'female' | 'non-binary' | 'robot-ai' | 'creature-other' | 'unspecified' | (string & {}); // Custom entities allowed!
   appearance?: string; // Visual details: hair, clothing, signature accessories, physical style
   personality?: string; // Archetype or emotional vibe (e.g. sarcastic, hyper-focused, stoic)
   catchphrase?: string; // Signature quote or catchphrase
@@ -27,7 +28,7 @@ export interface SpeechBubble {
   id: string;
   speaker: string;
   text: string;
-  type: 'speech' | 'thought' | 'whisper' | 'shout' | 'caption';
+  type: 'speech' | 'thought' | 'whisper' | 'shout' | 'caption' | (string & {}); // Custom speech types!
   position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
 }
 
@@ -115,7 +116,7 @@ export interface WorldLaw {
   id: string;
   title: string; // e.g. "Law of Equivalent Exchange", "The Friday Deploy Taboo"
   rule: string; // The exact rule, constraint, physics, or magic law
-  category: 'physics' | 'magic' | 'social' | 'taboo' | 'custom';
+  category: 'physics' | 'magic' | 'social' | 'taboo' | 'custom' | (string & {});
 }
 
 export interface CustomWorldAttribute {

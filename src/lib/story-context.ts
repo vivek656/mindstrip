@@ -74,7 +74,10 @@ export function buildWorldBible(world: ComicWorld): string {
   const cast = world.characters
     .map((c) => {
       const anchor = (c.appearance || c.description || '').trim();
-      const line = anchor ? `${c.name} (${c.role}): ${anchor}` : `${c.name} (${c.role})`;
+      const roleAndGender = [c.role, c.gender && c.gender !== 'unspecified' ? c.gender : null]
+        .filter(Boolean)
+        .join(', ');
+      const line = anchor ? `${c.name} (${roleAndGender}): ${anchor}` : `${c.name} (${roleAndGender})`;
       return c.catchphrase ? `${line} Catchphrase: "${c.catchphrase}"` : line;
     })
     .join('\n');

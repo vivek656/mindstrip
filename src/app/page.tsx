@@ -247,7 +247,7 @@ export default function Home() {
   const activeWorld = worlds.find((w) => w.id === activeWorldId) || null;
   const activeEpisode = activeWorld
     ? activeWorld.episodes.find((ep) => ep.id === activeEpisodeId) ||
-      activeWorld.episodes[activeWorld.episodes.length - 1]
+      (activeWorld.episodes.length > 0 ? activeWorld.episodes[activeWorld.episodes.length - 1] : null)
     : null;
 
   const handleSelectWorld = (world: ComicWorld) => {
@@ -255,22 +255,47 @@ export default function Home() {
     const latestEp = world.episodes[world.episodes.length - 1];
     if (latestEp) {
       setActiveEpisodeId(latestEp.id);
+    } else {
+      setActiveEpisodeId(null);
     }
   };
 
-  const handleCreateNewWorld = async (newWorld: ComicWorld) => {
+  const handleCreateNewWorld = async (
+    newWorld: ComicWorld,
+    startWithEpisode: boolean = true,
+    initialPremise?: string
+  ) => {
+    // Stamp user id if logged in
+    const worldToSave: ComicWorld = {
+      ...newWorld,
+      userId: creatorProfile?.id,
+    };
+
+    if (!startWithEpisode) {
+      // Creator chose "Review World Bible First": save world with 0 episodes and open directly in Reader
+      const updated = [worldToSave, ...worlds];
+      setWorlds(updated);
+      setActiveWorldId(worldToSave.id);
+      setActiveEpisodeId(null);
+      setIsBuilderOpen(false);
+      syncWorldToDb(worldToSave);
+      saveWorldsLocally(updated, creatorProfile);
+      return;
+    }
+
     setIsLoading(true);
+    setIsBuilderOpen(false);
     try {
-      // New world: context is just the bible (no episodes exist yet).
-      const storyContext = buildStoryContext(newWorld, newWorld.tagline);
+      const premise = initialPremise?.trim() || worldToSave.tagline;
+      const storyContext = buildStoryContext(worldToSave, premise);
       const generated = await generateMindStrip(
-        newWorld.tagline,
-        newWorld.artStyle,
+        premise,
+        worldToSave.artStyle,
         'candid',
         apiConfig,
-        newWorld.characters,
-        newWorld.title,
-        newWorld.genre,
+        worldToSave.characters,
+        worldToSave.title,
+        worldToSave.genre,
         storyContext
       );
 
@@ -278,11 +303,11 @@ export default function Home() {
         ...generated,
         ...writeRecap(generated),
         episodeNumber: 1,
-        title: `${newWorld.title}: Origin`,
+        title: `${worldToSave.title}: Origin`,
       };
 
       const worldWithEpisode: ComicWorld = {
-        ...newWorld,
+        ...worldToSave,
         episodes: [firstEpisode],
       };
 
@@ -291,12 +316,7 @@ export default function Home() {
       setActiveWorldId(worldWithEpisode.id);
       setActiveEpisodeId(firstEpisode.id);
       syncWorldToDb(worldWithEpisode);
-
-      try {
-        localStorage.setItem('mindstrip_worlds', JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
+      saveWorldsLocally(updated, creatorProfile);
     } catch (e) {
       console.error('World creation episode generation failed:', e);
     } finally {
@@ -331,7 +351,7 @@ export default function Home() {
         ...generated,
         ...writeRecap(generated),
         episodeNumber: nextNum,
-        title: `Episode #${nextNum}: ${generated.title}`,
+        title: nextNum === 1 ? `${activeWorld.title}: Origin` : `Episode #${nextNum}: ${generated.title}`,
       };
 
       const updatedWorld: ComicWorld = {
@@ -657,7 +677,7 @@ export default function Home() {
     panelNumber: number,
     speaker: string,
     text: string,
-    type: 'speech' | 'thought' | 'shout' | 'caption' = 'speech'
+    type: SpeechBubble['type'] = 'speech'
   ) => {
     if (!activeWorld || !activeEpisode) return;
     const newBubble: SpeechBubble = {
@@ -733,12 +753,11 @@ export default function Home() {
         /* Full-Screen Immersive Universe & Character Studio */
         <UniverseBuilderStudio
           onBack={() => setIsBuilderOpen(false)}
-          onCreateWorld={(newWorld) => {
-            handleCreateNewWorld(newWorld);
-            setIsBuilderOpen(false);
+          onCreateWorld={(newWorld, startWithEpisode, initialPremise) => {
+            handleCreateNewWorld(newWorld, startWithEpisode, initialPremise);
           }}
         />
-      ) : activeWorld && activeEpisode ? (
+      ) : activeWorld ? (
         /* Zen Full-Screen Comic Reader with Persistent Studio Sidebar */
         <ZenComicReader
           world={activeWorld}

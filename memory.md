@@ -70,6 +70,22 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Added Storage Transparency Modal (`AuthModal.tsx`) showing live storage mode (`🟢 Cloud Database Active` vs `💾 Private Browser Storage`).
   - Added 1-click **Export Backup (.json)** and **Import Backup (.json)** for complete data sovereignty and cross-device portability.
   - Added interactive Creator Profile pill in both `ZenLanding` and `ZenComicReader` headers.
+- Pre-First Page Setup & Review Flow:
+  - "Review World Bible First" pathway: allows creators to explore, expand, and finalize their characters, universal laws, staging locations, and lore in the World Bible Hub *before* drawing a single comic panel or generating Episode 1.
+  - "Launch Episode 1 with Custom Premise": allows creators to define an exact Day 1 premise directly at universe launch instead of being constrained to the generic tagline.
+  - Zero-Episode World Support: `ZenComicReader` gracefully supports worlds with 0 episodes, opening directly to World Bible mode and providing an empowering "Draw Episode 1: Origin" call-to-action.
+- Mid-Story Character Introduction (`✨ Introduce Character`):
+  - Fast-action button directly in the bottom co-director dock and desktop sidebar.
+  - Opens streamlined modal to introduce a new character/entity/faction on the fly mid-story.
+  - Automatically commits to `world.characters` and appends `@NewName arrives on the scene — ` into the prompt bar.
+- De-hardcoded Custom Creator Types:
+  - Custom Genre: Free-form text input alongside preset genres.
+  - Custom Character Role: Presets + custom role write-in (e.g. Rival Detective, Sentient OS, Cosmic Wanderer).
+  - Custom Entity Form / Gender: Presets + custom identity write-in (e.g. Cyborg Hivemind, Formless Spirit).
+  - Custom Law Category: Presets + custom category write-in (e.g. Cosmic Curse, Economic Order).
+  - Custom Art Style: Presets + custom medium/aesthetic write-in (e.g. Charcoal & Pastel, 1980s Anime Cel).
+  - Custom Speech Bubble / Dialogue Type: Presets + Whisper, Radio/Comm, and custom types.
+  - Custom Speaker write-in on panel dialogue bubbles.
 - Universe Laws, Canon Locations & Custom World Attributes:
   - Extended `ComicWorld` schema with `laws?: WorldLaw[]`, `locations?: WorldLocation[]`, and `customAttributes?: CustomWorldAttribute[]`.
   - Upgraded `buildWorldBible` in `story-context.ts`: all universal laws (physics, magic, taboos, social laws), staging locations, and arbitrary custom parameters are injected as canonical constraints into Meta's `muse-spark-1.3` context.

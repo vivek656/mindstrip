@@ -25,12 +25,13 @@ import {
   Scale,
   MapPin,
   Tag,
-  Scroll
+  Scroll,
+  Globe
 } from 'lucide-react';
 
 interface UniverseBuilderStudioProps {
   onBack: () => void;
-  onCreateWorld: (newWorld: ComicWorld) => void;
+  onCreateWorld: (newWorld: ComicWorld, startWithEpisode?: boolean, initialPremise?: string) => void;
 }
 
 const GENRE_OPTIONS = [
@@ -64,7 +65,12 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
   const [title, setTitle] = useState('');
   const [tagline, setTagline] = useState('');
   const [genre, setGenre] = useState('Sci-Fi & Cyberpunk');
+  const [isCustomGenre, setIsCustomGenre] = useState(false);
+  const [customGenreText, setCustomGenreText] = useState('');
+
   const [artStyle, setArtStyle] = useState<ArtStyle>('webcomic');
+  const [isCustomArtStyle, setIsCustomArtStyle] = useState(false);
+  const [customArtStyleText, setCustomArtStyleText] = useState('');
 
   // Character list state - starts completely empty so user defines their own cast
   const [characters, setCharacters] = useState<ComicCharacter[]>([]);
@@ -72,7 +78,13 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
   // Active character draft form state
   const [charName, setCharName] = useState('');
   const [charGender, setCharGender] = useState<GenderType>('female');
+  const [isCustomGender, setIsCustomGender] = useState(false);
+  const [customGenderText, setCustomGenderText] = useState('');
+
   const [charRole, setCharRole] = useState<RoleType>('sidekick');
+  const [isCustomRole, setIsCustomRole] = useState(false);
+  const [customRoleText, setCustomRoleText] = useState('');
+
   const [charEmoji, setCharEmoji] = useState('👩‍💻');
   const [charAppearance, setCharAppearance] = useState('');
   const [charPersonality, setCharPersonality] = useState('');
@@ -88,6 +100,7 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
   const [draftLawTitle, setDraftLawTitle] = useState('');
   const [draftLawRule, setDraftLawRule] = useState('');
   const [draftLawCategory, setDraftLawCategory] = useState<'physics' | 'magic' | 'social' | 'taboo' | 'custom'>('physics');
+  const [customLawCategoryText, setCustomLawCategoryText] = useState('');
 
   // World locations state
   const [worldLocations, setWorldLocations] = useState<WorldLocation[]>([]);
@@ -99,19 +112,27 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
   const [draftAttrKey, setDraftAttrKey] = useState('');
   const [draftAttrVal, setDraftAttrVal] = useState('');
 
+  // Custom Episode 1 premise state
+  const [customEpisode1Premise, setCustomEpisode1Premise] = useState('');
+
   const handleAddLaw = () => {
     if (!draftLawTitle.trim() || !draftLawRule.trim()) return;
+    const finalCategory = draftLawCategory === 'custom' && customLawCategoryText.trim()
+      ? customLawCategoryText.trim()
+      : draftLawCategory;
+
     setWorldLaws((prev) => [
       ...prev,
       {
         id: `law-${Date.now()}`,
         title: draftLawTitle.trim(),
         rule: draftLawRule.trim(),
-        category: draftLawCategory,
+        category: finalCategory,
       },
     ]);
     setDraftLawTitle('');
     setDraftLawRule('');
+    setCustomLawCategoryText('');
   };
 
   const handleAddLocation = () => {
@@ -161,17 +182,20 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
       return;
     }
 
+    const finalRole = isCustomRole && customRoleText.trim() ? customRoleText.trim() : charRole;
+    const finalGender = isCustomGender && customGenderText.trim() ? customGenderText.trim() : charGender;
+
     const newChar: ComicCharacter = {
       id: `char-${Date.now()}`,
       name: charName.trim(),
-      gender: charGender,
-      role: charRole,
+      gender: finalGender,
+      role: finalRole,
       appearance: charAppearance.trim() || 'Distinctive everyday comic attire with expressive features',
       personality: charPersonality.trim() || 'Pragmatic and supportive ally',
       catchphrase: charCatchphrase.trim() || undefined,
-      description: charDescription.trim() || `${charRole} in this universe`,
+      description: charDescription.trim() || `${finalRole} in this universe`,
       avatarEmoji: charEmoji,
-      traits: [charRole, charGender || 'unspecified'].filter(Boolean) as string[],
+      traits: [finalRole, finalGender || 'unspecified'].filter(Boolean) as string[],
     };
 
     setCharacters((prev) => [...prev, newChar]);
@@ -182,6 +206,10 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
     setCharPersonality('');
     setCharCatchphrase('');
     setCharDescription('');
+    setCustomRoleText('');
+    setIsCustomRole(false);
+    setCustomGenderText('');
+    setIsCustomGender(false);
     setFormError(null);
   };
 
@@ -189,23 +217,16 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
     setCharacters((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleLaunchUniverse = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      alert('Please provide a name for your comic universe.');
-      return;
-    }
-    if (characters.length === 0) {
-      alert('Please add at least one recurring character for story continuity.');
-      return;
-    }
+  const buildUniverseObject = (): ComicWorld => {
+    const finalGenre = isCustomGenre && customGenreText.trim() ? customGenreText.trim() : genre;
+    const finalArtStyle = isCustomArtStyle && customArtStyleText.trim() ? customArtStyleText.trim() : artStyle;
 
-    const newWorld: ComicWorld = {
+    return {
       id: `world-${Date.now()}`,
       title: title.trim(),
       tagline: tagline.trim() || 'A new serialized comic universe in the making',
-      genre,
-      artStyle,
+      genre: finalGenre,
+      artStyle: finalArtStyle,
       characters,
       episodes: [],
       createdAt: new Date().toISOString(),
@@ -214,8 +235,32 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
       locations: worldLocations,
       customAttributes: worldCustomAttrs,
     };
+  };
 
-    onCreateWorld(newWorld);
+  const validateUniverse = () => {
+    if (!title.trim()) {
+      alert('Please provide a name for your comic universe.');
+      return false;
+    }
+    if (characters.length === 0) {
+      alert('Please add at least one recurring character for story continuity.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleLaunchWithEpisode = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!validateUniverse()) return;
+    const newWorld = buildUniverseObject();
+    onCreateWorld(newWorld, true, customEpisode1Premise.trim() || undefined);
+  };
+
+  const handleReviewBibleFirst = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!validateUniverse()) return;
+    const newWorld = buildUniverseObject();
+    onCreateWorld(newWorld, false);
   };
 
   return (
@@ -243,22 +288,35 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onBack}
-              className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors"
+              className="px-3 sm:px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
             >
               Cancel
             </button>
 
             <button
-              onClick={handleLaunchUniverse}
+              type="button"
+              onClick={handleReviewBibleFirst}
               disabled={!title.trim() || characters.length === 0}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-sm active:scale-98"
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold bg-white border border-zinc-300 text-zinc-800 hover:bg-zinc-50 hover:border-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xs cursor-pointer"
+              title="Open universe directly in World Bible Hub to review and expand before drawing"
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Review World Bible First</span>
+              <span className="sm:hidden">Bible First</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLaunchWithEpisode}
+              disabled={!title.trim() || characters.length === 0}
+              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-sm active:scale-98 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Build Universe & Draw Episode 1</span>
+              <span>Draw Episode 1</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -315,6 +373,20 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                     className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-black/[0.08] text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 focus:ring-1 focus:ring-zinc-950 transition-all leading-relaxed"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-zinc-600 mb-1.5 flex items-center justify-between">
+                    <span>Universe Lore & Deep Canon Backstory (Optional)</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">Embedded into Meta AI Context</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={worldLore}
+                    onChange={(e) => setWorldLore(e.target.value)}
+                    placeholder="e.g. In 2088, the sea walls failed. The city became a decentralized archipelago governed by autonomous AI servers. Protagonists salvage scrap chips to survive..."
+                    className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-black/[0.08] text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 focus:ring-1 focus:ring-zinc-950 transition-all leading-relaxed"
+                  />
+                </div>
               </div>
 
               {/* Genre Selector Pills */}
@@ -327,9 +399,12 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                     <button
                       key={g}
                       type="button"
-                      onClick={() => setGenre(g)}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        genre === g
+                      onClick={() => {
+                        setGenre(g);
+                        setIsCustomGenre(false);
+                      }}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                        !isCustomGenre && genre === g
                           ? 'bg-zinc-950 text-white shadow-2xs font-semibold'
                           : 'bg-zinc-100 hover:bg-zinc-200/70 text-zinc-700 border border-black/[0.04]'
                       }`}
@@ -337,7 +412,30 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                       {g}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomGenre(true)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                      isCustomGenre
+                        ? 'bg-zinc-950 text-white shadow-2xs font-semibold'
+                        : 'bg-zinc-100 hover:bg-zinc-200/70 text-zinc-700 border border-dashed border-zinc-400'
+                    }`}
+                  >
+                    + Custom Genre...
+                  </button>
                 </div>
+                {isCustomGenre && (
+                  <div className="mt-2.5">
+                    <input
+                      type="text"
+                      value={customGenreText}
+                      onChange={(e) => setCustomGenreText(e.target.value)}
+                      placeholder="Type your custom genre (e.g. Dieselpunk Solarpunk, Absurdist Office Musical, Vedic Cyberpunk)..."
+                      className="w-full px-4 py-2 rounded-xl bg-zinc-50 border border-black/[0.12] text-xs text-zinc-950 outline-none focus:border-zinc-950 font-medium"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Visual Art Style Selector */}
@@ -349,28 +447,65 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                   {ART_STYLE_OPTIONS.map((style) => (
                     <div
                       key={style.id}
-                      onClick={() => setArtStyle(style.id)}
+                      onClick={() => {
+                        setArtStyle(style.id);
+                        setIsCustomArtStyle(false);
+                      }}
                       className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
-                        artStyle === style.id
+                        !isCustomArtStyle && artStyle === style.id
                           ? 'border-zinc-950 bg-zinc-950 text-white shadow-xs'
                           : 'border-black/[0.08] bg-zinc-50 hover:bg-zinc-100/80 text-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xl">{style.sample}</span>
-                        {artStyle === style.id && (
+                        {!isCustomArtStyle && artStyle === style.id && (
                           <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         )}
                       </div>
                       <div>
                         <div className="font-bold text-xs">{style.name}</div>
-                        <div className={`text-[10px] mt-0.5 line-clamp-2 ${artStyle === style.id ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                        <div className={`text-[10px] mt-0.5 line-clamp-2 ${!isCustomArtStyle && artStyle === style.id ? 'text-zinc-300' : 'text-zinc-500'}`}>
                           {style.desc}
                         </div>
                       </div>
                     </div>
                   ))}
+
+                  {/* Custom Art Style Card */}
+                  <div
+                    onClick={() => setIsCustomArtStyle(true)}
+                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                      isCustomArtStyle
+                        ? 'border-zinc-950 bg-zinc-950 text-white shadow-xs'
+                        : 'border-dashed border-zinc-300 bg-zinc-50 hover:bg-zinc-100/80 text-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xl">✨</span>
+                      {isCustomArtStyle && <span className="w-2 h-2 rounded-full bg-emerald-400" />}
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs">+ Custom Visual Style</div>
+                      <div className={`text-[10px] mt-0.5 line-clamp-2 ${isCustomArtStyle ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                        Define your own rendering medium or aesthetic
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {isCustomArtStyle && (
+                  <div className="mt-2.5">
+                    <input
+                      type="text"
+                      value={customArtStyleText}
+                      onChange={(e) => setCustomArtStyleText(e.target.value)}
+                      placeholder="Describe custom style (e.g. 1980s Retro Anime Cel, Charcoal & Pastel on Slate, Claymation 3D...)"
+                      className="w-full px-4 py-2 rounded-xl bg-zinc-50 border border-black/[0.12] text-xs text-zinc-950 outline-none focus:border-zinc-950 font-medium"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
             </section>
 
@@ -478,11 +613,18 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
 
                   <div>
                     <label className="block text-[11px] font-mono font-semibold uppercase text-zinc-600 mb-1">
-                      Gender
+                      Gender / Form
                     </label>
                     <select
-                      value={charGender}
-                      onChange={(e) => setCharGender(e.target.value as GenderType)}
+                      value={isCustomGender ? '__custom__' : charGender}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomGender(true);
+                        } else {
+                          setIsCustomGender(false);
+                          setCharGender(e.target.value as GenderType);
+                        }
+                      }}
                       className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
                     >
                       <option value="female">Female ♀️</option>
@@ -490,7 +632,18 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                       <option value="non-binary">Non-Binary ⚧️</option>
                       <option value="robot-ai">Robot / AI 🤖</option>
                       <option value="creature-other">Creature / Other 🐾</option>
+                      <option value="__custom__">✨ Custom Form / Identity...</option>
                     </select>
+                    {isCustomGender && (
+                      <input
+                        type="text"
+                        value={customGenderText}
+                        onChange={(e) => setCustomGenderText(e.target.value)}
+                        placeholder="e.g. Cyborg Hivemind, Formless Spirit"
+                        className="w-full mt-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-50 border border-black/10 text-xs text-zinc-900 outline-none focus:border-zinc-950 font-medium"
+                        autoFocus
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -498,15 +651,33 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                       Role in Story
                     </label>
                     <select
-                      value={charRole}
-                      onChange={(e) => setCharRole(e.target.value as RoleType)}
+                      value={isCustomRole ? '__custom__' : charRole}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomRole(true);
+                        } else {
+                          setIsCustomRole(false);
+                          setCharRole(e.target.value as RoleType);
+                        }
+                      }}
                       className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
                     >
                       <option value="protagonist">Protagonist 🌟</option>
                       <option value="sidekick">Sidekick / Partner 🤝</option>
                       <option value="antagonist">Antagonist / Foil 😈</option>
                       <option value="supporting">Supporting / Mentor 🧙‍♂️</option>
+                      <option value="__custom__">✨ Custom Story Role...</option>
                     </select>
+                    {isCustomRole && (
+                      <input
+                        type="text"
+                        value={customRoleText}
+                        onChange={(e) => setCustomRoleText(e.target.value)}
+                        placeholder="e.g. Rival Detective, Ship OS, Cosmic Wanderer"
+                        className="w-full mt-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-50 border border-black/10 text-xs text-zinc-900 outline-none focus:border-zinc-950 font-medium"
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -666,8 +837,18 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                       <option value="magic">Magic / Super 🔮</option>
                       <option value="social">Social Law ⚖️</option>
                       <option value="taboo">Strict Taboo 🚫</option>
-                      <option value="custom">Custom Quirk 📜</option>
+                      <option value="custom">✨ Custom Category... 📜</option>
                     </select>
+                    {draftLawCategory === 'custom' && (
+                      <input
+                        type="text"
+                        value={customLawCategoryText}
+                        onChange={(e) => setCustomLawCategoryText(e.target.value)}
+                        placeholder="Custom category name (e.g. Cosmic Curse, Economic Order)"
+                        className="w-full mt-1.5 px-2.5 py-1.5 rounded-lg bg-white border border-black/10 text-xs text-zinc-900 outline-none focus:border-zinc-950 font-medium"
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -848,11 +1029,11 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
               {/* Cover Preview */}
               <div className="p-4 rounded-2xl bg-[#faf9f6] border border-black/[0.06] space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-200/80 text-zinc-700 text-[10px] font-mono font-bold uppercase">
-                    {genre}
+                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-200/80 text-zinc-700 text-[10px] font-mono font-bold uppercase truncate max-w-[150px]">
+                    {isCustomGenre && customGenreText.trim() ? customGenreText : genre}
                   </span>
-                  <span className="text-[11px] font-mono text-zinc-500 capitalize">
-                    {artStyle} Art
+                  <span className="text-[11px] font-mono text-zinc-500 capitalize truncate max-w-[120px]">
+                    {isCustomArtStyle && customArtStyleText.trim() ? customArtStyleText : artStyle} Art
                   </span>
                 </div>
 
@@ -899,17 +1080,43 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                 </div>
               </div>
 
-              {/* Ready to Launch Button */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleLaunchUniverse}
-                  disabled={!title.trim() || characters.length === 0}
-                  className="w-full py-3 rounded-2xl bg-zinc-950 text-white text-xs font-semibold hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Build Universe & Draw Episode 1</span>
-                </button>
+              {/* Launch Pathways & Optional Custom Premise */}
+              <div className="space-y-3 pt-2 border-t border-black/[0.06]">
+                <div>
+                  <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-600 block mb-1">
+                    Episode 1 Premise (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customEpisode1Premise}
+                    onChange={(e) => setCustomEpisode1Premise(e.target.value)}
+                    placeholder="Optional: How does Episode 1 kick off? (Defaults to universe premise if blank)..."
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-black/[0.08] text-xs text-zinc-950 placeholder:text-zinc-400 outline-none focus:bg-white focus:border-zinc-950 leading-relaxed"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleReviewBibleFirst}
+                    disabled={!title.trim() || characters.length === 0}
+                    className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-zinc-100 text-zinc-800 text-xs font-bold border border-zinc-300 disabled:bg-zinc-100 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Explore and expand world laws and characters before drawing"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Review Bible First</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLaunchWithEpisode}
+                    disabled={!title.trim() || characters.length === 0}
+                    className="w-full py-2.5 px-3 rounded-xl bg-zinc-950 text-white text-xs font-bold hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Draw Episode 1</span>
+                  </button>
+                </div>
               </div>
             </div>
 

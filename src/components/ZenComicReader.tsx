@@ -48,7 +48,7 @@ import { toPng } from 'html-to-image';
 
 interface ZenComicReaderProps {
   world: ComicWorld;
-  episode: ComicStrip;
+  episode?: ComicStrip | null;
   onBackToWorlds: () => void;
   onGenerateNextEpisode: (
     storyPremise: string,
@@ -57,7 +57,7 @@ interface ZenComicReaderProps {
   ) => void;
   isLoading: boolean;
   onUpdateDialogue: (panelNumber: number, bubbleId: string, text: string) => void;
-  onAddDialogue?: (panelNumber: number, speaker: string, text: string, type: 'speech' | 'thought' | 'shout' | 'caption') => void;
+  onAddDialogue?: (panelNumber: number, speaker: string, text: string, type: 'speech' | 'thought' | 'shout' | 'caption' | (string & {})) => void;
   onDeleteDialogue?: (panelNumber: number, bubbleId: string) => void;
   onUpdatePanelScene?: (panelNumber: number, newDescription: string, newSoundEffect?: string) => void;
   onOpenSettings: () => void;
@@ -98,7 +98,7 @@ export function ZenComicReader({
   isDbConnected = false,
   onOpenAuth,
 }: ZenComicReaderProps) {
-  const [activeTab, setActiveTab] = useState<'comic' | 'universe' | 'agent'>('comic');
+  const [activeTab, setActiveTab] = useState<'comic' | 'universe' | 'agent'>(episode ? 'comic' : 'universe');
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>('auto');
   const [selectedLens, setSelectedLens] = useState<PerspectiveLens>('candid');
   const [prompt, setPrompt] = useState('');
@@ -106,11 +106,16 @@ export function ZenComicReader({
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isAddCharOpen, setIsAddCharOpen] = useState(false);
+  const [isMidStoryIntro, setIsMidStoryIntro] = useState(false);
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
   const [newCharRole, setNewCharRole] = useState<ComicCharacter['role']>('sidekick');
+  const [isCustomCharRole, setIsCustomCharRole] = useState(false);
+  const [customCharRoleText, setCustomCharRoleText] = useState('');
   const [newCharGender, setNewCharGender] = useState<ComicCharacter['gender']>('female');
+  const [isCustomCharGender, setIsCustomCharGender] = useState(false);
+  const [customCharGenderText, setCustomCharGenderText] = useState('');
   const [newCharEmoji, setNewCharEmoji] = useState('⚡');
   const [newCharAppearance, setNewCharAppearance] = useState('');
   const [newCharPersonality, setNewCharPersonality] = useState('');
@@ -121,6 +126,8 @@ export function ZenComicReader({
   const [newLawTitle, setNewLawTitle] = useState('');
   const [newLawRule, setNewLawRule] = useState('');
   const [newLawCategory, setNewLawCategory] = useState<'physics' | 'magic' | 'social' | 'taboo' | 'custom'>('physics');
+  const [isCustomLawCat, setIsCustomLawCat] = useState(false);
+  const [customLawCatText, setCustomLawCatText] = useState('');
 
   // World Locations state
   const [isAddLocOpen, setIsAddLocOpen] = useState(false);
@@ -140,7 +147,7 @@ export function ZenComicReader({
   const stripRef = useRef<HTMLDivElement>(null);
 
   const handleExportPng = async () => {
-    if (!stripRef.current) return;
+    if (!stripRef.current || !episode) return;
     try {
       setIsExporting(true);
       const dataUrl = await toPng(stripRef.current, {
@@ -159,6 +166,12 @@ export function ZenComicReader({
   };
 
   const handleShare = () => {
+    if (!episode) {
+      navigator.clipboard.writeText(`${world.title} • ${world.tagline}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      return;
+    }
     const text = `${world.title} • Episode #${episode.episodeNumber || 1}: "${episode.title}"\n\n"${episode.cognitiveAnalysis?.coreTruth || ''}"`;
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -180,17 +193,20 @@ export function ZenComicReader({
     e.preventDefault();
     if (!newCharName.trim() || !onUpdateWorld) return;
 
+    const finalRole = isCustomCharRole && customCharRoleText.trim() ? customCharRoleText.trim() : newCharRole;
+    const finalGender = isCustomCharGender && customCharGenderText.trim() ? customCharGenderText.trim() : newCharGender;
+
     const newChar: ComicCharacter = {
       id: `char-${Date.now()}`,
       name: newCharName.trim(),
-      role: newCharRole,
-      gender: newCharGender,
+      role: finalRole,
+      gender: finalGender,
       avatarEmoji: newCharEmoji || '⚡',
       appearance: newCharAppearance.trim() || 'Distinctive comic attire with expressive features',
       personality: newCharPersonality.trim() || 'Resourceful ally',
       catchphrase: newCharCatchphrase.trim() || undefined,
-      description: `${newCharRole} in ${world.title}`,
-      traits: [newCharRole, newCharGender || 'unspecified']
+      description: `${finalRole} in ${world.title}`,
+      traits: [finalRole, finalGender || 'unspecified']
     };
 
     const updatedWorld: ComicWorld = {
@@ -199,21 +215,36 @@ export function ZenComicReader({
     };
 
     onUpdateWorld(updatedWorld);
+
+    // If this was introduced mid-story from the co-director dock, automatically insert into prompt!
+    if (isMidStoryIntro) {
+      setPrompt((prev) => {
+        const introBeat = `@${newChar.name} arrives on the scene — `;
+        return prev ? `${prev} ${introBeat}` : introBeat;
+      });
+    }
+
     setIsAddCharOpen(false);
+    setIsMidStoryIntro(false);
     setNewCharName('');
     setNewCharAppearance('');
     setNewCharPersonality('');
     setNewCharCatchphrase('');
+    setIsCustomCharRole(false);
+    setCustomCharRoleText('');
+    setIsCustomCharGender(false);
+    setCustomCharGenderText('');
   };
 
   const handleSaveLaw = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLawTitle.trim() || !newLawRule.trim() || !onUpdateWorld) return;
+    const finalCategory = isCustomLawCat && customLawCatText.trim() ? customLawCatText.trim() : newLawCategory;
     const newLaw: WorldLaw = {
       id: `law-${Date.now()}`,
       title: newLawTitle.trim(),
       rule: newLawRule.trim(),
-      category: newLawCategory,
+      category: finalCategory,
     };
     onUpdateWorld({
       ...world,
@@ -222,6 +253,8 @@ export function ZenComicReader({
     setIsAddLawOpen(false);
     setNewLawTitle('');
     setNewLawRule('');
+    setIsCustomLawCat(false);
+    setCustomLawCatText('');
   };
 
   const handleDeleteLaw = (id: string) => {
@@ -370,28 +403,34 @@ export function ZenComicReader({
           </div>
 
           <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-            {world.episodes.map((ep, idx) => {
-              const isSelected = ep.id === episode.id;
-              return (
-                <div
-                  key={ep.id}
-                  onClick={() => onSelectEpisode && onSelectEpisode(ep)}
-                  className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-between ${
-                    isSelected
-                      ? 'bg-zinc-950 text-white font-bold shadow-xs'
-                      : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border border-black/[0.04]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <span className={`font-mono text-xs ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
-                      #{idx + 1}
-                    </span>
-                    <span className="truncate">{ep.title}</span>
+            {world.episodes.length === 0 ? (
+              <div className="p-3 rounded-xl bg-zinc-50 border border-dashed border-zinc-200 text-center">
+                <span className="text-[11px] text-zinc-500 font-mono">No episodes drawn yet</span>
+              </div>
+            ) : (
+              world.episodes.map((ep, idx) => {
+                const isSelected = episode ? ep.id === episode.id : false;
+                return (
+                  <div
+                    key={ep.id}
+                    onClick={() => onSelectEpisode && onSelectEpisode(ep)}
+                    className={`px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-zinc-950 text-white font-bold shadow-xs'
+                        : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-800 border border-black/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className={`font-mono text-xs ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                        #{idx + 1}
+                      </span>
+                      <span className="truncate">{ep.title}</span>
+                    </div>
+                    {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />}
                   </div>
-                  {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -402,13 +441,26 @@ export function ZenComicReader({
               <Users className="w-4 h-4 text-zinc-700" />
               <span>Cast ({world.characters.length})</span>
             </span>
-            <button
-              type="button"
-              onClick={() => setActiveTab('universe')}
-              className="text-[11px] text-blue-600 hover:underline font-medium cursor-pointer"
-            >
-              View Dossiers &rarr;
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMidStoryIntro(true);
+                  setIsAddCharOpen(true);
+                }}
+                className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer"
+                title="Introduce new character mid-story"
+              >
+                + Intro
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('universe')}
+                className="text-[11px] text-blue-600 hover:underline font-medium cursor-pointer"
+              >
+                Dossiers &rarr;
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
@@ -475,7 +527,7 @@ export function ZenComicReader({
             </span>
 
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 font-mono font-semibold hidden md:inline border border-black/10">
-              Ep #{episode.episodeNumber || 1}
+              {episode ? `Ep #${episode.episodeNumber || 1}` : 'World Bible Mode'}
             </span>
           </div>
 
@@ -568,7 +620,7 @@ export function ZenComicReader({
             )}
 
             {/* Direct Page Art Generation Button if Episode has no page image */}
-            {onGenerateArtwork && !episode.pageImageUrl && (
+            {onGenerateArtwork && episode && !episode.pageImageUrl && (
               <button
                 type="button"
                 onClick={() => onGenerateArtwork()}
@@ -582,7 +634,7 @@ export function ZenComicReader({
             )}
 
             {/* Quick Regenerate Story & Art Button */}
-            {onRegenerateEpisode && (
+            {onRegenerateEpisode && episode && (
               <button
                 type="button"
                 onClick={onRegenerateEpisode}
@@ -621,14 +673,16 @@ export function ZenComicReader({
               </button>
             )}
 
-            <button
-              onClick={handleExportPng}
-              disabled={isExporting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition-all shadow-xs cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{isExporting ? 'Exporting...' : 'Export'}</span>
-            </button>
+            {episode && (
+              <button
+                onClick={handleExportPng}
+                disabled={isExporting}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition-all shadow-xs cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+              </button>
+            )}
 
             {/* Mobile Sidebar Hamburger Toggle */}
             <button
@@ -656,42 +710,81 @@ export function ZenComicReader({
           {/* TAB 1: COMIC SPREAD VIEW */}
           {activeTab === 'comic' && (
             <div className="w-full max-w-5xl xl:max-w-6xl mx-auto flex flex-col items-center">
-              {/* AI Director Pacing Rationale Badge */}
-              {episode.directorReasoning && (
-                <div className="w-full mb-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200/80 rounded-2xl px-5 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-mono font-bold text-[10px] uppercase tracking-wider">
-                      AI Pacing Decision
-                    </span>
-                    <span className="text-zinc-800 font-medium italic">
-                      &ldquo;{episode.directorReasoning}&rdquo;
-                    </span>
+              {episode ? (
+                <>
+                  {/* AI Director Pacing Rationale Badge */}
+                  {episode.directorReasoning && (
+                    <div className="w-full mb-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200/80 rounded-2xl px-5 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs">
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-mono font-bold text-[10px] uppercase tracking-wider">
+                          AI Pacing Decision
+                        </span>
+                        <span className="text-zinc-800 font-medium italic">
+                          &ldquo;{episode.directorReasoning}&rdquo;
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-white border border-purple-200 font-mono text-[10px] font-bold text-purple-700 uppercase shrink-0">
+                        {episode.layoutStyle || '4-panel'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* The Expansive Comic Spread */}
+                  <ComicPageSpread
+                    ref={stripRef}
+                    world={world}
+                    episode={episode}
+                    showBubbles={true}
+                    onUpdateDialogue={onUpdateDialogue}
+                    onAddDialogue={onAddDialogue}
+                    onDeleteDialogue={onDeleteDialogue}
+                    onUpdatePanelScene={onUpdatePanelScene}
+                    onGenerateArtwork={onGenerateArtwork}
+                    isGeneratingArtwork={isGeneratingArtwork}
+                    artworkError={artworkError}
+                  />
+
+                  {/* Minimal Core Truth Reflection Banner */}
+                  {episode.cognitiveAnalysis?.coreTruth && (
+                    <div className="mt-6 text-center text-xs sm:text-sm text-zinc-500 font-serif italic max-w-2xl mx-auto">
+                      &ldquo;{episode.cognitiveAnalysis.coreTruth}&rdquo;
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* World Bible Mode Screen when world has 0 episodes */
+                <div className="w-full max-w-3xl bg-white rounded-3xl p-8 sm:p-12 border-2 border-zinc-950 shadow-md text-center space-y-6 my-8">
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-100 border border-black/10 flex items-center justify-center mx-auto text-3xl">
+                    🎨
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-white border border-purple-200 font-mono text-[10px] font-bold text-purple-700 uppercase shrink-0">
-                    {episode.layoutStyle || '4-panel'}
-                  </span>
-                </div>
-              )}
+                  <div className="max-w-md mx-auto space-y-2">
+                    <h2 className="text-xl sm:text-2xl font-bold text-zinc-950">
+                      Welcome to {world.title}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+                      You are in World Setup & Bible Mode. Review laws, locations, and characters in the <strong>World Bible</strong> tab, or direct Episode #1 whenever you're ready!
+                    </p>
+                  </div>
 
-              {/* The Expansive Comic Spread */}
-              <ComicPageSpread
-                ref={stripRef}
-                world={world}
-                episode={episode}
-                showBubbles={true}
-                onUpdateDialogue={onUpdateDialogue}
-                onAddDialogue={onAddDialogue}
-                onDeleteDialogue={onDeleteDialogue}
-                onUpdatePanelScene={onUpdatePanelScene}
-                onGenerateArtwork={onGenerateArtwork}
-                isGeneratingArtwork={isGeneratingArtwork}
-                artworkError={artworkError}
-              />
-
-              {/* Minimal Core Truth Reflection Banner */}
-              {episode.cognitiveAnalysis?.coreTruth && (
-                <div className="mt-6 text-center text-xs sm:text-sm text-zinc-500 font-serif italic max-w-2xl mx-auto">
-                  &ldquo;{episode.cognitiveAnalysis.coreTruth}&rdquo;
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('universe')}
+                      className="px-5 py-2.5 rounded-full bg-white border border-black/15 text-xs font-bold text-zinc-800 hover:bg-zinc-50 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Globe className="w-4 h-4 text-blue-600" />
+                      <span>Explore World Bible & Laws</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens)}
+                      disabled={isLoading}
+                      className="px-6 py-2.5 rounded-full bg-zinc-950 hover:bg-zinc-800 text-xs font-bold text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>{isLoading ? 'Generating Episode 1...' : 'Draw Episode 1: Origin'}</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1052,10 +1145,22 @@ export function ZenComicReader({
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
                   <div className="relative w-full max-w-lg bg-white border-2 border-zinc-950 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5">
                     <div className="flex items-center justify-between pb-3 border-b border-black/[0.08]">
-                      <h3 className="font-bold text-lg text-zinc-950">Add New Character to {world.title}</h3>
+                      <div>
+                        <h3 className="font-bold text-lg text-zinc-950">
+                          {isMidStoryIntro ? '✨ Introduce Character into Scene & Canon' : `Add New Character to ${world.title}`}
+                        </h3>
+                        {isMidStoryIntro && (
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            Introduce a new person or ally mid-story. Automatically added to Canon and inserted into your current prompt!
+                          </p>
+                        )}
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setIsAddCharOpen(false)}
+                        onClick={() => {
+                          setIsAddCharOpen(false);
+                          setIsMidStoryIntro(false);
+                        }}
                         className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer"
                       >
                         <X className="w-5 h-5" />
@@ -1072,7 +1177,7 @@ export function ZenComicReader({
                             onChange={(e) => setNewCharName(e.target.value)}
                             placeholder="e.g. Inspector Vance"
                             required
-                            className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600"
+                            className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3.5 py-2 text-xs text-zinc-900 outline-none focus:ring-2 focus:ring-blue-600 font-medium"
                           />
                         </div>
 
@@ -1093,22 +1198,47 @@ export function ZenComicReader({
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-zinc-800">Role</label>
                           <select
-                            value={newCharRole}
-                            onChange={(e) => setNewCharRole(e.target.value as ComicCharacter['role'])}
+                            value={isCustomCharRole ? '__custom__' : newCharRole}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setIsCustomCharRole(true);
+                              } else {
+                                setIsCustomCharRole(false);
+                                setNewCharRole(e.target.value as ComicCharacter['role']);
+                              }
+                            }}
                             className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-xs text-zinc-900 outline-none"
                           >
                             <option value="protagonist">Protagonist (Hero)</option>
                             <option value="antagonist">Antagonist (Rival / Villain)</option>
                             <option value="sidekick">Sidekick / Partner</option>
                             <option value="supporting">Supporting Character</option>
+                            <option value="__custom__">✨ Custom Story Role...</option>
                           </select>
+                          {isCustomCharRole && (
+                            <input
+                              type="text"
+                              value={customCharRoleText}
+                              onChange={(e) => setCustomCharRoleText(e.target.value)}
+                              placeholder="e.g. Rival Detective, Sentient AI, Deity"
+                              className="w-full mt-1.5 px-3 py-1.5 bg-zinc-50 border border-zinc-300 rounded-lg text-xs text-zinc-900 outline-none font-medium"
+                              autoFocus
+                            />
+                          )}
                         </div>
 
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-zinc-800">Gender / Form</label>
                           <select
-                            value={newCharGender}
-                            onChange={(e) => setNewCharGender(e.target.value as ComicCharacter['gender'])}
+                            value={isCustomCharGender ? '__custom__' : newCharGender}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setIsCustomCharGender(true);
+                              } else {
+                                setIsCustomCharGender(false);
+                                setNewCharGender(e.target.value as ComicCharacter['gender']);
+                              }
+                            }}
                             className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-3 py-2 text-xs text-zinc-900 outline-none"
                           >
                             <option value="female">Female</option>
@@ -1116,7 +1246,18 @@ export function ZenComicReader({
                             <option value="non-binary">Non-Binary</option>
                             <option value="robot-ai">Robot / AI Chassis</option>
                             <option value="creature-other">Creature / Monster</option>
+                            <option value="__custom__">✨ Custom Form / Identity...</option>
                           </select>
+                          {isCustomCharGender && (
+                            <input
+                              type="text"
+                              value={customCharGenderText}
+                              onChange={(e) => setCustomCharGenderText(e.target.value)}
+                              placeholder="e.g. Cyborg Hivemind, Formless Spirit"
+                              className="w-full mt-1.5 px-3 py-1.5 bg-zinc-50 border border-zinc-300 rounded-lg text-xs text-zinc-900 outline-none font-medium"
+                              autoFocus
+                            />
+                          )}
                         </div>
                       </div>
 
@@ -1160,7 +1301,10 @@ export function ZenComicReader({
                       <div className="pt-3 flex items-center justify-end gap-2 border-t border-zinc-100">
                         <button
                           type="button"
-                          onClick={() => setIsAddCharOpen(false)}
+                          onClick={() => {
+                            setIsAddCharOpen(false);
+                            setIsMidStoryIntro(false);
+                          }}
                           className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-900 cursor-pointer"
                         >
                           Cancel
@@ -1170,7 +1314,7 @@ export function ZenComicReader({
                           disabled={!newCharName.trim()}
                           className="px-6 py-2 rounded-full bg-zinc-950 text-white font-bold text-xs hover:bg-blue-600 transition-all cursor-pointer disabled:opacity-50"
                         >
-                          Save Character
+                          {isMidStoryIntro ? 'Introduce & Enter Scene' : 'Save Character'}
                         </button>
                       </div>
                     </form>
@@ -1213,8 +1357,15 @@ export function ZenComicReader({
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-zinc-800">Category</label>
                           <select
-                            value={newLawCategory}
-                            onChange={(e) => setNewLawCategory(e.target.value as any)}
+                            value={isCustomLawCat ? '__custom__' : newLawCategory}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setIsCustomLawCat(true);
+                              } else {
+                                setIsCustomLawCat(false);
+                                setNewLawCategory(e.target.value as any);
+                              }
+                            }}
                             className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-2 py-2 text-xs text-zinc-900 outline-none"
                           >
                             <option value="physics">Physics ⚛️</option>
@@ -1222,7 +1373,18 @@ export function ZenComicReader({
                             <option value="social">Social Law ⚖️</option>
                             <option value="taboo">Strict Taboo 🚫</option>
                             <option value="custom">Custom Quirk 📜</option>
+                            <option value="__custom__">✨ Custom Category Name...</option>
                           </select>
+                          {isCustomLawCat && (
+                            <input
+                              type="text"
+                              value={customLawCatText}
+                              onChange={(e) => setCustomLawCatText(e.target.value)}
+                              placeholder="e.g. Cosmic Curse, Economic Order"
+                              className="w-full mt-1.5 px-3 py-1.5 bg-zinc-50 border border-zinc-300 rounded-lg text-xs text-zinc-900 outline-none font-medium"
+                              autoFocus
+                            />
+                          )}
                         </div>
                       </div>
 
@@ -1407,90 +1569,102 @@ export function ZenComicReader({
           {/* TAB 3: META AI DIRECTOR BRAIN & CANON MEMORY */}
           {activeTab === 'agent' && (
             <div className="w-full max-w-5xl xl:max-w-6xl mx-auto space-y-6 animate-in fade-in duration-200">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-zinc-950 shadow-md space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-black/[0.08]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
-                      🧠
+              {episode ? (
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-zinc-950 shadow-md space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-black/[0.08]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                        🧠
+                      </div>
+                      <div>
+                        <h2 className="font-bold text-lg text-zinc-950">Meta AI Director & Canon Memory</h2>
+                        <p className="text-xs text-zinc-500">How the autonomous Meta AI agent directs story continuity and pacing.</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="font-bold text-lg text-zinc-950">Meta AI Director & Canon Memory</h2>
-                      <p className="text-xs text-zinc-500">How the autonomous Meta AI agent directs story continuity and pacing.</p>
+
+                    <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono text-xs font-bold">
+                      {episode.metaModelUsed}
+                    </span>
+                  </div>
+
+                  {/* AI Director Pacing & Layout Rationale */}
+                  <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🎬</span>
+                        <span>Episode #{episode.episodeNumber || 1} Pacing Rationale</span>
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-purple-200/80 text-purple-900 font-mono text-xs font-bold uppercase">
+                        Layout: {episode.layoutStyle || '4-panel'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-purple-950 font-serif italic">
+                      &ldquo;{episode.directorReasoning || 'The AI Director analyzed the dramatic beats and optimized this chapter into a sequential narrative arc.'}&rdquo;
+                    </p>
+                  </div>
+
+                  {/* Canon Continuity Memory Chain */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Canon Facts Introduced */}
+                    <div className="bg-zinc-50 border border-black/[0.08] rounded-2xl p-5 space-y-3">
+                      <span className="font-mono text-xs font-bold uppercase text-zinc-800 tracking-wider flex items-center gap-1.5">
+                        <span>📜</span>
+                        <span>Canon Facts Established in this Episode</span>
+                      </span>
+                      {episode.newFacts && episode.newFacts.length > 0 ? (
+                        <ul className="space-y-1.5 text-xs text-zinc-700">
+                          {episode.newFacts.map((fact, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="font-bold text-emerald-600 font-mono">•</span>
+                              <span>{fact}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic">Established world continuity and recurring cast presence.</p>
+                      )}
+                    </div>
+
+                    {/* Open Narrative Threads */}
+                    <div className="bg-zinc-50 border border-black/[0.08] rounded-2xl p-5 space-y-3">
+                      <span className="font-mono text-xs font-bold uppercase text-zinc-800 tracking-wider flex items-center gap-1.5">
+                        <span>🪝</span>
+                        <span>Unresolved Narrative Hooks & Cliffhangers</span>
+                      </span>
+                      {episode.openThreads && episode.openThreads.length > 0 ? (
+                        <ul className="space-y-1.5 text-xs text-zinc-700">
+                          {episode.openThreads.map((thread, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="font-bold text-amber-600 font-mono">•</span>
+                              <span>{thread}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic">Open threads will carry forward into the next directed episode.</p>
+                      )}
                     </div>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono text-xs font-bold">
-                    {episode.metaModelUsed}
-                  </span>
+                  {/* Stamped Continuity Recap */}
+                  {episode.recap && (
+                    <div className="p-4 bg-zinc-100 rounded-xl border border-black/[0.06] text-xs text-zinc-700 flex items-start gap-3">
+                      <span className="font-bold font-mono uppercase text-zinc-900 shrink-0">Continuity Recap:</span>
+                      <span className="italic">{episode.recap}</span>
+                    </div>
+                  )}
                 </div>
-
-                {/* AI Director Pacing & Layout Rationale */}
-                <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>🎬</span>
-                      <span>Episode #{episode.episodeNumber || 1} Pacing Rationale</span>
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-purple-200/80 text-purple-900 font-mono text-xs font-bold uppercase">
-                      Layout: {episode.layoutStyle || '4-panel'}
-                    </span>
+              ) : (
+                <div className="bg-white rounded-3xl p-8 sm:p-12 border-2 border-zinc-950 shadow-md text-center space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center text-3xl mx-auto">
+                    🧠
                   </div>
-                  <p className="text-sm text-purple-950 font-serif italic">
-                    &ldquo;{episode.directorReasoning || 'The AI Director analyzed the dramatic beats and optimized this chapter into a sequential narrative arc.'}&rdquo;
+                  <h3 className="font-bold text-lg text-zinc-950">Meta AI Director Ready</h3>
+                  <p className="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
+                    Once Episode 1 is generated, the Meta AI Director will log the pacing rationale, canon facts established, and unresolved hooks right here.
                   </p>
                 </div>
-
-                {/* Canon Continuity Memory Chain */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Canon Facts Introduced */}
-                  <div className="bg-zinc-50 border border-black/[0.08] rounded-2xl p-5 space-y-3">
-                    <span className="font-mono text-xs font-bold uppercase text-zinc-800 tracking-wider flex items-center gap-1.5">
-                      <span>📜</span>
-                      <span>Canon Facts Established in this Episode</span>
-                    </span>
-                    {episode.newFacts && episode.newFacts.length > 0 ? (
-                      <ul className="space-y-1.5 text-xs text-zinc-700">
-                        {episode.newFacts.map((fact, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="font-bold text-emerald-600 font-mono">•</span>
-                            <span>{fact}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-zinc-500 italic">Established world continuity and recurring cast presence.</p>
-                    )}
-                  </div>
-
-                  {/* Open Narrative Threads */}
-                  <div className="bg-zinc-50 border border-black/[0.08] rounded-2xl p-5 space-y-3">
-                    <span className="font-mono text-xs font-bold uppercase text-zinc-800 tracking-wider flex items-center gap-1.5">
-                      <span>🪝</span>
-                      <span>Unresolved Narrative Hooks & Cliffhangers</span>
-                    </span>
-                    {episode.openThreads && episode.openThreads.length > 0 ? (
-                      <ul className="space-y-1.5 text-xs text-zinc-700">
-                        {episode.openThreads.map((thread, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="font-bold text-amber-600 font-mono">•</span>
-                            <span>{thread}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-zinc-500 italic">Open threads will carry forward into the next directed episode.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Stamped Continuity Recap */}
-                {episode.recap && (
-                  <div className="p-4 bg-zinc-100 rounded-xl border border-black/[0.06] text-xs text-zinc-700 flex items-start gap-3">
-                    <span className="font-bold font-mono uppercase text-zinc-900 shrink-0">Continuity Recap:</span>
-                    <span className="italic">{episode.recap}</span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
 
@@ -1554,7 +1728,7 @@ export function ZenComicReader({
                 ))}
               </div>
 
-              {/* Character Quick-Tags */}
+              {/* Character Quick-Tags & Mid-Story Intro Button */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 {world.characters.map((c) => (
                   <button
@@ -1567,6 +1741,20 @@ export function ZenComicReader({
                     <span className="font-bold">@{c.name}</span>
                   </button>
                 ))}
+
+                {/* Introduce Character Mid-Story Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMidStoryIntro(true);
+                    setIsAddCharOpen(true);
+                  }}
+                  className="px-3 py-1 rounded-full text-xs bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 hover:border-indigo-400 text-indigo-700 hover:text-indigo-950 transition-all shadow-2xs flex items-center gap-1.5 font-bold cursor-pointer"
+                  title="Introduce a new character or faction mid-story directly into the scene"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Introduce Character</span>
+                </button>
               </div>
             </div>
 
@@ -1579,7 +1767,11 @@ export function ZenComicReader({
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={`Direct Episode #${(episode.episodeNumber || 1) + 1} (e.g. @${world.characters[0]?.name || 'Hero'} faces an unexpected twist)...`}
+                placeholder={
+                  episode
+                    ? `Direct Episode #${(episode.episodeNumber || 1) + 1} (e.g. @${world.characters[0]?.name || 'Hero'} faces an unexpected twist)...`
+                    : `Direct Episode #1: Origin (e.g. How does the story begin for @${world.characters[0]?.name || 'Hero'}?)...`
+                }
                 className="flex-1 bg-transparent px-5 text-sm sm:text-base text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
               />
 
@@ -1599,7 +1791,11 @@ export function ZenComicReader({
                   </>
                 ) : (
                   <>
-                    <span>Generate Episode #{(episode.episodeNumber || 1) + 1}</span>
+                    <span>
+                      {episode
+                        ? `Generate Episode #${(episode.episodeNumber || 1) + 1}`
+                        : 'Draw Episode #1: Origin'}
+                    </span>
                     <Send className="w-4 h-4" />
                   </>
                 )}
