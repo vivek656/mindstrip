@@ -93,6 +93,14 @@ export interface ComicStrip {
   layoutStyle?: '1-panel' | '2-panel' | '3-panel' | '4-panel'; // Dynamic panel format
   directorReasoning?: string; // Meta AI Agent rationale for why this pacing/layout was selected
   imageModel?: string; // Model used to synthesize page artwork (e.g. muse-image-1.0)
+  nextSuggestions?: string[]; // 2-3 proactive story continuation suggestions from the AI Co-Director
+  directorQuestion?: {
+    question: string; // The creative fork question (e.g. "What should happen next?")
+    options: {
+      label: string;
+      beat: string;
+    }[];
+  };
 }
 
 export interface CreatorProfile {

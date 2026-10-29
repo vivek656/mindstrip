@@ -107,7 +107,20 @@ export async function generateMindStrip(
       worldTitle,
       genre
     );
-    const chosenLayout = layoutPreference === 'auto' ? '4-panel' : layoutPreference;
+    // Intelligent auto layout resolution based on scene cues
+    let chosenLayout = layoutPreference;
+    if (chosenLayout === 'auto') {
+      const lower = rawDump.toLowerCase();
+      if (/splash|epic|reveal|poster|monumental|panoramic|climax/.test(lower)) {
+        chosenLayout = '1-panel';
+      } else if (/vs|versus|faceoff|duel|confrontation|debate|argument|dialogue/.test(lower)) {
+        chosenLayout = '2-panel';
+      } else if (/chase|escape|trio|journey|escalat/.test(lower)) {
+        chosenLayout = '3-panel';
+      } else {
+        chosenLayout = '4-panel';
+      }
+    }
     const maxP = chosenLayout === '1-panel' ? 1 : chosenLayout === '2-panel' ? 2 : chosenLayout === '3-panel' ? 3 : 4;
     return {
       ...mock,

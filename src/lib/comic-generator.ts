@@ -234,6 +234,21 @@ export function generateComicStripMock(
     pageImageUrl: buildPageImageUrl(),
     panels,
     cognitiveAnalysis,
-    metaModelUsed: modelUsed
+    metaModelUsed: modelUsed,
+    nextSuggestions: [
+      `${protagonistName} investigates the secret hidden in this chapter's climax`,
+      antagonistName
+        ? `${antagonistName} retaliates with an unexpected countermeasure`
+        : `A new complication challenges the laws of this world`,
+      `A surprise ally emerges with high-stakes intelligence`
+    ],
+    directorQuestion: {
+      question: `What should ${protagonistName} do after this encounter?`,
+      options: [
+        { label: '⚔️ Direct Confrontation', beat: `${protagonistName} refuses to back down and initiates a direct confrontation` },
+        { label: '🕵️ Covert Investigation', beat: `${protagonistName} slips away into the shadows to gather crucial intel first` },
+        { label: '🤝 Seek an Alliance', beat: `${protagonistName} reaches out to an unexpected contact to form a temporary truce` }
+      ]
+    }
   };
 }

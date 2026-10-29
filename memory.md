@@ -98,6 +98,13 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Prepared Vercel deployment instructions with required environment variables.
   - Redesigned comic dialogue balloons: compact comic balloons with directional speech tails (`max-w-[72%]` instead of covering the entire panel) and clean typography.
   - Added a "Hide/Show Dialogue" toggle button in the reader toolbar to inspect the artwork completely unobstructed.
+- Intelligent AI Layout Decision & Proactive Narrative Co-Director:
+  - Auto Layout Resolution (`layoutStyle: 'auto'`): Meta AI intelligently analyzes narrative tension, dramatic pacing, and keywords in the premise (e.g. splash/climax/epic -> 1-panel splash, confrontation/vs/duel -> 2-panel faceoff, chase/escape/journey -> 3-panel strip, comprehensive narrative arc -> 4-panel spread).
+  - Added `🤖 Auto (AI Decides)` to Granular Controls layout options in `ComicPageSpread.tsx` and the bottom dock in `ZenComicReader.tsx`.
+  - Proactive AI Co-Director Suggestions (`nextSuggestions`): Every generated episode now synthesizes 2-3 forward-looking narrative continuation hooks strictly obeying canon continuity.
+  - Interactive Creative Fork Card (`directorQuestion`): AI Co-Director asks the creator "What should happen next?" with 2-3 one-click clickable decision branches (e.g. `⚔️ Confront`, `🕵️ Investigate`, `🤝 Seek Alliance`) displayed directly above the prompt input dock and in the Agent tab.
+  - `🎲 Roll Ideas` feature: One-click button dynamically generates fresh context-aware beats leveraging established characters, universal laws, and locations on the fly.
+  - Cost Optimization & Documentation: Total cost per serialized episode is ~$0.015 - $0.02 total (~$0.0006 text via `muse-spark-1.3`/`llama-3.3-70b`, ~$0.003 - $0.015 image via Fireworks FLUX or `muse-image-1.0`), with 100% free modes via Instant Simulation Engine and local Ollama. Unified full-page generation reduces image API calls by 75%.
   - Full-Screen Universe & Character Studio ([`UniverseBuilderStudio.tsx`](src/components/UniverseBuilderStudio.tsx)): Replaced cramped modal with full-page workspace featuring Gender, Visual Appearance & Clothing anchors, Personality, Catchphrases, and live Universe Bible preview.
   - Dynamic Story & Episode Prompt Engine:
     - Completely decoupled story generation from hardcoded CBT templates; stories are now dynamically generated around the user's premise, characters, genre, and action arc.

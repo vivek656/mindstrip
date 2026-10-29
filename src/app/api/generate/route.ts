@@ -109,6 +109,19 @@ Return ONLY valid JSON with this exact schema:
   "recap": "One or two sentences (under 80 words) summarizing this episode for future continuity",
   "newFacts": ["Canon facts this episode introduced"],
   "openThreads": ["Unresolved hooks this episode leaves open"],
+  "nextSuggestions": [
+    "Specific plot hook 1 continuing this arc naturally",
+    "Specific plot hook 2 introducing an unexpected complication or rule twist",
+    "Specific plot hook 3 exploring a canon location or character dilemma"
+  ],
+  "directorQuestion": {
+    "question": "A provocative question to the creator asking what should happen next",
+    "options": [
+      { "label": "Short Action 1 (e.g. ⚔️ Direct Confrontation)", "beat": "Full dramatic beat describing what the character does" },
+      { "label": "Short Action 2 (e.g. 🕵️ Covert Investigation)", "beat": "Full dramatic beat describing what the character does" },
+      { "label": "Short Action 3 (e.g. 🤝 Unexpected Alliance)", "beat": "Full dramatic beat describing what the character does" }
+    ]
+  },
   "panels": [
     {
       "panelNumber": 1,
@@ -281,6 +294,12 @@ Episode Premise / Prompt: "${rawDump}"`
               openThreads: Array.isArray(parsed.openThreads)
                 ? parsed.openThreads.filter((f: unknown): f is string => typeof f === 'string')
                 : undefined,
+              nextSuggestions: Array.isArray(parsed.nextSuggestions) && parsed.nextSuggestions.length > 0
+                ? parsed.nextSuggestions.filter((f: unknown): f is string => typeof f === 'string')
+                : skeleton.nextSuggestions,
+              directorQuestion: parsed.directorQuestion && typeof parsed.directorQuestion.question === 'string'
+                ? parsed.directorQuestion
+                : skeleton.directorQuestion,
               panels: mergedPanels,
               pageImageUrl: generatedPageImage,
               cognitiveAnalysis: {

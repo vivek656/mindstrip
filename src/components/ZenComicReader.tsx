@@ -144,6 +144,29 @@ export function ZenComicReader({
   const [isEditingLore, setIsEditingLore] = useState(false);
   const [draftLore, setDraftLore] = useState(world.lore || '');
 
+  // Dynamic plot beat suggestions state
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
+
+  const handleRollNewBeatIdeas = () => {
+    const chars = world.characters;
+    const hero = chars[0]?.name || 'Hero';
+    const sidekick = chars[1]?.name || 'Ally';
+    const villain = chars.find((c) => c.role === 'villain')?.name || 'Nemesis';
+    const loc = world.locations?.[0]?.name || 'the perimeter';
+    const law = world.laws?.[0]?.title || 'the ancient law';
+
+    const ideas = [
+      `@${hero} discovers an anomaly in ${loc} that tests ${law}`,
+      `@${villain} forces @${sidekick} into an impossible moral choice`,
+      `A sudden blackout across ${loc} unites @${hero} and @${villain} against a greater threat`,
+      `@${hero} risks violating ${law} to rescue @${sidekick}`,
+      `An encrypted message from ${loc} changes everything @${hero} believed`,
+    ];
+    // Pick 3 random ideas
+    const shuffled = [...ideas].sort(() => 0.5 - Math.random()).slice(0, 3);
+    setDynamicSuggestions(shuffled);
+  };
+
   const stripRef = useRef<HTMLDivElement>(null);
 
   const handleExportPng = async () => {
@@ -1644,6 +1667,32 @@ export function ZenComicReader({
                         <p className="text-xs text-zinc-500 italic">Open threads will carry forward into the next directed episode.</p>
                       )}
                     </div>
+
+                    {/* AI Co-Director Fork & Next Beat Branches */}
+                    {episode.directorQuestion && (
+                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-5 space-y-3">
+                        <span className="font-mono text-xs font-bold uppercase text-purple-800 tracking-wider flex items-center gap-1.5">
+                          <span>✨</span>
+                          <span>Director Branch: {episode.directorQuestion.question}</span>
+                        </span>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {episode.directorQuestion.options.map((opt, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setPrompt(opt.beat);
+                                setActiveTab('comic');
+                              }}
+                              className="px-3 py-1.5 rounded-xl text-xs font-medium bg-white hover:bg-purple-600 hover:text-white text-zinc-800 border border-purple-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer text-left"
+                            >
+                              <span className="text-purple-600 font-bold">↳</span>
+                              <span>{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Stamped Continuity Recap */}
@@ -1757,6 +1806,71 @@ export function ZenComicReader({
                 </button>
               </div>
             </div>
+
+            {/* Interactive Creative Fork / Meta AI Co-Director Question */}
+            {episode?.directorQuestion && (
+              <div className="mb-2 p-3 sm:p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50/70 to-purple-50 border border-purple-200/90 rounded-2xl shadow-2xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase text-purple-700">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-600"></span>
+                    </span>
+                    <Brain className="w-3.5 h-3.5 text-purple-600" />
+                    <span>AI Co-Director Fork</span>
+                  </div>
+                  <span className="text-[10px] text-purple-600/70 font-mono">Select a path or type custom beat</span>
+                </div>
+                <p className="text-xs sm:text-sm font-bold text-zinc-900 mb-2">
+                  {episode.directorQuestion.question}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {episode.directorQuestion.options.map((opt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPrompt(opt.beat)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-purple-600 hover:text-white text-zinc-800 border border-purple-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer text-left group"
+                    >
+                      <span className="text-purple-600 group-hover:text-white font-bold">↳</span>
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Next Beat Suggestions & Roll Ideas */}
+            {((episode?.nextSuggestions && episode.nextSuggestions.length > 0) || (dynamicSuggestions && dynamicSuggestions.length > 0)) && (
+              <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase text-zinc-400 shrink-0">
+                  <Compass className="w-3 h-3 text-indigo-500" />
+                  <span>Next Beats:</span>
+                </div>
+                {(dynamicSuggestions || episode?.nextSuggestions || []).map((sug, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setPrompt(sug)}
+                    className="px-2.5 py-1 rounded-full text-xs bg-indigo-50/80 hover:bg-indigo-100 hover:border-indigo-300 border border-indigo-200/60 text-indigo-950 transition-all shadow-2xs flex items-center gap-1 cursor-pointer truncate max-w-[280px] sm:max-w-md"
+                    title={sug}
+                  >
+                    <span className="text-indigo-400 font-serif">“</span>
+                    <span className="truncate">{sug}</span>
+                    <span className="text-indigo-400 font-serif">”</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleRollNewBeatIdeas}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-700 transition-all shadow-2xs flex items-center gap-1 cursor-pointer shrink-0"
+                  title="Roll new context-aware narrative beats"
+                >
+                  <RefreshCw className="w-3 h-3 text-zinc-500" />
+                  <span>Roll Ideas</span>
+                </button>
+              </div>
+            )}
 
             {/* Prompt Input Form */}
             <form

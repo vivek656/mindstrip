@@ -481,12 +481,14 @@ export default function Home() {
       }
 
       if (data.pageImageUrl) {
+        const resolvedLayout: ComicStrip['layoutStyle'] =
+          data.layoutStyle || (targetLayoutStyle === 'auto' ? '4-panel' : targetLayoutStyle);
         const updatedEpisode: ComicStrip = {
           ...activeEpisode,
           pageImageUrl: data.pageImageUrl,
-          layoutStyle: targetLayoutStyle,
+          layoutStyle: resolvedLayout,
           imageModel: targetImageModel,
-          generationNotice: `Synthesized with ${data.provider || 'Meta Muse Image 1.0'} (${targetArtStyle}, ${targetLayoutStyle})`
+          generationNotice: `Synthesized with ${data.provider || 'Meta Muse Image 1.0'} (${targetArtStyle}, ${resolvedLayout})`
         };
         const updatedEpisodes = activeWorld.episodes.map((ep) =>
           ep.id === activeEpisode.id ? updatedEpisode : ep

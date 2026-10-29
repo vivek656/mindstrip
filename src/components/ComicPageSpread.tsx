@@ -29,7 +29,7 @@ import {
 export interface GranularArtworkOptions {
   customPrompt?: string;
   artStyle?: ArtStyle;
-  layoutStyle?: '1-panel' | '2-panel' | '3-panel' | '4-panel';
+  layoutStyle?: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel';
   imageModel?: string;
   provider?: string;
   aspectRatio?: string;
@@ -58,7 +58,8 @@ const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] =
   { id: 'minimalist', name: 'Minimalist Indie', desc: 'Crisp editorial linework & refined tone', icon: '✒️' },
 ];
 
-const LAYOUT_FORMATS: { id: '1-panel' | '2-panel' | '3-panel' | '4-panel'; name: string; desc: string; aspect: string }[] = [
+const LAYOUT_FORMATS: { id: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'; name: string; desc: string; aspect: string }[] = [
+  { id: 'auto', name: '🤖 Auto (AI Decides)', desc: 'AI analyzes dramatic stakes and chooses optimal layout', aspect: 'Smart' },
   { id: '1-panel', name: '1-Panel Splash', desc: 'Single cinematic panoramic frame', aspect: '16:9' },
   { id: '2-panel', name: '2-Panel Faceoff', desc: 'Dual confrontation & reaction split', aspect: '3:4' },
   { id: '3-panel', name: '3-Panel Strip', desc: 'Sequential 3-beat webtoon flow', aspect: '3:4' },
@@ -103,8 +104,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
   // Granular state controls
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyle>(world.artStyle || 'webcomic');
-  const [selectedLayout, setSelectedLayout] = useState<'1-panel' | '2-panel' | '3-panel' | '4-panel'>(
-    episode.layoutStyle || '4-panel'
+  const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>(
+    'auto'
   );
   const [selectedEngine, setSelectedEngine] = useState<string>(
     episode.imageModel || 'muse-image-1.0'
@@ -435,7 +436,9 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     type="button"
                     onClick={() => {
                       setSelectedLayout(layout.id);
-                      setSelectedAspect(layout.aspect);
+                      if (layout.aspect !== 'Smart') {
+                        setSelectedAspect(layout.aspect);
+                      }
                     }}
                     className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
                       selectedLayout === layout.id
