@@ -44,10 +44,22 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 2. **Never Commit Secrets:** Under no circumstances should API keys, access tokens, or sensitive credentials be written into code or markdown files.
 3. **Keep `memory.md` Updated:** When completing or altering significant functionality, record the update here in the progress log.
 
-## Progress Log (2026-10-28)
+## Progress Log (2026-10-28 & 2026-10-29)
 - Modern Webcomic Art & Image Engine Overhaul:
   - Eliminated crude placeholder stick figure and flowchart SVGs; added real AI image generation support (`imageUrl` on `ComicPanel`) powered by Pollinations AI and Meta Muse Image prompts.
   - Implemented rich, vibrant Modern Webcomic fallback illustrations: dynamic night city skylines, glowing superhero auras, villainous silhouettes, heroic team-up action angles, and dawn rooftop sunrise vistas.
+- MongoDB Atlas & Cloud Persistence:
+  - Added official `mongodb` client with connection pooling in `src/lib/mongodb.ts`.
+  - Added `/api/worlds` CRUD endpoints for persistent comic universe storage.
+  - Frontend (`src/app/page.tsx`) auto-syncs with MongoDB Atlas when `MONGODB_URI` is present, with automatic fallback to `localStorage`.
+- Meta AI Official API Models:
+  - Connected text generation to `muse-spark-1.3` (with dynamic panel pacing reasoner).
+  - Connected image generation to `muse-image-1.0` via `/api/generate-image`.
+  - Added Autonomous World Architect Agent at `/api/build-world`.
+- Git & Vercel Deployment:
+  - Codebase verified with clean `npm run build` (Next.js 16.4.3).
+  - Pushed to GitHub repository (`https://github.com/vivek656/mindstrip`).
+  - Prepared Vercel deployment instructions with required environment variables.
   - Redesigned comic dialogue balloons: compact comic balloons with directional speech tails (`max-w-[72%]` instead of covering the entire panel) and clean typography.
   - Added a "Hide/Show Dialogue" toggle button in the reader toolbar to inspect the artwork completely unobstructed.
   - Full-Screen Universe & Character Studio ([`UniverseBuilderStudio.tsx`](src/components/UniverseBuilderStudio.tsx)): Replaced cramped modal with full-page workspace featuring Gender, Visual Appearance & Clothing anchors, Personality, Catchphrases, and live Universe Bible preview.
