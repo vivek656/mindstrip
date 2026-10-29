@@ -57,6 +57,12 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Connected image generation to `muse-image-1.0` via `/api/generate-image`.
   - Added Autonomous World Architect Agent at `/api/build-world`.
   - Refactored `/api/generate-image` and `/api/generate` to dynamically accept `imageModel` and `layoutStyle` from request payload, world settings, or episode overrides, falling back to `muse-image-1.0` if `META_IMAGE_MODEL` is omitted in Vercel.
+- Granular Manual Control Deck:
+  - Added interactive `[ 🎛️ Granular Controls ]` studio directly in `ComicPageSpread.tsx`.
+  - Full manual control over: Art Style (6 styles), Layout (1-panel splash, 2-panel faceoff, 3-panel strip, 4-panel spread), AI Engine (`muse-image-1.0`, Fireworks `flux-1-schnell`, Free Preview `simulation`), and Aspect Ratio (3:4, 16:9, 1:1).
+  - Live editable prompt textarea with 1-click aesthetic injector tags (Rain, Cyberpunk Neon, Golden Sunset, Speedlines, Close-up, etc.).
+  - Complete granular script controls: add/delete dialogue bubbles, change speaker, customize sound effects (`+ SFX`), and edit scene descriptions inline.
+  - Added dynamic Director Lens / Tone selector pills (`Candid`, `Empathetic`, `Satirical`, `Stoic`, `Engineer`) in the bottom dock.
 - Git & Vercel Deployment:
   - Codebase verified with clean `npm run build` (Next.js 16.4.3).
   - Pushed to GitHub repository (`https://github.com/vivek656/mindstrip`).
