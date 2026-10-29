@@ -56,6 +56,7 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Connected text generation to `muse-spark-1.3` (with dynamic panel pacing reasoner).
   - Connected image generation to `muse-image-1.0` via `/api/generate-image`.
   - Added Autonomous World Architect Agent at `/api/build-world`.
+  - Refactored `/api/generate-image` and `/api/generate` to dynamically accept `imageModel` and `layoutStyle` from request payload, world settings, or episode overrides, falling back to `muse-image-1.0` if `META_IMAGE_MODEL` is omitted in Vercel.
 - Git & Vercel Deployment:
   - Codebase verified with clean `npm run build` (Next.js 16.4.3).
   - Pushed to GitHub repository (`https://github.com/vivek656/mindstrip`).
