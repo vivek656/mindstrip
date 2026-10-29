@@ -9,6 +9,7 @@ import {
   WorldLocation,
   CustomWorldAttribute
 } from '@/types/comic';
+import { CharacterDossierModal } from './CharacterDossierModal';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -174,6 +175,28 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
         category,
       },
     ]);
+  };
+
+  // Dedicated Character Dossier modal state
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [selectedCharForDossier, setSelectedCharForDossier] = useState<ComicCharacter | null>(null);
+
+  const handleOpenDossier = (char?: ComicCharacter) => {
+    setSelectedCharForDossier(char || null);
+    setIsDossierOpen(true);
+  };
+
+  const handleSaveCharacterDossier = (updatedChar: ComicCharacter) => {
+    const exists = characters.some((c) => c.id === updatedChar.id);
+    if (exists) {
+      setCharacters(characters.map((c) => (c.id === updatedChar.id ? updatedChar : c)));
+    } else {
+      setCharacters([...characters, updatedChar]);
+    }
+  };
+
+  const handleDeleteCharacterDossier = (charId: string) => {
+    setCharacters(characters.filter((c) => c.id !== charId));
   };
 
   const handleAddCharacter = () => {
@@ -570,14 +593,26 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCharacter(char.id)}
-                        className="text-zinc-400 hover:text-red-600 p-1 rounded-md transition-colors shrink-0"
-                        title="Remove character"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDossier(char)}
+                          className="px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
+                          title="Open detailed character studio"
+                        >
+                          <Sparkles className="w-3 h-3 text-purple-600" />
+                          <span>Dossier</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCharacter(char.id)}
+                          className="text-zinc-400 hover:text-red-600 p-1 rounded-md transition-colors cursor-pointer"
+                          title="Remove character"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1136,6 +1171,30 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
         </div>
       </main>
 
+      {/* =========================================================================
+          DEDICATED CHARACTER DOSSIER & DEVELOPMENT STUDIO WINDOW
+      ========================================================================= */}
+      <CharacterDossierModal
+        isOpen={isDossierOpen}
+        onClose={() => setIsDossierOpen(false)}
+        character={selectedCharForDossier}
+        world={{
+          id: 'draft',
+          title: title || 'Draft Universe',
+          tagline,
+          genre,
+          artStyle,
+          characters,
+          episodes: [],
+          lore: worldLore,
+          laws: worldLaws,
+          locations: worldLocations,
+          customAttributes: worldCustomAttrs,
+          createdAt: '',
+        }}
+        onSaveCharacter={handleSaveCharacterDossier}
+        onDeleteCharacter={handleDeleteCharacterDossier}
+      />
     </div>
   );
 }

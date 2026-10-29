@@ -112,6 +112,13 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Intelligent initial engine resolution: defaults to `simulation` ($0.00) in Free Mode, and `flux-1-schnell` (~$0.003) in paid mode, slashing image costs by 80% out of the box.
     - Dynamic Draw button label displaying the exact cost before synthesizing artwork.
     - Added Cost Optimization tip banner in `SettingsModal.tsx`.
+  - Dedicated Character Dossier Studio & Deep Profile Window (2026-10-29):
+    - Created `CharacterDossierModal.tsx`: comprehensive, dedicated window to flesh out any character in extreme depth.
+    - Extended `ComicCharacter` schema with: `wardrobe`, `iconicItem`, `backstory`, `motivation`, `flaws`, `secret`, `abilities`, `gear`, `voiceTone`, and `relationships?: CharacterRelationship[]`.
+    - Tabs included: 🎨 Visuals & Wardrobe (AI continuity anchors), 🧠 Psychology & Lore (origins, desires, vulnerabilities, plot secrets), 💬 Voice & Speech (cadence, traits, catchphrases), ⚡ Powers & Gear, and 👥 Interpersonal Cast Ties (matrix linking to other universe characters with dynamic friction descriptions).
+    - Built `/api/expand-character`: Meta AI-powered 1-click `✨ Flesh Out with Meta AI` assistant that auto-generates multidimensional flaws, backstories, and cast dynamics based on universe genre.
+    - Connected Dossier access across the entire app: from Tab 2 ("World Bible & Cast"), the sidebar/drawer Cast list, and `UniverseBuilderStudio.tsx`.
+    - Upgraded `buildWorldBible` in `story-context.ts` so character drives, flaws, wardrobe anchors, and relationship ties are injected into Meta AI's reasoning context.
   - Full-Screen Universe & Character Studio ([`UniverseBuilderStudio.tsx`](src/components/UniverseBuilderStudio.tsx)): Replaced cramped modal with full-page workspace featuring Gender, Visual Appearance & Clothing anchors, Personality, Catchphrases, and live Universe Bible preview.
   - Dynamic Story & Episode Prompt Engine:
     - Completely decoupled story generation from hardcoded CBT templates; stories are now dynamically generated around the user's premise, characters, genre, and action arc.

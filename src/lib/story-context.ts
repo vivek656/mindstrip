@@ -77,8 +77,20 @@ export function buildWorldBible(world: ComicWorld): string {
       const roleAndGender = [c.role, c.gender && c.gender !== 'unspecified' ? c.gender : null]
         .filter(Boolean)
         .join(', ');
-      const line = anchor ? `${c.name} (${roleAndGender}): ${anchor}` : `${c.name} (${roleAndGender})`;
-      return c.catchphrase ? `${line} Catchphrase: "${c.catchphrase}"` : line;
+      let line = anchor ? `${c.name} (${roleAndGender}): ${anchor}` : `${c.name} (${roleAndGender})`;
+      if (c.wardrobe || c.iconicItem) {
+        const visualAnchors = [c.wardrobe, c.iconicItem ? `Signature: ${c.iconicItem}` : null].filter(Boolean).join(', ');
+        line += ` [Visual Anchor: ${visualAnchors}]`;
+      }
+      if (c.motivation) line += ` | Drive: ${c.motivation}`;
+      if (c.flaws) line += ` | Flaw: ${c.flaws}`;
+      if (c.voiceTone) line += ` | Voice: ${c.voiceTone}`;
+      if (c.catchphrase) line += ` | Catchphrase: "${c.catchphrase}"`;
+      if (c.relationships && c.relationships.length > 0) {
+        const ties = c.relationships.map((r) => `${r.relationType} to ${r.targetCharacterName}`).join(', ');
+        line += ` | Ties: ${ties}`;
+      }
+      return line;
     })
     .join('\n');
 

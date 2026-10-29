@@ -11,6 +11,13 @@ export type PerspectiveLens = 'candid' | 'stoic' | 'satirical' | 'empathetic' | 
 
 export type LayoutMode = 'page' | 'strip' | 'grid' | 'webtoon';
 
+export interface CharacterRelationship {
+  targetCharacterId?: string;
+  targetCharacterName: string;
+  relationType: 'ally' | 'rival' | 'mentor' | 'nemesis' | 'family' | 'romantic' | 'subordinate' | 'frenemy' | (string & {});
+  dynamicDescription: string;
+}
+
 export interface ComicCharacter {
   id: string;
   name: string;
@@ -22,6 +29,17 @@ export interface ComicCharacter {
   description: string; // Backstory or role in the narrative
   avatarEmoji: string;
   traits: string[];
+  // Deep-dive fields for dedicated Character Studio / Dossier
+  backstory?: string; // Deep origin story, formative history, traumas
+  motivation?: string; // Core desire, driving ambition, what they want most
+  flaws?: string; // Fatal flaw, psychological vulnerability, blindspot
+  secret?: string; // Hidden truth or classified knowledge
+  abilities?: string; // Powers, combat style, martial arts, special skills
+  gear?: string; // Signature weapons, gadgets, vehicles, artifacts
+  voiceTone?: string; // Dialogue cadence, vocabulary quirks, speaking habits
+  wardrobe?: string; // Detailed everyday clothing and color scheme
+  iconicItem?: string; // Signature silhouette accessory (e.g. cracked goggles, robotic arm)
+  relationships?: CharacterRelationship[]; // Cast relationship dynamics
 }
 
 export interface SpeechBubble {

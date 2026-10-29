@@ -13,6 +13,7 @@ import {
 } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
+import { CharacterDossierModal } from './CharacterDossierModal';
 import {
   ArrowLeft,
   Menu,
@@ -165,6 +166,38 @@ export function ZenComicReader({
     // Pick 3 random ideas
     const shuffled = [...ideas].sort(() => 0.5 - Math.random()).slice(0, 3);
     setDynamicSuggestions(shuffled);
+  };
+
+  // Dedicated Character Dossier Studio state
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [selectedCharForDossier, setSelectedCharForDossier] = useState<ComicCharacter | null>(null);
+
+  const handleOpenDossier = (char?: ComicCharacter) => {
+    setSelectedCharForDossier(char || null);
+    setIsDossierOpen(true);
+  };
+
+  const handleSaveCharacterDossier = (updatedChar: ComicCharacter) => {
+    if (!onUpdateWorld) return;
+    const exists = world.characters.some((c) => c.id === updatedChar.id);
+    const updatedChars = exists
+      ? world.characters.map((c) => (c.id === updatedChar.id ? updatedChar : c))
+      : [...world.characters, updatedChar];
+
+    const updatedWorld: ComicWorld = {
+      ...world,
+      characters: updatedChars,
+    };
+    onUpdateWorld(updatedWorld);
+  };
+
+  const handleDeleteCharacter = (charId: string) => {
+    if (!onUpdateWorld) return;
+    const updatedWorld: ComicWorld = {
+      ...world,
+      characters: world.characters.filter((c) => c.id !== charId),
+    };
+    onUpdateWorld(updatedWorld);
   };
 
   const stripRef = useRef<HTMLDivElement>(null);
@@ -490,18 +523,40 @@ export function ZenComicReader({
             {world.characters.map((char) => (
               <div
                 key={char.id}
-                onClick={() => handleInsertBeat(`@${char.name}`)}
-                className="p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-black/[0.06] cursor-pointer transition-all flex items-center justify-between shadow-2xs"
-                title={`Click to tag @${char.name} in director prompt`}
+                className="p-2.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-black/[0.06] transition-all flex items-center justify-between shadow-2xs group"
               >
-                <div className="flex items-center gap-2 truncate">
+                <div
+                  onClick={() => handleInsertBeat(`@${char.name}`)}
+                  className="flex items-center gap-2 truncate cursor-pointer flex-1"
+                  title={`Click to tag @${char.name} in prompt`}
+                >
                   <span className="text-lg">{char.avatarEmoji}</span>
                   <div className="truncate">
-                    <span className="font-bold text-xs text-zinc-900 block truncate">{char.name}</span>
+                    <span className="font-bold text-xs text-zinc-900 block truncate">@{char.name}</span>
                     <span className="text-[10px] text-zinc-500 capitalize">{char.role}</span>
                   </div>
                 </div>
-                <span className="text-[10px] text-zinc-400 font-mono">+ Tag</span>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDossier(char);
+                    }}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 cursor-pointer"
+                    title="Open full character dossier studio"
+                  >
+                    Dossier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBeat(`@${char.name}`)}
+                    className="text-[10px] text-zinc-400 font-mono hover:text-zinc-900 cursor-pointer"
+                  >
+                    + Tag
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1085,21 +1140,31 @@ export function ZenComicReader({
 
               {/* Characters Visual Dossiers Section */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h2 className="text-lg font-black text-zinc-950 flex items-center gap-2">
                     <Users className="w-5 h-5 text-blue-600" />
-                    <span>Recurring Cast & Visual Continuity Anchors ({world.characters.length})</span>
+                    <span>Recurring Cast & Character Dossiers ({world.characters.length})</span>
                   </h2>
-                  <span className="text-xs text-zinc-400 font-mono">
-                    Visual anchors locked across all AI episodes
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDossier()}
+                      className="px-3.5 py-1.5 rounded-full bg-zinc-950 hover:bg-purple-600 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      <span>+ Create Detailed Character</span>
+                    </button>
+                    <span className="text-xs text-zinc-400 font-mono hidden sm:inline">
+                      Visual anchors locked across all AI episodes
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {world.characters.map((char) => (
                     <div
                       key={char.id}
-                      className="bg-white rounded-2xl border-2 border-zinc-950 p-5 shadow-xs flex flex-col justify-between space-y-4 relative group hover:border-blue-600 transition-colors"
+                      className="bg-white rounded-2xl border-2 border-zinc-950 p-5 shadow-xs flex flex-col justify-between space-y-4 relative group hover:border-purple-600 transition-colors"
                     >
                       <div className="space-y-3">
                         {/* Header: Avatar, Name, Role */}
@@ -1146,19 +1211,52 @@ export function ZenComicReader({
                             &ldquo;{char.catchphrase}&rdquo;
                           </div>
                         )}
+
+                        {/* Deep-dive Badges (Wardrobe, Motivation, Ties) */}
+                        {(char.wardrobe || char.motivation || char.flaws || (char.relationships && char.relationships.length > 0)) && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {char.wardrobe && (
+                              <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-[10px] font-mono text-zinc-700">
+                                👔 Wardrobe Locked
+                              </span>
+                            )}
+                            {char.motivation && (
+                              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[10px] font-mono text-blue-700">
+                                🎯 Motive
+                              </span>
+                            )}
+                            {char.relationships && char.relationships.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-md bg-purple-50 text-[10px] font-mono text-purple-700">
+                                👥 {char.relationships.length} Ties
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Tag in Prompt Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleInsertBeat(`@${char.name}`);
-                          setActiveTab('comic');
-                        }}
-                        className="w-full py-2 rounded-xl bg-zinc-100 hover:bg-zinc-950 hover:text-white text-xs font-bold text-zinc-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <span>Tag @{char.name} in Next Episode</span>
-                      </button>
+                      {/* Card Action Buttons: Deep Dossier & Tag */}
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-black/[0.06]">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDossier(char)}
+                          className="py-2 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200/80 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          title="Open detailed character dossier studio"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Deep Dossier</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleInsertBeat(`@${char.name}`);
+                            setActiveTab('comic');
+                          }}
+                          className="py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-950 hover:text-white text-xs font-bold text-zinc-800 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>Tag in Scene</span>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1939,6 +2037,18 @@ export function ZenComicReader({
           </div>
         </div>
       )}
+      {/* =========================================================================
+          DEDICATED CHARACTER DOSSIER & DEVELOPMENT STUDIO WINDOW
+      ========================================================================= */}
+      <CharacterDossierModal
+        isOpen={isDossierOpen}
+        onClose={() => setIsDossierOpen(false)}
+        character={selectedCharForDossier}
+        world={world}
+        onSaveCharacter={handleSaveCharacterDossier}
+        onDeleteCharacter={handleDeleteCharacter}
+        apiConfig={apiConfig}
+      />
     </div>
   );
 }
