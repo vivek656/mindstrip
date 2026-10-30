@@ -690,13 +690,20 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   1. **Restored 100% Pristine Art Canvas**:
      - Removed automatic canvas speech bubble baking from obstructing the comic spread image.
      - `pageImage` is displayed in its pure, cinematic glory without any pixel defacement or sticker covers.
-  2. **Integrated Graphic Novel Dialogue & SFX Deck**:
-     - Positioned directly underneath the comic page image in an elegant matching 2x2 grid (mirroring the 4 quadrants of the art above).
+  2. **Integrated Graphic Novel Dialogue & SFX Deck (Dynamic Layout-Aware)**:
+     - Positioned directly underneath the comic page image, dynamically adapting its grid to match whatever layout format the AI or user selects:
+       - **1-Panel Splash**: Full-width single panoramic story card (`grid-cols-1`).
+       - **2-Panel Confrontation**: 2 side-by-side cards (`grid-cols-2`) matching the left/right split.
+       - **3-Panel Webtoon**: 3 vertical strip cards (`grid-cols-3`) matching the 3-act beats.
+       - **4-Panel Classic**: 2x2 grid (`grid-cols-2`) matching the 4 quadrants.
      - Each panel card displays:
        - Panel badge (`1`, `2`, `3`, `4`) and scene title.
        - Character speaker avatars with clean quotation styling.
        - Dynamic sound effect badges (`⚡ SFX`) in amber badges.
      - Readers can enjoy the artwork unobstructed while reading the dialogue and scene beats in perfect harmony.
-  3. **Verification**:
+  3. **Zero Hardcoding of Layout**:
+     - `layoutPreference: 'auto'` is passed to the AI Showrunner Agent, giving the model full autonomy to analyze story pacing and choose 1-panel, 2-panel, 3-panel, or 4-panel.
+     - `handleRegenerateCurrentEpisode` and `handleGenerateArtwork` derive dynamic layout from `panels.length` instead of defaulting to 4-panel.
+  4. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
