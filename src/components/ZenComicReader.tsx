@@ -18,6 +18,7 @@ import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
 import { BranchTimelineModal } from './BranchTimelineModal';
+import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
 import {
   ArrowLeft,
   Menu,
@@ -1621,6 +1622,7 @@ export function ZenComicReader({
                     onUpdatePanelScene={onUpdatePanelScene}
                     onGenerateArtwork={onGenerateArtwork}
                     isGeneratingArtwork={isGeneratingArtwork}
+                    isLoading={isLoading}
                     artworkError={artworkError}
                     apiConfig={apiConfig}
                     onSelectCharacterForDossier={handleOpenDossier}
@@ -1635,6 +1637,17 @@ export function ZenComicReader({
                     </div>
                   )}
                 </>
+              ) : isLoading ? (
+                /* Live RAG Pipeline Telemetry when generating Episode 1 */
+                <div className="w-full max-w-4xl mx-auto my-4 sm:my-8">
+                  <LiveRagPipelineTracker
+                    world={world}
+                    isLoading={true}
+                    isGeneratingArtwork={false}
+                    premise={prompt.trim() || world.tagline}
+                    layoutPreference={selectedLayout}
+                  />
+                </div>
               ) : (
                 /* World Bible Mode Screen when world has 0 episodes */
                 <div className="w-full max-w-3xl bg-white rounded-3xl p-8 sm:p-12 border-2 border-zinc-950 shadow-md text-center space-y-6 my-8">

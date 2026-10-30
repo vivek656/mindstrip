@@ -626,3 +626,25 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Receives `worldTitle`, `genre`, and `worldLore`, blending the world's genre aesthetic into character model sheets, turnarounds, and action poses. Uses `TEXTLESS_ARTWORK_DIRECTIVE`.
   3. **Episodic Generation & Canon RAG (`generateMindStrip` & `/api/generate`)**:
      - `generateMindStrip` and `/api/generate` now receive the full `world` and `pastEpisodes` array from `src/app/page.tsx`, directly empowering `queryCanonRag` to index universe lore, canonical laws, staging locations, and unresolved threads across every episode generation.
+
+### Live Animated RAG & Multi-Agent Production Pipeline HUD (2026-10-30)
+- **Problem Diagnosed**:
+  - Previously, during episode regeneration, Next Episode generation, or clean re-draws, the canvas showed a tiny spinning loader inside a small empty box ("Meta AI is Drawing Your Comic...") or sat frozen on the previous comic spread while a tiny button spinner spun, leaving creators completely in the dark regarding what the autonomous agents were doing.
+- **Architectural Solution Implemented (`LiveRagPipelineTracker.tsx`)**:
+  1. **Replaced Empty Loader with Full Animated Pipeline HUD**:
+     - Replaces the small box and frozen canvas during `isLoading` and `isGeneratingArtwork` with an expansive, editorial multi-agent production dashboard directly on the comic spread canvas.
+     - Also activates when launching Episode 1 ("Draw Episode 1: Origin") from World Bible mode.
+  2. **Live Multi-Stage Pipeline Stepper & Dynamic Pulse Animation**:
+     - **Stage 1 (Canon RAG Memory Retrieval)**: Reads World Bible, Universal Laws, Active Cast Dossiers, and Chronological Continuity Recaps.
+     - **Stage 2 (Showrunner Dramatic Pacing)**: Analyzes dramatic premise, selects sequential panel layout (1-panel splash, 2-panel faceoff, 3-panel strip, 4-panel spread), writes beats, dialogue balloons, and sound effects.
+     - **Stage 3 (Canon Continuity Auditor & Loop)**: Validates draft against universal laws & antagonist hostility; runs autonomous self-correction loop if violations occur.
+     - **Stage 4 (Visual Art Director & Anchors)**: Injects character model sheet anchors and enforces strict textless / wordless comic prompt sanitization.
+     - **Stage 5 (Neural Diffusion Synthesis)**: Meta Muse Image / FLUX.1 latent diffusion sampling sequential graphic novel frames into high-resolution artwork.
+  3. **Real-time Live Telemetry Log Stream**:
+     - Dynamic millisecond-accurate terminal stream displaying live agent thoughts and actions customized with the creator's actual world title, characters, laws, and selected art style.
+     - Live elapsed stopwatch (`00:04.2s`) and animated gradient progress bar (`0%` to `100%`).
+  4. **Frontend Integration**:
+     - Integrated seamlessly into `ComicPageSpread.tsx` and `ZenComicReader.tsx`.
+     - Preserves single unified light editorial theme (`#faf8f5`, white cards, zinc borders, and dark typography).
+  5. **Verification**:
+     - Verified with `npm run build` (0 TypeScript / Turbopack errors, all 12 routes clean).

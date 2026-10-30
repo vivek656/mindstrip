@@ -5,6 +5,7 @@ import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, ComicCharac
 import { ApiConfig } from '@/lib/meta-models';
 import { cleanPromptForWordlessArtwork } from '@/lib/agents/art-director';
 import { SamVisionOverlay } from './SamVisionOverlay';
+import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
 import {
   Sparkles,
   Users,
@@ -50,6 +51,7 @@ interface ComicPageSpreadProps {
   onUpdatePanelScene?: (panelNumber: number, newDescription: string, newSoundEffect?: string) => void;
   onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
   isGeneratingArtwork?: boolean;
+  isLoading?: boolean;
   artworkError?: string | null;
   apiConfig?: ApiConfig;
   className?: string;
@@ -102,6 +104,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     onUpdatePanelScene,
     onGenerateArtwork,
     isGeneratingArtwork = false,
+    isLoading = false,
     artworkError = null,
     apiConfig,
     className = '',
@@ -760,9 +763,21 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
       </div>
 
       {/* =========================================================================
-          PAGE CONTENT: REAL META AI IMAGE OR CLEAN COMIC DRAFTING STAGE
+          PAGE CONTENT: LIVE RAG PIPELINE TRACKER, REAL IMAGE OR DRAFTING STAGE
       ========================================================================= */}
-      {spreadViewMode === 'panels' ? (
+      {(isGeneratingArtwork || isLoading) ? (
+        <div className="w-full">
+          <LiveRagPipelineTracker
+            world={world}
+            episode={episode}
+            isLoading={isLoading}
+            isGeneratingArtwork={isGeneratingArtwork}
+            premise={episode.rawBrainDump || episode.title}
+            layoutPreference={selectedLayout}
+            selectedEngine={selectedEngine}
+          />
+        </div>
+      ) : spreadViewMode === 'panels' ? (
         /* Sequential Strip / Grid View dynamically adapted to panel count */
         <div className="space-y-5">
           <div className={`grid gap-5 ${
