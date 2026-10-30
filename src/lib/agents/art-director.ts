@@ -1,5 +1,5 @@
 import { ShowrunnerDraft, AgentContext } from './types';
-import { ArtStyle } from '@/types/comic';
+import { ComicPanel, ArtStyle } from '@/types/comic';
 
 export interface ArtDirectorResult {
   sanitizedDraft: ShowrunnerDraft;
@@ -9,22 +9,11 @@ export interface ArtDirectorResult {
 }
 
 /**
- * Visual Art Director Agent
- * 
- * Enforces visual consistency across characters and styles:
- * 1. Extracts character visual anchors (hair, wardrobe, iconic items, silhouette).
- * 2. Injects composition & camera angles for the selected layout format.
- * 3. Strips all panel labels, numbers, and text references from prompts.
- * 4. Injects strict textless negative prompts to prevent diffusion models from drawing words/numbers.
+ * Strips structural jargon, panel numbering, and timestamps (e.g. "Panel 1:", "[Beat 2]", "09:00")
+ * that cause diffusion models to mistakenly paint literal metadata banners like "PANEL 1".
+ * Crucially, it preserves narrative descriptions, action, and dialogue.
  */
-/**
- * Thoroughly sanitizes text intended for image diffusion models.
- * Strips panel numbers, scene headers, timestamps (e.g. 09:00, 22:30), 
- * title badges (e.g. THE CALL, SAVING EARTH), quotes, and structural jargon
- * that cause diffusion models (like FLUX.1 or Meta Muse) to physically paint 
- * text badges or banners onto the comic artwork.
- */
-export function cleanPromptForWordlessArtwork(raw: string): string {
+export function cleanStructuralMetadata(raw: string): string {
   if (!raw) return '';
   return raw
     // Strip timestamps like 09:00, 22:30, 09:00 am
@@ -36,14 +25,10 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
     .replace(/\b(panel|scene|frame|beat)\s*#?\s*\d+\s*([—\-\:\.]\s*)?/gi, ' ')
     // Strip word numbers: "panel one:", "scene two -"
     .replace(/\b(panel|scene|frame|beat)\s*(one|two|three|four|five|six)\s*([—\-\:\.]\s*)?/gi, ' ')
-    // Strip "4-panel", "3-panel", "1-panel"
+    // Strip standalone panel counts like "4-panel", "3-panel"
     .replace(/\b\d+\s*-\s*panels?\b/gi, ' ')
     // Strip all-caps titles with colons like "THE CALL:", "SAVING EARTH:", "THE SETUP:"
     .replace(/\b[A-Z0-9\s]{2,25}:(?=\s)/g, ' ')
-    // Strip standalone words: panel, panels, speech bubble, dialogue box, caption
-    .replace(/\b(panels?|speech bubbles?|dialogue box(es)?|captions?)\b/gi, ' ')
-    // Strip quotes so diffusion models never treat quoted text as text to paint
-    .replace(/["'“”‘’«»]/g, ' ')
     // Clean up empty parentheses or brackets
     .replace(/[\(\[\{]\s*[\)\]\}]/g, ' ')
     // Strip leftover leading dashes, colons, punctuation clumps
@@ -56,12 +41,55 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
 }
 
 /**
- * Textless directive formulated using purely positive descriptive keywords.
- * CRITICAL: Never include quoted strings like 'NO "Panel 1"' because diffusion
- * models will attend to the quotes and draw the quoted text as a visual badge!
+ * Backwards-compatible alias for cleanStructuralMetadata.
+ */
+export function cleanPromptForWordlessArtwork(raw: string): string {
+  return cleanStructuralMetadata(raw);
+}
+
+/**
+ * Injects RAG-grounded dialogue, speech balloons, and sound effects directly into
+ * a sequential frame's visual prompt for native in-image generation.
+ */
+export function formatFrameWithRagDialogue(panel: ComicPanel): string {
+  if (!panel) return '';
+  const visualDesc = cleanStructuralMetadata(panel.imagePrompt || panel.sceneDescription || '');
+
+  const speechParts: string[] = [];
+  if (panel.bubbles && panel.bubbles.length > 0) {
+    panel.bubbles.slice(0, 2).forEach((b) => {
+      const cleanText = b.text.replace(/["“”]/g, '').trim();
+      if (cleanText) {
+        if (b.type === 'thought') {
+          speechParts.push(`${b.speaker} thought bubble saying "${cleanText}"`);
+        } else {
+          speechParts.push(`${b.speaker} speech balloon saying "${cleanText}"`);
+        }
+      }
+    });
+  }
+
+  const sfxPart = panel.soundEffect ? `sound effect "${panel.soundEffect.replace(/^⚡\s*/, '')}"` : '';
+  const textElements = [...speechParts, sfxPart].filter(Boolean).join(', ');
+
+  if (textElements) {
+    return `${visualDesc}, featuring ${textElements}`;
+  }
+  return visualDesc;
+}
+
+/**
+ * Textless directive used strictly for standalone character model sheet portraits.
  */
 export const TEXTLESS_ARTWORK_DIRECTIVE =
-  'clean wordless sequential art, mute graphic novel illustration, unlettered clean comic art, pristine visual storytelling, silent comic page without typography, professional graphic novel publication.';
+  'clean wordless portrait, unlettered character design, pristine model sheet without typography, professional publication.';
+
+/**
+ * Authentic comic page publication directive: instructs diffusion models to generate
+ * real graphic novel pages with comic speech balloons, dialogue, and sound effects.
+ */
+export const COMIC_PAGE_PUBLICATION_DIRECTIVE =
+  'authentic published graphic novel comic book page, clean white gutters separating sequential frames, expressive comic speech balloons with dialogue, comic sound effects, professional comic publication.';
 
 export function directVisualArtwork(
   draft: ShowrunnerDraft,
@@ -92,7 +120,7 @@ export function directVisualArtwork(
   });
 
   // 2. Resolve Layout Composition Descriptor
-  let layoutDescriptor = 'multi-frame graphic novel comic page spread, sequential visual storytelling divided by clean white gutters, borderless frame compositions';
+  let layoutDescriptor = 'comic book page layout structured as four distinct sequential frames separated by crisp white comic gutters';
   if (layout === '1-panel') {
     layoutDescriptor = 'cinematic full-page dramatic graphic novel splash illustration, single panoramic widescreen frame, borderless dynamic composition, atmospheric lighting';
   } else if (layout === '2-panel') {
@@ -122,11 +150,10 @@ export function directVisualArtwork(
 
   const styleDescriptor = getStyleDescriptor(artStyle);
 
-  // 4. Sanitize and update each panel's imagePrompt in the draft
+  // 4. Sanitize and update each panel's imagePrompt in the draft with dialogue
   const sanitizedPanels = draft.panels.map((panel) => {
-    const rawPrompt = panel.imagePrompt || panel.sceneDescription || '';
-    const cleaned = cleanPromptForWordlessArtwork(rawPrompt);
-    const sanitized = `${styleDescriptor}. ${cleaned}. Pure visual illustration, cinematic composition, textless comic art.`;
+    const frameWithDialogue = formatFrameWithRagDialogue(panel);
+    const sanitized = `${styleDescriptor}. ${frameWithDialogue}. Dynamic composition, expressive comic frame.`;
     return {
       ...panel,
       imagePrompt: sanitized
@@ -138,20 +165,32 @@ export function directVisualArtwork(
     panels: sanitizedPanels
   };
 
-  // 5. Build Unified Full-Page Image Prompt (for Meta Muse Image 1.0 & FLUX.1)
+  // 5. Build Unified Full-Page Image Prompt with Injected RAG Dialogue
   const charsSummary = charDescriptions.length > 0 ? charDescriptions.join(' and ') : 'comic characters';
-  let premiseSnippet = cleanPromptForWordlessArtwork(context.rawDump || draft.title || 'dynamic comic scene');
+  let premiseSnippet = cleanStructuralMetadata(context.rawDump || draft.title || 'dynamic comic scene');
 
-  if (layout === '4-panel' && draft.panels.length >= 4) {
-    const p1 = cleanPromptForWordlessArtwork(draft.panels[0]?.imagePrompt || draft.panels[0]?.sceneDescription || '');
-    const p2 = cleanPromptForWordlessArtwork(draft.panels[1]?.imagePrompt || draft.panels[1]?.sceneDescription || '');
-    const p3 = cleanPromptForWordlessArtwork(draft.panels[2]?.imagePrompt || draft.panels[2]?.sceneDescription || '');
-    const p4 = cleanPromptForWordlessArtwork(draft.panels[3]?.imagePrompt || draft.panels[3]?.sceneDescription || '');
+  if (layout === '1-panel' && draft.panels.length >= 1) {
+    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
+    premiseSnippet = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
+  } else if (layout === '2-panel' && draft.panels.length >= 2) {
+    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
+    const p2 = formatFrameWithRagDialogue(draft.panels[1]);
+    premiseSnippet = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+  } else if (layout === '3-panel' && draft.panels.length >= 3) {
+    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
+    const p2 = formatFrameWithRagDialogue(draft.panels[1]);
+    const p3 = formatFrameWithRagDialogue(draft.panels[2]);
+    premiseSnippet = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+  } else if (draft.panels.length >= 4) {
+    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
+    const p2 = formatFrameWithRagDialogue(draft.panels[1]);
+    const p3 = formatFrameWithRagDialogue(draft.panels[2]);
+    const p4 = formatFrameWithRagDialogue(draft.panels[3]);
     layoutDescriptor = 'a four-panel comic strip page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
-    premiseSnippet = `Four sequential narrative frames in a 2x2 comic grid: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+    premiseSnippet = `Four sequential narrative frames in a 2x2 comic grid with white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
   }
 
-  const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${TEXTLESS_ARTWORK_DIRECTIVE} Dynamic composition, cinematic lighting.`;
+  const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${COMIC_PAGE_PUBLICATION_DIRECTIVE} Dynamic composition, cinematic lighting.`;
 
   return {
     sanitizedDraft,

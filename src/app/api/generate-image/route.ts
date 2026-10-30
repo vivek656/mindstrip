@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
-import { cleanPromptForWordlessArtwork, TEXTLESS_ARTWORK_DIRECTIVE } from '@/lib/agents/art-director';
+import {
+  cleanPromptForWordlessArtwork,
+  formatFrameWithRagDialogue,
+  COMIC_PAGE_PUBLICATION_DIRECTIVE
+} from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,25 +52,25 @@ export async function POST(req: NextRequest) {
     // Thoroughly scrub all metadata, panel numbers, timestamps, and typography triggers so diffusion models never paint text
     let sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
 
-    // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt
+    // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt with RAG dialogue
     const hasExplicitCustom = Boolean(customPrompt && customPrompt.trim().length > 0 && !customPrompt.includes('sequential narrative frames'));
     if (!hasExplicitCustom && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
-      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const p1 = formatFrameWithRagDialogue(panels[0]);
       sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
     } else if (!hasExplicitCustom && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
-      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      const p1 = formatFrameWithRagDialogue(panels[0]);
+      const p2 = formatFrameWithRagDialogue(panels[1]);
       sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
     } else if (!hasExplicitCustom && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
-      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
+      const p1 = formatFrameWithRagDialogue(panels[0]);
+      const p2 = formatFrameWithRagDialogue(panels[1]);
+      const p3 = formatFrameWithRagDialogue(panels[2]);
       sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
     } else if (!hasExplicitCustom && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
-      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
-      const p4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
+      const p1 = formatFrameWithRagDialogue(panels[0]);
+      const p2 = formatFrameWithRagDialogue(panels[1]);
+      const p3 = formatFrameWithRagDialogue(panels[2]);
+      const p4 = formatFrameWithRagDialogue(panels[3]);
       sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
     }
 
@@ -130,8 +134,8 @@ export async function POST(req: NextRequest) {
       calculatedAspect = userAspectRatio || '3:4';
     }
 
-    const textlessDirective = TEXTLESS_ARTWORK_DIRECTIVE;
-    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${sanitizedPrompt}. ${textlessDirective} Dynamic composition, cinematic lighting.`;
+    const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
+    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {

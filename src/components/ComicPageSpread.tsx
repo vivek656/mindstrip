@@ -3,7 +3,7 @@
 import React, { useState, useEffect, forwardRef } from 'react';
 import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, ComicCharacter } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
-import { cleanPromptForWordlessArtwork } from '@/lib/agents/art-director';
+import { cleanPromptForWordlessArtwork, formatFrameWithRagDialogue } from '@/lib/agents/art-director';
 import { SamVisionOverlay } from './SamVisionOverlay';
 import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
 import {
@@ -207,29 +207,29 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     const layout = selectedLayout || episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');
 
     if ((layout === '1-panel' || panels.length === 1) && panels[0]) {
-      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      return `${selectedArtStyle} full-page cinematic graphic novel splash illustration depicting ${charsSummary}. Climax scene: ${s1}. Panoramic dramatic composition, cinematic lighting, wordless visual storytelling.`;
+      const s1 = formatFrameWithRagDialogue(panels[0]);
+      return `${selectedArtStyle} full-page cinematic graphic novel splash illustration depicting ${charsSummary}. Climax scene: ${s1}. Panoramic dramatic composition, cinematic lighting, authentic comic speech balloons with dialogue.`;
     }
     if ((layout === '2-panel' || panels.length === 2) && panels.length >= 2) {
-      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      return `${selectedArtStyle} two-panel comic page spread separated by a clean vertical white comic gutter, depicting ${charsSummary}. Left frame: ${s1}. Right frame: ${s2}. Wordless visual sequential storytelling.`;
+      const s1 = formatFrameWithRagDialogue(panels[0]);
+      const s2 = formatFrameWithRagDialogue(panels[1]);
+      return `${selectedArtStyle} two-panel comic page spread separated by a clean vertical white comic gutter, depicting ${charsSummary}. Left frame: ${s1}. Right frame: ${s2}. Authentic comic speech balloons with dialogue.`;
     }
     if ((layout === '3-panel' || panels.length === 3) && panels.length >= 3) {
-      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      const s3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
-      return `${selectedArtStyle} three-frame vertical comic strip separated by clean white gutters, depicting ${charsSummary}. Top frame: ${s1}. Middle frame: ${s2}. Bottom frame: ${s3}. Wordless visual sequential storytelling.`;
+      const s1 = formatFrameWithRagDialogue(panels[0]);
+      const s2 = formatFrameWithRagDialogue(panels[1]);
+      const s3 = formatFrameWithRagDialogue(panels[2]);
+      return `${selectedArtStyle} three-frame vertical comic strip separated by clean white gutters, depicting ${charsSummary}. Top frame: ${s1}. Middle frame: ${s2}. Bottom frame: ${s3}. Authentic comic speech balloons with dialogue.`;
     }
     if (panels.length >= 4) {
-      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      const s3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
-      const s4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
-      return `${selectedArtStyle} four-panel comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}. Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Wordless visual sequential storytelling, clean graphic novel publication.`;
+      const s1 = formatFrameWithRagDialogue(panels[0]);
+      const s2 = formatFrameWithRagDialogue(panels[1]);
+      const s3 = formatFrameWithRagDialogue(panels[2]);
+      const s4 = formatFrameWithRagDialogue(panels[3]);
+      return `${selectedArtStyle} four-panel comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}. Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Authentic comic speech balloons with dialogue, sound effects, clean graphic novel publication.`;
     }
     const cleanNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
-    return `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
+    return `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, authentic comic speech balloons with dialogue, pristine published graphic novel illustration.`;
   };
 
   const defaultPrompt = buildSequentialPrompt();
@@ -963,7 +963,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                       type="button"
                       onClick={() => {
                         setIsGranularOpen(true);
-                        setCustomPrompt(`${selectedArtStyle} comic frame: ${cleanPromptForWordlessArtwork(p.imagePrompt || p.sceneDescription)}. Dynamic composition, textless comic art.`);
+                        setCustomPrompt(`${selectedArtStyle} comic frame: ${formatFrameWithRagDialogue(p)}. Dynamic composition, authentic comic speech balloons with dialogue.`);
                       }}
                       className="text-blue-600 hover:text-blue-700 font-bold text-[10px] underline shrink-0 cursor-pointer"
                     >
