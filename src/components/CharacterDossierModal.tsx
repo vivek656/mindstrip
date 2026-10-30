@@ -906,7 +906,7 @@ export function CharacterDossierModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.08] bg-zinc-50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <span className="w-10 h-10 rounded-2xl bg-zinc-950 text-white flex items-center justify-center text-xl shadow-xs overflow-hidden">
+              <span className="w-10 h-10 rounded-2xl bg-purple-100 border border-purple-200 text-purple-900 flex items-center justify-center text-xl shadow-xs overflow-hidden">
                 {lockedImageUrl ? (
                   <img src={lockedImageUrl} alt={name} className="w-full h-full object-cover" />
                 ) : (
@@ -1190,21 +1190,21 @@ export function CharacterDossierModal({
                 );
 
                 return (
-                  <div className="bg-gradient-to-br from-indigo-950 via-zinc-900 to-black text-white p-5 sm:p-6 rounded-3xl border-2 border-indigo-500/40 shadow-2xl space-y-6">
+                  <div className="bg-zinc-50 border-2 border-zinc-200 text-zinc-900 p-5 sm:p-6 rounded-3xl space-y-6 shadow-2xs">
                     {/* Studio Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/[0.08]">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                        <div className="w-11 h-11 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-2xl shrink-0">
                           📸
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-black text-base text-white tracking-tight">Character Visual Generator & Multi-Angle Studio</h3>
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                            <h3 className="font-bold text-base text-zinc-950 tracking-tight">Character Visual Generator & Multi-Angle Studio</h3>
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wider">
                               Zero-Drift Pipeline RAG
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-300 mt-0.5">
+                          <p className="text-xs text-zinc-500 mt-0.5">
                             Generate individual reference angles (Face, Legs/Full-Body, Back, Action, Model Sheet) to anchor @{name || 'this character'} across all comic episodes.
                           </p>
                         </div>
@@ -1215,7 +1215,7 @@ export function CharacterDossierModal({
                         type="button"
                         onClick={handleGenerateAllAngles}
                         disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
-                        className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 shrink-0 self-start sm:self-auto"
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 shrink-0 self-start sm:self-auto"
                         title="Generate all 5 reference views (Face, Full-Body, Back, Action, Model Sheet) in one click"
                       >
                         <Sparkles className={`w-3.5 h-3.5 ${isBatchGenerating ? 'animate-spin' : ''}`} />
@@ -1227,7 +1227,7 @@ export function CharacterDossierModal({
                         HERO PREVIEW CANVAS STAGE (ALWAYS PROMINENT!)
                     ========================================================================= */}
                     {currentDisplayImage ? (
-                      <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-500/50 bg-black shadow-2xl flex flex-col items-center justify-center min-h-[360px] max-h-[460px] group">
+                      <div className="relative rounded-2xl overflow-hidden border-2 border-zinc-200 bg-white shadow-xs flex flex-col items-center justify-center min-h-[360px] max-h-[460px] group">
                         <img
                           src={currentDisplayImage}
                           alt={`Reference art for ${name}`}
@@ -1236,12 +1236,12 @@ export function CharacterDossierModal({
 
                         {/* Floating Header Badges on Image */}
                         <div className="absolute top-3 left-3 flex items-center gap-2">
-                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-black/80 backdrop-blur-md text-white border border-white/20 uppercase shadow-md flex items-center gap-1.5">
+                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/95 backdrop-blur-md text-zinc-900 border border-black/10 uppercase shadow-xs flex items-center gap-1.5">
                             <span>{currentDisplayOpt?.icon || '📸'}</span>
                             <span>{currentDisplayOpt?.label || selectedViewType}</span>
                           </span>
                           {isCurrentCanon && (
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white flex items-center gap-1 shadow-md">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white flex items-center gap-1 shadow-xs">
                               <Lock className="w-3 h-3" />
                               <span>ACTIVE CANONICAL RAG</span>
                             </span>
@@ -1249,24 +1249,24 @@ export function CharacterDossierModal({
                         </div>
 
                         {/* Floating Action Toolbar on Image */}
-                        <div className="absolute bottom-3 inset-x-3 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/15">
+                        <div className="absolute bottom-3 inset-x-3 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-white/95 backdrop-blur-md border border-black/10 shadow-xs">
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => setPreviewImageModal(currentDisplayImage)}
-                              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                              className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-zinc-200"
                             >
-                              <Maximize2 className="w-3.5 h-3.5" />
+                              <Maximize2 className="w-3.5 h-3.5 text-zinc-600" />
                               <span>Inspect Full-Res</span>
                             </button>
                             
                             <button
                               type="button"
                               onClick={() => handleToggleAngleLock(selectedViewType, currentDisplayImage)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border ${
                                 isCurrentCanon
-                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                  : 'bg-white/10 hover:bg-emerald-600 text-white'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300'
                               }`}
                             >
                               <Lock className="w-3.5 h-3.5" />
@@ -1278,7 +1278,7 @@ export function CharacterDossierModal({
                             type="button"
                             onClick={() => handleGenerateCharacterArt(selectedViewType)}
                             disabled={isGeneratingImage || isBatchGenerating}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 shadow-xs"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingImage ? 'animate-spin' : ''}`} />
                             <span>{isGeneratingImage ? 'Re-drawing...' : 'Re-draw this View'}</span>
@@ -1287,15 +1287,15 @@ export function CharacterDossierModal({
                       </div>
                     ) : (
                       /* Blank Concept Studio Canvas with Big Generator CTA */
-                      <div className="relative rounded-2xl border-2 border-dashed border-indigo-400/40 bg-gradient-to-b from-indigo-950/40 to-black p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-4">
-                        <div className="w-16 h-16 rounded-3xl bg-indigo-600/20 border border-indigo-400/40 flex items-center justify-center text-3xl shadow-lg animate-pulse">
+                      <div className="relative rounded-2xl border-2 border-dashed border-zinc-300 bg-white p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 rounded-3xl bg-purple-50 border border-purple-200 flex items-center justify-center text-3xl shadow-xs">
                           🎨
                         </div>
                         <div className="max-w-md space-y-1">
-                          <h4 className="font-bold text-base sm:text-lg text-white">
+                          <h4 className="font-bold text-base sm:text-lg text-zinc-950">
                             Visual Concept Canvas Ready for @{name || 'Character'}
                           </h4>
-                          <p className="text-xs text-zinc-400 leading-relaxed">
+                          <p className="text-xs text-zinc-500 leading-relaxed">
                             No reference images generated yet. Click below to synthesize authentic concept artwork. You can generate individual angles (Face, Full-Body, Back) or the complete 5-angle model pack!
                           </p>
                         </div>
@@ -1305,9 +1305,9 @@ export function CharacterDossierModal({
                             type="button"
                             onClick={() => handleGenerateCharacterArt(selectedViewType)}
                             disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
-                            className="px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xl flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+                            className="px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 active:scale-95"
                           >
-                            <Sparkles className={`w-4 h-4 text-amber-300 ${isGeneratingImage ? 'animate-spin' : ''}`} />
+                            <Sparkles className={`w-4 h-4 text-purple-200 ${isGeneratingImage ? 'animate-spin' : ''}`} />
                             <span>
                               {isGeneratingImage
                                 ? `Drawing ${selectedViewType.replace('_', ' ')}...`
@@ -1319,7 +1319,7 @@ export function CharacterDossierModal({
                             type="button"
                             onClick={handleGenerateAllAngles}
                             disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
-                            className="px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-400/40 shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40"
+                            className="px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold bg-white hover:bg-purple-50 text-purple-900 border border-purple-300 shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40"
                           >
                             <span>⚡ Generate All 5 Angles at Once</span>
                           </button>
@@ -1332,10 +1332,10 @@ export function CharacterDossierModal({
                     ========================================================================= */}
                     <div className="space-y-3 pt-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                        <label className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-700 flex items-center gap-2">
                           <span>Multi-Angle Reference Lineup & Pipeline RAG Selectors:</span>
                         </label>
-                        <span className="text-[10px] text-indigo-400 font-mono">
+                        <span className="text-[10px] text-purple-700 font-mono font-bold">
                           Click any view to preview on canvas or generate
                         </span>
                       </div>
@@ -1358,12 +1358,12 @@ export function CharacterDossierModal({
                               onClick={() => setSelectedViewType(opt.id)}
                               className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
                                 isSelected
-                                  ? 'bg-indigo-600/25 border-indigo-400 shadow-md ring-1 ring-indigo-400'
-                                  : 'bg-zinc-900/60 border-white/10 hover:bg-zinc-800 hover:border-white/20'
+                                  ? 'bg-purple-50 border-2 border-purple-600 text-purple-950 shadow-xs ring-2 ring-purple-600/15'
+                                  : 'bg-white border-2 border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 text-zinc-800 shadow-2xs'
                               }`}
                             >
                               {/* Thumbnail Preview if exists */}
-                              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-black/60 mb-2 border border-white/10 flex items-center justify-center">
+                              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-zinc-100 mb-2 border border-black/[0.08] flex items-center justify-center">
                                 {matchingRef ? (
                                   <>
                                     <img
@@ -1372,16 +1372,16 @@ export function CharacterDossierModal({
                                       className="w-full h-full object-cover"
                                     />
                                     {isLockedAngle && (
-                                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500 text-white flex items-center gap-0.5 shadow-sm">
+                                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-600 text-white flex items-center gap-0.5 shadow-xs">
                                         <Lock className="w-2.5 h-2.5" />
                                         <span>RAG</span>
                                       </div>
                                     )}
                                   </>
                                 ) : (
-                                  <div className="flex flex-col items-center justify-center text-zinc-500 space-y-1">
-                                    <span className="text-2xl opacity-60">{opt.icon}</span>
-                                    <span className="text-[9px] font-mono uppercase text-zinc-500">Not drawn</span>
+                                  <div className="flex flex-col items-center justify-center text-zinc-400 space-y-1">
+                                    <span className="text-2xl opacity-75">{opt.icon}</span>
+                                    <span className="text-[9px] font-mono uppercase text-zinc-400">Not drawn</span>
                                   </div>
                                 )}
                               </div>
@@ -1389,10 +1389,10 @@ export function CharacterDossierModal({
                               {/* Label & Details */}
                               <div className="space-y-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="font-bold text-xs text-white truncate">{opt.label}</span>
-                                  <span className="text-[9px] font-mono text-zinc-400 uppercase">{opt.aspect}</span>
+                                  <span className="font-bold text-xs text-zinc-950 truncate">{opt.label}</span>
+                                  <span className="text-[9px] font-mono text-zinc-500 uppercase px-1 rounded bg-zinc-100 border border-zinc-200 font-bold">{opt.aspect}</span>
                                 </div>
-                                <p className="text-[10px] text-zinc-400 line-clamp-1 leading-tight">{opt.desc}</p>
+                                <p className="text-[10px] text-zinc-500 line-clamp-1 leading-tight">{opt.desc}</p>
                               </div>
 
                               {/* Action button inside card */}
@@ -1404,10 +1404,10 @@ export function CharacterDossierModal({
                                       e.stopPropagation();
                                       handleToggleAngleLock(opt.id, matchingRef.imageUrl);
                                     }}
-                                    className={`w-full py-1 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                                    className={`w-full py-1 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer border ${
                                       isLockedAngle
-                                        ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50'
-                                        : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                        : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'
                                     }`}
                                   >
                                     <Lock className="w-2.5 h-2.5" />
@@ -1422,7 +1422,7 @@ export function CharacterDossierModal({
                                       handleGenerateCharacterArt(opt.id);
                                     }}
                                     disabled={isGeneratingImage || isBatchGenerating}
-                                    className="w-full py-1 rounded-lg text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                                    className="w-full py-1 rounded-lg text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40 shadow-xs"
                                   >
                                     <Sparkles className="w-2.5 h-2.5" />
                                     <span>Generate</span>
@@ -1438,12 +1438,12 @@ export function CharacterDossierModal({
                     {/* =========================================================================
                         3. RAG PIPELINE STATUS BAR
                     ========================================================================= */}
-                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="p-3 rounded-xl bg-white border border-zinc-200 flex flex-wrap items-center justify-between gap-2 text-xs shadow-2xs">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold uppercase text-indigo-400">
+                        <span className="font-mono text-[10px] font-bold uppercase text-purple-700">
                           RAG Continuity Memory:
                         </span>
-                        <span className="text-zinc-300">
+                        <span className="text-zinc-600 font-medium">
                           {referenceImages.length} views generated • {
                             [portraitRefUrl, fullBodyRefUrl, backViewRefUrl, actionPoseRefUrl, lockedImageUrl].filter(Boolean).length
                           } active pipeline anchors
@@ -1451,16 +1451,16 @@ export function CharacterDossierModal({
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${portraitRefUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${portraitRefUrl ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-zinc-100 text-zinc-400 border border-zinc-200'}`}>
                           Face {portraitRefUrl ? '✓' : '—'}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${fullBodyRefUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${fullBodyRefUrl ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-zinc-100 text-zinc-400 border border-zinc-200'}`}>
                           Full-Body / Legs {fullBodyRefUrl ? '✓' : '—'}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${backViewRefUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${backViewRefUrl ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-zinc-100 text-zinc-400 border border-zinc-200'}`}>
                           Back {backViewRefUrl ? '✓' : '—'}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${lockedImageUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${lockedImageUrl ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-zinc-100 text-zinc-400 border border-zinc-200'}`}>
                           Master Sheet {lockedImageUrl ? '✓' : '—'}
                         </span>
                       </div>
@@ -1471,13 +1471,13 @@ export function CharacterDossierModal({
                     ========================================================================= */}
                     <div className="pt-1 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-mono text-zinc-400 uppercase">
+                        <label className="text-[10px] font-mono text-zinc-500 uppercase font-bold">
                           Optional Prompt Refinements for View:
                         </label>
                         <button
                           type="button"
                           onClick={() => setShowUrlInput(!showUrlInput)}
-                          className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer"
+                          className="text-[10px] text-zinc-500 hover:text-zinc-900 underline cursor-pointer"
                         >
                           {showUrlInput ? 'Hide Custom URL' : 'Or Paste Custom URL'}
                         </button>
@@ -1489,14 +1489,14 @@ export function CharacterDossierModal({
                           value={customViewPrompt}
                           onChange={(e) => setCustomViewPrompt(e.target.value)}
                           placeholder="e.g. Amber glowing eyes, intense focused gaze, high-collared trench coat..."
-                          className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-indigo-400"
+                          className="flex-1 px-3.5 py-2 bg-white border-2 border-zinc-200 focus:border-zinc-950 rounded-xl text-xs text-zinc-900 placeholder-zinc-400 outline-none shadow-2xs"
                         />
 
                         <button
                           type="button"
                           onClick={() => handleGenerateCharacterArt(selectedViewType)}
                           disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
                           <span>Generate View</span>
@@ -1504,19 +1504,19 @@ export function CharacterDossierModal({
                       </div>
 
                       {showUrlInput && (
-                        <div className="p-3 bg-black/50 border border-white/10 rounded-xl flex items-center gap-2 animate-in fade-in duration-150">
+                        <div className="p-3 bg-zinc-100 border border-zinc-200 rounded-xl flex items-center gap-2 animate-in fade-in duration-150">
                           <input
                             type="text"
                             value={manualUrlInput}
                             onChange={(e) => setManualUrlInput(e.target.value)}
                             placeholder="https://... (direct image URL to character artwork)"
-                            className="flex-1 px-3 py-1.5 bg-black/60 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-indigo-400"
+                            className="flex-1 px-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-xs text-zinc-900 outline-none focus:border-purple-600"
                           />
                           <button
                             type="button"
                             onClick={handleAddManualImage}
                             disabled={!manualUrlInput.trim()}
-                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-40 cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-colors disabled:opacity-40 cursor-pointer"
                           >
                             Add to Gallery
                           </button>
@@ -1524,15 +1524,15 @@ export function CharacterDossierModal({
                       )}
 
                       {generationError && (
-                        <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-xs text-red-300 flex items-center justify-between gap-2">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                             <span>{generationError}</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => setGenerationError(null)}
-                            className="text-red-400 hover:text-white text-xs underline cursor-pointer"
+                            className="text-red-600 hover:text-red-900 text-xs underline cursor-pointer"
                           >
                             Dismiss
                           </button>
@@ -1633,11 +1633,11 @@ export function CharacterDossierModal({
                 </div>
 
                 {/* Live Meta Image Prompt Fragment Preview */}
-                <div className="p-3.5 bg-zinc-900 text-zinc-200 rounded-xl font-mono text-[11px] space-y-1">
-                  <span className="text-zinc-500 uppercase text-[9px] tracking-wider block">
+                <div className="p-3.5 bg-zinc-50 border border-zinc-200 text-zinc-800 rounded-xl font-mono text-[11px] space-y-1">
+                  <span className="text-zinc-500 uppercase text-[9px] font-bold tracking-wider block">
                     Meta Muse Image Injected Continuity Token:
                   </span>
-                  <p className="text-emerald-400">
+                  <p className="text-purple-700 font-semibold">
                     {name || 'Hero'} ({role}): {appearance || 'Expressive look'}, wearing {wardrobe || 'signature attire'} with {iconicItem || 'distinctive accessories'}.
                   </p>
                 </div>
@@ -2143,19 +2143,19 @@ export function CharacterDossierModal({
         {isCoWriterOpen && (
           <aside className="w-full md:w-80 lg:w-96 border-t md:border-t-0 md:border-l border-black/[0.08] bg-zinc-50 flex flex-col shrink-0 overflow-y-auto max-h-[42vh] md:max-h-none">
             {/* Header */}
-            <div className="p-4 bg-gradient-to-r from-purple-900 via-indigo-950 to-zinc-900 text-white shrink-0 flex items-center justify-between shadow-xs">
+            <div className="p-4 bg-purple-50/90 border-b border-purple-200 text-purple-950 shrink-0 flex items-center justify-between shadow-xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-purple-500/30 border border-purple-400/40 flex items-center justify-center text-purple-200">
+                <div className="w-7 h-7 rounded-lg bg-purple-100 border border-purple-300 flex items-center justify-center text-purple-700">
                   <Bot className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-xs tracking-tight text-white flex items-center gap-1.5">
+                  <h4 className="font-bold text-xs tracking-tight text-purple-950 flex items-center gap-1.5">
                     <span>AI Co-Writer Deck</span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-500/40 text-purple-200 border border-purple-400/30">
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-200 text-purple-800 border border-purple-300">
                       Meta AI
                     </span>
                   </h4>
-                  <p className="text-[10px] text-zinc-300">
+                  <p className="text-[10px] text-purple-700">
                     Direct character creation in plain English
                   </p>
                 </div>
@@ -2163,7 +2163,7 @@ export function CharacterDossierModal({
               <button
                 type="button"
                 onClick={() => setIsCoWriterOpen(false)}
-                className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-purple-600 hover:text-purple-950 hover:bg-purple-100 transition-colors cursor-pointer"
                 title="Hide side panel"
               >
                 <X className="w-4 h-4" />

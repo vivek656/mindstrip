@@ -147,9 +147,9 @@ export function ZenComicReader({
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
   const [branchTargetEpisode, setBranchTargetEpisode] = useState<ComicStrip | null>(null);
 
-  // Cinematic Reading Experience States
+  // Studio Reading Experience States (Unified Single Light Theme)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [readerTheme, setReaderTheme] = useState<'cinema' | 'studio'>('cinema');
+  const [readerTheme, setReaderTheme] = useState<'cinema' | 'studio'>('studio');
   const [readerWidth, setReaderWidth] = useState<'standard' | 'wide' | 'cinema'>('wide');
 
   // Dedicated Desktop Right Studio Panel States
@@ -1391,22 +1391,6 @@ export function ZenComicReader({
               </div>
             )}
 
-            {/* Dark Cinema / Studio Light Canvas Toggle */}
-            {activeTab === 'comic' && (
-              <button
-                type="button"
-                onClick={() => setReaderTheme(readerTheme === 'cinema' ? 'studio' : 'cinema')}
-                className={`p-1.5 rounded-full border transition-all cursor-pointer ${
-                  readerTheme === 'cinema'
-                    ? 'bg-zinc-900 text-amber-300 border-zinc-700 hover:bg-zinc-800'
-                    : 'bg-zinc-100 text-zinc-700 border-black/10 hover:bg-zinc-200'
-                }`}
-                title={readerTheme === 'cinema' ? 'Dark Cinema Reading Canvas Active (Click for Studio Light)' : 'Studio Light Canvas Active (Click for Dark Cinema)'}
-              >
-                {readerTheme === 'cinema' ? <Moon className="w-4 h-4 text-amber-300" /> : <Sun className="w-4 h-4 text-amber-600" />}
-              </button>
-            )}
-
             {/* Dual Mode Switcher */}
             {apiConfig?.mode === 'meta' ? (
               <div className="flex items-center gap-1 p-0.5 rounded-full bg-blue-50/90 border border-blue-200">
@@ -1602,10 +1586,10 @@ export function ZenComicReader({
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            className="hidden lg:flex fixed left-0 top-24 z-30 px-3 py-2 bg-zinc-900/90 hover:bg-zinc-800 text-white rounded-r-xl border-y border-r border-white/20 shadow-xl text-xs font-bold items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md"
+            className="hidden lg:flex fixed left-0 top-24 z-30 px-3 py-2 bg-white/95 hover:bg-zinc-50 text-zinc-900 rounded-r-xl border-y border-r border-zinc-300 shadow-md text-xs font-bold items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md"
             title="Open Studio Sidebar"
           >
-            <PanelLeftOpen className="w-4 h-4 text-purple-400" />
+            <PanelLeftOpen className="w-4 h-4 text-purple-600" />
             <span>Cast & Ep</span>
           </button>
         )}

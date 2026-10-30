@@ -436,21 +436,21 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           GRANULAR ART DIRECTOR & MODEL STUDIO DECK (COLLAPSIBLE)
       ========================================================================= */}
       {isGranularOpen && (
-        <div className="mb-6 p-5 sm:p-6 bg-zinc-950 text-white rounded-2xl border-2 border-zinc-900 shadow-xl space-y-5 animate-in fade-in slide-in-from-top-3 duration-200">
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+        <div className="mb-6 p-5 sm:p-6 bg-white text-zinc-900 rounded-2xl border-2 border-zinc-200 shadow-md space-y-5 animate-in fade-in slide-in-from-top-3 duration-200">
+          <div className="flex items-center justify-between pb-3 border-b border-black/[0.08]">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 🎛️
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white">Granular Art Director & Model Studio</h3>
-                <p className="text-[11px] text-zinc-400">Fine-tune artwork prompt, visual layout, model engine, and aesthetic modifiers.</p>
+                <h3 className="font-bold text-sm text-zinc-950">Granular Art Director & Model Studio</h3>
+                <p className="text-[11px] text-zinc-500">Fine-tune artwork prompt, visual layout, model engine, and aesthetic modifiers.</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setIsGranularOpen(false)}
-              className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
+              className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-black/5 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -459,8 +459,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Control 1: Art Style Selection */}
             <div className="space-y-2">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-blue-400" />
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5 text-blue-600" />
                 <span>1. Art Style</span>
               </label>
               <div className="grid grid-cols-2 gap-1.5">
@@ -473,17 +473,17 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                       setIsCustomArtStyle(false);
                       setCustomPrompt((prev) => prev.replace(/^\w+\s/, `${style.id} `));
                     }}
-                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl text-left border-2 transition-all cursor-pointer ${
                       !isCustomArtStyle && selectedArtStyle === style.id
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        ? 'bg-blue-50 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-600/10'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-white hover:border-zinc-300'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 font-bold text-xs">
                       <span>{style.icon}</span>
                       <span>{style.name}</span>
                     </div>
-                    <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{style.desc}</p>
+                    <p className="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">{style.desc}</p>
                   </button>
                 ))}
 
@@ -491,17 +491,17 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 <button
                   type="button"
                   onClick={() => setIsCustomArtStyle(true)}
-                  className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl text-left border-2 transition-all cursor-pointer ${
                     isCustomArtStyle
-                      ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
-                      : 'bg-zinc-900 border-dashed border-zinc-700 text-zinc-300 hover:border-zinc-500'
+                      ? 'bg-blue-50 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-600/10'
+                      : 'bg-zinc-50 border-dashed border-zinc-300 text-zinc-800 hover:bg-white hover:border-zinc-400'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold text-xs">
                     <span>✨</span>
                     <span>Custom Art Style</span>
                   </div>
-                  <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">Define your own medium</p>
+                  <p className="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">Define your own medium</p>
                 </button>
               </div>
 
@@ -517,7 +517,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     }
                   }}
                   placeholder="e.g. Charcoal & Pastel, 1980s Retro Anime Cel..."
-                  className="w-full mt-1.5 p-2 bg-zinc-900 border border-zinc-700 rounded-lg text-xs text-zinc-100 font-mono outline-none focus:border-blue-500"
+                  className="w-full mt-1.5 p-2 bg-white border-2 border-zinc-200 rounded-lg text-xs text-zinc-900 font-mono outline-none focus:border-blue-600"
                   autoFocus
                 />
               )}
@@ -525,8 +525,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
             {/* Control 2: Layout Format */}
             <div className="space-y-2">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-blue-400" />
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-blue-600" />
                 <span>2. Page Layout Format</span>
               </label>
               <div className="grid grid-cols-2 gap-1.5">
@@ -540,17 +540,17 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                         setSelectedAspect(layout.aspect);
                       }
                     }}
-                    className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                    className={`p-2.5 rounded-xl text-left border-2 transition-all cursor-pointer ${
                       selectedLayout === layout.id
-                        ? 'bg-blue-600 border-blue-500 text-white shadow-xs'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        ? 'bg-blue-50 border-blue-600 text-blue-950 shadow-xs ring-2 ring-blue-600/10'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-800 hover:bg-white hover:border-zinc-300'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-xs">{layout.name}</span>
-                      <span className="text-[9px] font-mono px-1 rounded bg-black/30 text-zinc-400">{layout.aspect}</span>
+                      <span className="text-[9px] font-mono px-1 rounded bg-zinc-200/80 text-zinc-700 font-bold">{layout.aspect}</span>
                     </div>
-                    <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{layout.desc}</p>
+                    <p className="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">{layout.desc}</p>
                   </button>
                 ))}
               </div>
@@ -558,10 +558,10 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           </div>
 
           {/* Control 3: AI Engine & Aspect Ratio */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-zinc-800/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-black/[0.08]">
             <div>
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
-                <Cpu className="w-3.5 h-3.5 text-blue-400" />
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5 mb-1.5">
+                <Cpu className="w-3.5 h-3.5 text-blue-600" />
                 <span>3. Image Engine / Model</span>
               </label>
               <div className="grid grid-cols-3 gap-1.5">
@@ -570,10 +570,10 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     key={eng.id}
                     type="button"
                     onClick={() => setSelectedEngine(eng.id)}
-                    className={`p-2 rounded-xl text-center border text-xs transition-all cursor-pointer ${
+                    className={`p-2 rounded-xl text-center border-2 text-xs transition-all cursor-pointer ${
                       selectedEngine === eng.id
-                        ? 'bg-white text-zinc-950 font-bold border-white'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                        ? 'bg-blue-50 border-blue-600 text-blue-950 font-bold shadow-xs'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-white'
                     }`}
                   >
                     <div className="truncate font-medium">{eng.name}</div>
@@ -584,8 +584,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
             </div>
 
             <div>
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
-                <Ratio className="w-3.5 h-3.5 text-blue-400" />
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5 mb-1.5">
+                <Ratio className="w-3.5 h-3.5 text-blue-600" />
                 <span>4. Aspect Ratio</span>
               </label>
               <div className="grid grid-cols-3 gap-1.5">
@@ -598,10 +598,10 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     key={asp.id}
                     type="button"
                     onClick={() => setSelectedAspect(asp.id)}
-                    className={`p-2 rounded-xl text-center border text-xs transition-all cursor-pointer ${
+                    className={`p-2 rounded-xl text-center border-2 text-xs transition-all cursor-pointer ${
                       selectedAspect === asp.id
-                        ? 'bg-white text-zinc-950 font-bold border-white'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                        ? 'bg-blue-50 border-blue-600 text-blue-950 font-bold shadow-xs'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-white'
                     }`}
                   >
                     {asp.label}
@@ -612,16 +612,16 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           </div>
 
           {/* Control 4: Granular Visual Prompt Editor */}
-          <div className="space-y-2 pt-1 border-t border-zinc-800/80">
+          <div className="space-y-2 pt-1 border-t border-black/[0.08]">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Wand2 className="w-3.5 h-3.5 text-blue-400" />
+              <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1.5">
+                <Wand2 className="w-3.5 h-3.5 text-blue-600" />
                 <span>5. Visual Image Prompt (Editable)</span>
               </label>
               <button
                 type="button"
                 onClick={() => setCustomPrompt(defaultPrompt)}
-                className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer"
+                className="text-[10px] text-zinc-500 hover:text-zinc-900 underline cursor-pointer"
               >
                 Reset to Default
               </button>
@@ -631,7 +631,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               rows={3}
-              className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-zinc-100 font-mono outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full p-3 bg-zinc-50 border-2 border-zinc-200 rounded-xl text-xs text-zinc-900 font-mono outline-none focus:border-blue-600 focus:bg-white"
               placeholder="Describe exact composition, characters, lighting, camera angles..."
             />
 
@@ -643,7 +643,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                   key={tag}
                   type="button"
                   onClick={() => handleInjectPromptTag(tag)}
-                  className="px-2 py-0.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] border border-zinc-700 transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] border border-zinc-200 transition-colors cursor-pointer"
                 >
                   {tag}
                 </button>
@@ -656,7 +656,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
             <button
               type="button"
               onClick={() => setIsGranularOpen(false)}
-              className="px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-zinc-500 hover:text-zinc-900 cursor-pointer"
             >
               Cancel
             </button>
@@ -664,7 +664,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               type="button"
               onClick={handleExecuteGranularArtwork}
               disabled={isGeneratingArtwork}
-              className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95"
+              className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95"
             >
               {isGeneratingArtwork ? (
                 <>
@@ -688,7 +688,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
       {pageImage ? (
         /* Real Meta AI Generated Full-Page Comic Spread */
         <div className="w-full">
-          <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-950 shadow-2xl bg-zinc-950">
+          <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-300 shadow-xl bg-white">
             <img
               src={pageImage}
               alt={`${world.title} — ${episode.title}`}

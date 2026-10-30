@@ -553,3 +553,26 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - System prompt strictly instructs Meta AI: *"If the creator specifies a non-superhero civilian (e.g. office romance, coworker, student, teacher, barista), STRICTLY OBEY and DO NOT invent combat powers, armor, weapons, or villain threats. Ground the skills in their actual profession or hobbies, and gear in everyday personal belongings."*
     - Fallback heuristic ensures romance/office leads get realistic workplace skills and belongings if offline.
   - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.
+
+
+- Elimination of Jarring Dark/Light Theme Mixing & Unified Light Theme Enforcement (2026-10-30):
+  - Addressed User Feedback: User strongly disliked the jarring mixture of black, white, and dark blue elements across the app ("what with this balck , white , blue theme going on why cant we have single theme i dont like the dark one TBH , we will have drk theme later but i dont like mixing dark and light like this").
+  - Root Cause Diagnosed:
+    - `CharacterDossierModal.tsx` featured a massive pitch-black / dark indigo card (`bg-gradient-to-br from-indigo-950 via-zinc-900 to-black`) inside an otherwise white modal, with black inputs and buttons.
+    - `ZenComicReader.tsx` defaulted `readerTheme` to `'cinema'`, which turned the entire background to pitch black (`#0c0d12`), the header to dark zinc, and the sidebar to dark black, clashing with the white comic elements and modals.
+    - `ComicPageSpread.tsx` had its Granular Art Director Studio styled in pitch-black (`bg-zinc-950 text-white`) and page wrapper in `bg-zinc-950`.
+  - Fixes Implemented:
+    - **Single Unified Light Theme**: Standardized the entire interface onto MindStrip's signature warm editorial paper aesthetic (`#faf8f5` page canvas, crisp white `#ffffff` cards, clean `zinc-200` borders, and high-contrast dark `zinc-950` text).
+    - **Character Visual Studio in `CharacterDossierModal.tsx`**:
+      - Converted the Model Sheet Studio from dark indigo to clean light ivory/zinc (`bg-zinc-50 border-2 border-zinc-200 text-zinc-900`).
+      - All 5 angle selector cards, hero preview canvas, toolbar, and inputs redesigned with crisp white surfaces, clean purple accents, and high-contrast text.
+      - Co-Writer Deck header converted from dark gradient to light lavender (`bg-purple-50 border-b border-purple-200 text-purple-950`).
+      - Injected continuity token box converted from pitch black to light zinc card.
+    - **`ZenComicReader.tsx` Default & Cleanup**:
+      - Defaulted `readerTheme` strictly to `'studio'` (light theme).
+      - Removed the dark theme toggle so users are never dropped into the dark mode.
+      - Converted floating sidebar restore pills to clean light styling (`bg-white/95 text-zinc-900 border-zinc-300`).
+    - **`ComicPageSpread.tsx` Granular Studio**:
+      - Redesigned Granular Art Director Deck from `bg-zinc-950` to `bg-white text-zinc-900 border-2 border-zinc-200 shadow-md`.
+      - Converted all art style, layout, engine, and aspect ratio selector pills to clean light mode styling.
+    - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.
