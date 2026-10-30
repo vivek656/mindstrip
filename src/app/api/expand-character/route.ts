@@ -46,8 +46,8 @@ Respond ONLY with valid JSON matching this schema:
   "motivation": "Core psychological desire or driving ambition",
   "flaws": "Fatal flaw, blindspot, or vulnerability that creates drama",
   "secret": "A hidden classified truth or burden they keep to themselves",
-  "abilities": "Special combat skill, superpower, technical mastery, or distinctive talent",
-  "gear": "Key signature tools, gadgets, or weapons",
+  "abilities": "Specialized skills, profession, talent, tradecraft, magic, or powers tailored to the universe genre (${genre}). If Slice-of-Life/Comedy, focus on jobs, culinary, artistic, or social talents; if Mystery, deduction/forensics; if Sci-Fi/Fantasy/Action, tech/magic/powers.",
+  "gear": "Signature items, belongings, tools, or gear carried by this character tailored to (${genre}). If Slice-of-Life, personal items like bags, cameras, sketchbooks, mugs; if Detective/Action/SciFi, field gear, devices, or weapons.",
   "voiceTone": "Dialogue cadence and speech habits (e.g. sharp cynical humor, cryptic brevity, energetic slang)",
   "catchphrase": "A punchy, memorable signature catchphrase",
   "suggestedRelationships": [
@@ -93,8 +93,29 @@ Respond ONLY with valid JSON matching this schema:
     const isHero = charRole === 'protagonist';
     const isVillain = charRole === 'antagonist';
     const otherCast = existingCharacters.filter((n: string) => n.toLowerCase() !== charName.toLowerCase());
+    const gLower = (genre || '').toLowerCase();
+    const isDaily = gLower.includes('slice') || gLower.includes('daily') || gLower.includes('comedy') || gLower.includes('romance') || gLower.includes('office') || gLower.includes('drama');
 
-    const fallbackExpansion = {
+    const fallbackExpansion = isDaily ? {
+      appearance: character.appearance || `${charName} possesses warm, expressive eyes, tousled dark hair, and a casual, animated posture that puts people immediately at ease.`,
+      wardrobe: character.wardrobe || `Oversized cable-knit cardigan over an organic cotton graphic tee, relaxed-fit dark denim, and classic worn canvas sneakers.`,
+      iconicItem: character.iconicItem || `A battered stainless steel coffee tumbler covered in quirky indie band and art cafe stickers.`,
+      backstory: character.backstory || `Moved to the neighborhood to pursue an independent creative dream, constantly juggling a chaotic day job, eccentric roommates, and big ambitions.`,
+      motivation: character.motivation || `To master their craft and build a welcoming community space where oddballs feel at home.`,
+      flaws: character.flaws || `Terrible at setting boundaries; agrees to help everyone else before finishing their own urgent projects.`,
+      secret: character.secret || `Secretly the anonymous creator of the neighborhood's beloved viral slice-of-life comic strip.`,
+      abilities: character.abilities || `Master coffee barista, quick-witted social banter, keen visual observation, and an uncanny ability to defuse tense arguments.`,
+      gear: character.gear || `Vintage 35mm film camera, leather-trimmed canvas messenger bag, dog-eared sketchbook, and noise-canceling headphones.`,
+      voiceTone: character.voiceTone || `Warm, conversational, and energetic; punctuates self-deprecating anecdotes with infectious laughter.`,
+      catchphrase: character.catchphrase || `One step at a time — first, we need more coffee.`,
+      suggestedRelationships: otherCast.length > 0 ? [
+        {
+          targetCharacterName: otherCast[0],
+          relationType: isHero ? 'ally' : 'rival',
+          dynamicDescription: `Close daily friends who playfully roast each other's habits over morning espresso.`
+        }
+      ] : []
+    } : {
       appearance: character.appearance || `${charName} possesses sharp, observant eyes, windswept dark hair, and a resilient, athletic posture forged through constant survival.`,
       wardrobe: character.wardrobe || `Weathered charcoal utility jacket over a slate-grey tunic, reinforced knee-high leather boots, and subtle copper metallic stitching.`,
       iconicItem: character.iconicItem || `A modified mechanical wrist-chronometer with a cracked display that still counts down to an unknown deadline.`,

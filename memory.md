@@ -505,3 +505,23 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - **Automatic Cache Purge**: `upgradeWorlds` in `page.tsx` and `CharacterDossierModal.tsx` automatically detects and scrubs any stale `pollinations.ai` URLs from characters, model sheets, and reference lineups, replacing them with clean official Meta Muse generation.
     - Verified direct Meta Muse Image 1.0 generation returns HTTP 200 with 643KB high-res artwork.
     - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.
+
+- Universal Genre Overhaul & Dossier Typography / UX Upgrade (2026-10-30):
+  - Addressed User Feedback: Comics are a storytelling medium, not just superhero/villain stories. The previous "⚡ Powers & Gear" tab with tiny 2-row text boxes pigeonholed all characters into combat superheroes with weapons and was cramped to read.
+  - Upgraded Tab 4 to **`🎯 Skills & Belongings`**:
+    - Built dynamic **Genre Lens Selector**:
+      - ☕ **Slice of Life & Daily Life**: Profession, tradecraft, culinary, artistic, or social talents; carried belongings, messenger bags, cameras, sketchbooks, bikes.
+      - 🕵️ **Mystery & Detective**: Forensic deduction, lockpicking, interrogation, photographic recall; investigation kits, bug scanners, trenchcoats, encrypted phones.
+      - 🚀 **Sci-Fi & Cyberpunk**: Hacking, piloting, cybernetic reflexes; cyberdecks, HUDs, drones, plasma cutters.
+      - 🪄 **Fantasy & Supernatural**: Arcane schools, beast-speech, apothecary herbalism; grimoires, wands, heirloom blades.
+      - ⚡ **Action & Superhero**: Powers, martial arts, gadgets, armor.
+    - Added 1-click **Quick Add Inspiration Chips** under each field that append relevant items/skills with one click.
+  - Sizing & Readability UX Overhaul across ALL tabs:
+    - Expanded modal width from `max-w-4xl` to `max-w-5xl`.
+    - Upgraded textarea heights from cramped `rows={2}` to generous `rows={4}` / `rows={5}` (`min-h-[110px]` to `min-h-[140px]`).
+    - Upgraded font sizes from strained `text-xs` (12px) to comfortable, crisp `text-sm sm:text-base font-medium text-zinc-950 leading-relaxed`.
+    - Added high-contrast white card borders with clear focus states (`border-2 border-zinc-200 focus:border-zinc-950`).
+  - Narrative Roles De-hardcoded from pure superhero terminology:
+    - Updated presets to `Protagonist`, `Ally / Partner / Friend`, `Antagonist / Rival`, and `Supporting Cast`.
+  - Upgraded `/api/expand-character`: Meta AI character generation prompt is now strictly genre-aware, generating realistic daily professions and belongings for slice-of-life and comedy universes instead of combat weapons.
+  - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.

@@ -27,7 +27,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Target,
+  Briefcase
 } from 'lucide-react';
 
 interface CharacterDossierModalProps {
@@ -40,13 +42,97 @@ interface CharacterDossierModalProps {
   apiConfig?: ApiConfig;
 }
 
-const EMOJI_PRESETS = ['⚡', '🕵️', '🔥', '🛡️', '🧠', '🗡️', '🤖', '👑', '🌌', '💥', '🐺', '🌙', '💀', '🎯', '🚀', '🥷'];
+const EMOJI_PRESETS = ['⚡', '🕵️', '🔥', '🛡️', '🧠', '🗡️', '🤖', '👑', '🌌', '💥', '🐺', '🌙', '💀', '🎯', '🚀', '🥷', '☕', '🎨', '📷', '🎸', '📖'];
 
 const ROLE_PRESETS: { id: ComicCharacter['role']; label: string; desc: string }[] = [
-  { id: 'protagonist', label: 'Protagonist', desc: 'Central hero driving the conflict' },
-  { id: 'sidekick', label: 'Sidekick / Ally', desc: 'Trusted confidant or loyal partner' },
-  { id: 'antagonist', label: 'Antagonist', desc: 'Primary opposition or rival' },
-  { id: 'supporting', label: 'Supporting', desc: 'Recurring figure or mentor' },
+  { id: 'protagonist', label: 'Protagonist', desc: 'Central character driving the story' },
+  { id: 'sidekick', label: 'Ally / Partner / Friend', desc: 'Trusted companion, best friend, or partner' },
+  { id: 'antagonist', label: 'Antagonist / Rival', desc: 'Foil, opponent, rival, or competing force' },
+  { id: 'supporting', label: 'Supporting Cast', desc: 'Family, mentor, coworker, or acquaintance' },
+];
+
+export type GearLensId = 'slice-of-life' | 'detective' | 'scifi' | 'fantasy' | 'action';
+
+export interface GenreLensContent {
+  id: GearLensId;
+  label: string;
+  icon: string;
+  skillLabel: string;
+  skillHelper: string;
+  skillPlaceholder: string;
+  skillPills: string[];
+  itemLabel: string;
+  itemHelper: string;
+  itemPlaceholder: string;
+  itemPills: string[];
+}
+
+export const GENRE_LENSES: GenreLensContent[] = [
+  {
+    id: 'slice-of-life',
+    label: '☕ Slice of Life & Daily',
+    icon: '☕',
+    skillLabel: 'Profession, Talents & Everyday Skills',
+    skillHelper: 'What is their trade, job, specialty, or passion? (e.g. barista craft, programming, illustration, athletics)',
+    skillPlaceholder: 'e.g. Specialty coffee barista, keen graphic illustrator, empathetic active listener, amateur marathon runner.',
+    skillPills: ['☕ Specialty Barista', '💻 Full-Stack Dev', '🎨 Freelance Illustrator', '🎸 Acoustic Songwriter', '🍳 Gourmet Home Chef', '🩺 Resident Doctor', '📚 Rare Book Archivist', '🏃 Marathon Runner'],
+    itemLabel: 'Personal Belongings, Carried Items & Tools',
+    itemHelper: 'Signature everyday items they always carry (e.g. messenger bag, vintage camera, thermos, sketchbook)',
+    itemPlaceholder: 'e.g. Vintage 35mm film camera, beat-up leather messenger bag, thermal travel mug, dog-eared moleskine sketchbook with fountain pens.',
+    itemPills: ['📷 Vintage 35mm Camera', '🎒 Leather Messenger Bag', '☕ Thermal Coffee Tumbler', '📓 Moleskine Sketchbook', '📱 Dual-SIM Smartphone', '🚲 Fixed-Gear Bicycle', '🎧 Studio Headphones', '🕶️ Tortoiseshell Glasses'],
+  },
+  {
+    id: 'detective',
+    label: '🕵️ Mystery & Detective',
+    icon: '🕵️',
+    skillLabel: 'Investigative Skills, Tradecraft & Deduction',
+    skillHelper: 'How they uncover secrets or solve mysteries (e.g. forensic observation, interrogation, lockpicking, memory)',
+    skillPlaceholder: 'e.g. Photographic recall, forensic crime scene analysis, subtle micro-expression polygraph reading, lockpicking.',
+    skillPills: ['🔍 Forensic Analysis', '🗝️ Master Lockpicker', '🧠 Photographic Memory', '🎙️ Interrogation Specialist', '🥋 Close-Quarters Disarm', '🚗 Tactical Getaway Driver'],
+    itemLabel: 'Detective Field Equipment & Key Tools',
+    itemHelper: 'Investigation kit, surveillance tools, recorders, or carried gear',
+    itemPlaceholder: 'e.g. Audio bug frequency scanner, brass zippo lighter, pocket magnifying loupe, encrypted satellite burner phone.',
+    itemPills: ['📡 Frequency Bug Scanner', '🕵️ Tailored Trenchcoat', '🔦 UV Blacklight Pen', '📱 Encrypted Burner Phone', '🧤 Kevlar Field Gloves', '📷 Telephoto Spycam'],
+  },
+  {
+    id: 'scifi',
+    label: '🚀 Sci-Fi & Cyberpunk',
+    icon: '🚀',
+    skillLabel: 'Technical Specialties, Cyberware & Disciplines',
+    skillHelper: 'Hacking, piloting, cybernetic augmentation, or scientific expertise',
+    skillPlaceholder: 'e.g. Sub-neural ICE breaker, zero-G orbital navigation, cybernetic reaction reflex booster, drone piloting.',
+    skillPills: ['💾 Neural ICE Breaker', '🚀 Zero-G Pilot', '👁️ Optical Cyber-HUD', '⚡ Kinetic Reflex Booster', '🦾 Bionic Prosthetic Arm', '🤖 Micro-Drone Commander'],
+    itemLabel: 'High-Tech Hardware, Cyberdecks & Implants',
+    itemHelper: 'Portable hardware, cybernetic decks, and exotic energy tools',
+    itemPlaceholder: 'e.g. Portable sub-ether cyberdeck with optical tap, monomolecular cutting wire, personal EMP dampener.',
+    itemPills: ['💻 Cyberdeck Terminal', '🕶️ Augmented HUD Shades', '🔋 Plasma Torch Cutter', '🦿 Anti-Grav Boots', '🛡️ EMP Personal Field', '🛸 Micro-Recon Drone'],
+  },
+  {
+    id: 'fantasy',
+    label: '🪄 Fantasy & Supernatural',
+    icon: '🪄',
+    skillLabel: 'Magic Disciplines, Spells & Martial Arts',
+    skillHelper: 'Arcane schools, divine gifts, alchemy, or blade mastery',
+    skillPlaceholder: 'e.g. Frost invocation, beast-speech communion, shadow-stepping, apothecary herbalism, dual-rapier dueling.',
+    skillPills: ['❄️ Frost Invocation', '🐺 Beast-Speech', '🌑 Shadow-Stepping', '🌿 Apothecary Herbalist', '⚔️ Dual-Blade Master', '✨ Light Manipulation'],
+    itemLabel: 'Enchanted Relics, Grimoires & Heirloom Arms',
+    itemHelper: 'Spellbooks, enchanted relics, talismans, and heirloom arms',
+    itemPlaceholder: 'e.g. Ancient leather-bound grimoire of forgotten wardings, carved rowan-wood wand, Damascus steel hunting blade.',
+    itemPills: ['📖 Ancient Grimoire', '🪄 Carved Rowan Wand', '🗡️ Damascus Steel Blade', '🧿 Warding Talisman', '🧪 Satchel of Potions', '🏹 Yew Longbow'],
+  },
+  {
+    id: 'action',
+    label: '⚡ Action & Superhero',
+    icon: '⚡',
+    skillLabel: 'Special Abilities, Powers or Combat Style',
+    skillHelper: 'Metahuman powers, superhuman physical feats, or combat mastery',
+    skillPlaceholder: 'e.g. Kinetic energy absorption, hypersonic acrobatics, peak-human marksmanship, telekinetic forcefields.',
+    skillPills: ['⚡ Kinetic Shockwave', '🛡️ Forcefield Shield', '🏃 Hypersonic Speed', '🎯 Peak Marksmanship', '🦅 Flight & Gliding', '🥋 Krav Maga Mastery'],
+    itemLabel: 'Costume Tech, Signature Gadgets & Arms',
+    itemHelper: 'Iconic gadgets, tactical suit tech, and signature weapon',
+    itemPlaceholder: 'e.g. Electrified collapsible kali batons, carbon-fiber grapple launcher, thermoptic gliding cape.',
+    itemPills: ['🦇 Grapple Launcher', '⚡ Shock Batons', '🦹 Armored Nomex Suit', '🪃 Boomerang Darts', '🥽 Night-Vision Cowl', '🛡️ Vibranium Shield'],
+  },
 ];
 
 const GENDER_PRESETS: { id: ComicCharacter['gender']; label: string }[] = [
@@ -157,9 +243,19 @@ export function CharacterDossierModal({
   const [traits, setTraits] = useState<string[]>(character?.traits || []);
   const [newTraitInput, setNewTraitInput] = useState('');
 
-  // Powers & Gear
+  // Skills & Belongings
   const [abilities, setAbilities] = useState(character?.abilities || '');
   const [gear, setGear] = useState(character?.gear || '');
+
+  const resolveDefaultLens = (): GearLensId => {
+    const g = (world.genre || '').toLowerCase();
+    if (g.includes('slice') || g.includes('daily') || g.includes('comedy') || g.includes('romance') || g.includes('office') || g.includes('drama')) return 'slice-of-life';
+    if (g.includes('detective') || g.includes('mystery') || g.includes('noir') || g.includes('crime') || g.includes('investigat')) return 'detective';
+    if (g.includes('cyber') || g.includes('sci-fi') || g.includes('space') || g.includes('tech')) return 'scifi';
+    if (g.includes('fantasy') || g.includes('magic') || g.includes('myth') || g.includes('supernatural')) return 'fantasy';
+    return 'action';
+  };
+  const [selectedGearLens, setSelectedGearLens] = useState<GearLensId>(resolveDefaultLens);
 
   // Relationships
   const [relationships, setRelationships] = useState<CharacterRelationship[]>(
@@ -756,7 +852,7 @@ export function CharacterDossierModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-white border-2 border-zinc-950 rounded-3xl shadow-2xl overflow-hidden text-zinc-900 my-auto max-h-[92vh] flex flex-col">
+      <div className="relative w-full max-w-5xl bg-white border-2 border-zinc-950 rounded-3xl shadow-2xl overflow-hidden text-zinc-900 my-auto max-h-[92vh] flex flex-col">
         
         {/* =====================================================================
             TOP TITLE BAR
@@ -982,7 +1078,7 @@ export function CharacterDossierModal({
             },
             { id: 'lore', label: '🧠 Psychology & Lore', icon: Brain },
             { id: 'voice', label: '💬 Voice & Dialogue', icon: MessageSquare },
-            { id: 'gear', label: '⚡ Powers & Gear', icon: Zap },
+            { id: 'gear', label: '🎯 Skills & Belongings', icon: Target },
             { id: 'relationships', label: `👥 Cast Ties (${relationships.length})`, icon: Users },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1400,11 +1496,11 @@ export function CharacterDossierModal({
                     <span className="text-[10px] text-zinc-400 font-mono">Image Anchor</span>
                   </label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={appearance}
                     onChange={(e) => setAppearance(e.target.value)}
                     placeholder="e.g. Angular jawline, observant amber eyes, messy cropped silver hair, lean athletic build with an alert posture."
-                    className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                    className="w-full p-3.5 bg-white border-2 border-zinc-200 rounded-2xl text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-colors leading-relaxed"
                   />
                 </div>
 
@@ -1414,11 +1510,11 @@ export function CharacterDossierModal({
                       Signature Wardrobe & Color Palette
                     </label>
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={wardrobe}
                       onChange={(e) => setWardrobe(e.target.value)}
                       placeholder="e.g. Faded charcoal trench coat with roll-up sleeves over an indigo combat tunic and reinforced knee-boots."
-                      className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                      className="w-full p-3.5 bg-white border-2 border-zinc-200 rounded-2xl text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-colors leading-relaxed"
                     />
                   </div>
 
@@ -1428,11 +1524,11 @@ export function CharacterDossierModal({
                       <span className="text-[10px] text-purple-600 font-mono">(Key Prop)</span>
                     </label>
                     <textarea
-                      rows={2}
+                      rows={3}
                       value={iconicItem}
                       onChange={(e) => setIconicItem(e.target.value)}
-                      placeholder="e.g. Cracked holographic wrist-chronometer, chipped mechanical katana, glowing neon cyber-goggles."
-                      className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                      placeholder="e.g. Cracked holographic wrist-chronometer, vintage 35mm film camera, chipped mechanical katana, glowing neon cyber-goggles."
+                      className="w-full p-3.5 bg-white border-2 border-zinc-200 rounded-2xl text-sm font-medium text-zinc-950 outline-none focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 transition-colors leading-relaxed"
                     />
                   </div>
                 </div>
@@ -1452,17 +1548,17 @@ export function CharacterDossierModal({
 
           {/* TAB 2: PSYCHOLOGY & LORE */}
           {activeTab === 'lore' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
+            <div className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">
                   Origin & Formative Backstory
                 </label>
                 <textarea
-                  rows={3}
+                  rows={5}
                   value={backstory}
                   onChange={(e) => setBackstory(e.target.value)}
-                  placeholder={`Who was @${name || 'this character'} before the story began? What formative event shaped their worldview?`}
-                  className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                  placeholder={`Who was @${name || 'this character'} before the story began? What formative events, background, or life experience shaped their worldview?`}
+                  className="w-full p-4 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm sm:text-base font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                 />
               </div>
 
@@ -1470,28 +1566,28 @@ export function CharacterDossierModal({
                 <div>
                   <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
                     <span>Core Motivation / Driving Desire</span>
-                    <span className="text-[10px] text-blue-600 font-mono">What they want</span>
+                    <span className="text-[10px] text-blue-600 font-mono">(What they want)</span>
                   </label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={motivation}
                     onChange={(e) => setMotivation(e.target.value)}
-                    placeholder="e.g. To redeem their family's name before the syndicate annexes their sector."
-                    className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                    placeholder="e.g. To open their own independent bakery, redeem their family's name, or uncover the truth behind the lost expedition."
+                    className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
-                    <span>Fatal Flaw / Psychological Blindspot</span>
-                    <span className="text-[10px] text-amber-600 font-mono">What trips them up</span>
+                    <span>Fatal Flaw / Blindspot</span>
+                    <span className="text-[10px] text-amber-600 font-mono">(What trips them up)</span>
                   </label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     value={flaws}
                     onChange={(e) => setFlaws(e.target.value)}
-                    placeholder="e.g. Paralyzing fear of failure; refuses to delegate until it's too late."
-                    className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                    placeholder="e.g. Chronic perfectionism; avoids confrontation until a breaking point; holds grudges; impulsive overconfidence."
+                    className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                   />
                 </div>
               </div>
@@ -1501,12 +1597,12 @@ export function CharacterDossierModal({
                   <span>Classified Secret / Hidden Truth</span>
                   <span className="text-[10px] text-purple-600 font-mono">(Plot Twist Fuel)</span>
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={2}
                   value={secret}
                   onChange={(e) => setSecret(e.target.value)}
-                  placeholder="e.g. Possesses the only encryption key capable of deactivating the city shield."
-                  className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                  placeholder="e.g. Secretly the anonymous author of the city's viral blog, or harbors an unpaid debt to an old rival."
+                  className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                 />
               </div>
             </div>
@@ -1514,62 +1610,62 @@ export function CharacterDossierModal({
 
           {/* TAB 3: VOICE & DIALOGUE */}
           {activeTab === 'voice' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
+            <div className="space-y-6 animate-in fade-in duration-150">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Dialogue Cadence & Voice Tone
                   </label>
                   <input
                     type="text"
                     value={voiceTone}
                     onChange={(e) => setVoiceTone(e.target.value)}
-                    placeholder="e.g. Fast-paced technical jargon, understated dry sarcasm, poetic riddles"
-                    className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                    placeholder="e.g. Fast-paced dry sarcasm, thoughtful warmth, cryptic brevity, excitable rambler"
+                    className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                     Signature Catchphrase or Motto
                   </label>
                   <input
                     type="text"
                     value={catchphrase}
                     onChange={(e) => setCatchphrase(e.target.value)}
-                    placeholder='e.g. "The law bends when survival is on the line."'
-                    className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors font-serif italic"
+                    placeholder='e.g. "Order up!" or "The truth never stays buried."'
+                    className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-serif italic text-zinc-950 outline-none transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
                   Personality Summary
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={personality}
                   onChange={(e) => setPersonality(e.target.value)}
-                  placeholder="e.g. Fiercely loyal, skeptical of authority, keeps emotion tightly under wraps."
-                  className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                  placeholder="e.g. Empathetic yet stubborn, values punctuality above all else, secretly a romantic who deflects with humor."
+                  className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                 />
               </div>
 
               {/* Character Traits Tags */}
               <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">
                   Personality & Archetype Traits
                 </label>
-                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {TRAIT_SUGGESTIONS.map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => handleToggleTrait(t)}
-                      className={`px-2.5 py-1 rounded-full text-xs transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                         traits.includes(t)
-                          ? 'bg-zinc-950 text-white font-bold'
+                          ? 'bg-zinc-950 text-white shadow-xs'
                           : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
                       }`}
                     >
@@ -1584,7 +1680,7 @@ export function CharacterDossierModal({
                     value={newTraitInput}
                     onChange={(e) => setNewTraitInput(e.target.value)}
                     placeholder="Add custom trait..."
-                    className="px-3 py-1.5 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none flex-1 max-w-xs"
+                    className="px-3.5 py-2 bg-white border-2 border-zinc-200 focus:border-zinc-950 rounded-xl text-xs font-medium text-zinc-900 outline-none flex-1 max-w-xs"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1595,7 +1691,7 @@ export function CharacterDossierModal({
                   <button
                     type="button"
                     onClick={handleAddCustomTrait}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-xs font-bold text-zinc-800 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-xs font-bold text-white cursor-pointer transition-colors"
                   >
                     + Add Trait
                   </button>
@@ -1604,36 +1700,117 @@ export function CharacterDossierModal({
             </div>
           )}
 
-          {/* TAB 4: POWERS & GEAR */}
-          {activeTab === 'gear' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-1.5">
-                  Special Abilities, Powers or Combat Style
-                </label>
-                <textarea
-                  rows={2}
-                  value={abilities}
-                  onChange={(e) => setAbilities(e.target.value)}
-                  placeholder="e.g. Master deducer, kinetic shockwave generation, rapid parkour, drone pilot."
-                  className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
-                />
-              </div>
+          {/* TAB 4: SKILLS & BELONGINGS (GENRE-AWARE CO-DIRECTOR) */}
+          {activeTab === 'gear' && (() => {
+            const currentLens = GENRE_LENSES.find((l) => l.id === selectedGearLens) || GENRE_LENSES[0];
+            return (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* Genre Lens Selector Bar */}
+                <div className="p-4 bg-zinc-50 border border-black/[0.08] rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500">
+                      Active Genre Lens (Comics are for all stories — not just superheroes!):
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      Universe: {world.genre || 'General'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {GENRE_LENSES.map((lens) => (
+                      <button
+                        key={lens.id}
+                        type="button"
+                        onClick={() => setSelectedGearLens(lens.id)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                          selectedGearLens === lens.id
+                            ? 'bg-zinc-950 text-white shadow-xs scale-102'
+                            : 'bg-white hover:bg-zinc-100 text-zinc-600 border border-zinc-200'
+                        }`}
+                      >
+                        <span>{lens.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-1.5">
-                  Signature Gear, Weapons & Technology
-                </label>
-                <textarea
-                  rows={2}
-                  value={gear}
-                  onChange={(e) => setGear(e.target.value)}
-                  placeholder="e.g. Electromagnetic grapple launcher, custom suppressed plasma sidearm, encrypted field datapad."
-                  className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
-                />
+                {/* Field 1: Skills, Profession or Abilities */}
+                <div>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <label className="block text-sm font-bold text-zinc-950">
+                      {currentLens.skillLabel}
+                    </label>
+                    <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+                      {currentLens.skillHelper}
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={abilities}
+                    onChange={(e) => setAbilities(e.target.value)}
+                    placeholder={currentLens.skillPlaceholder}
+                    className="w-full p-4 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm sm:text-base font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
+                  />
+                  {/* 1-Click Quick Add Inspiration Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mr-1">
+                      Quick Add:
+                    </span>
+                    {currentLens.skillPills.map((pill) => (
+                      <button
+                        key={pill}
+                        type="button"
+                        onClick={() => {
+                          const cleanPill = pill.replace(/^[^\s]+\s+/, '');
+                          setAbilities((prev) => (prev ? `${prev}, ${cleanPill}` : cleanPill));
+                        }}
+                        className="px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors cursor-pointer"
+                      >
+                        + {pill}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Field 2: Signature Items, Belongings, Tools or Gear */}
+                <div>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <label className="block text-sm font-bold text-zinc-950">
+                      {currentLens.itemLabel}
+                    </label>
+                    <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+                      {currentLens.itemHelper}
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={gear}
+                    onChange={(e) => setGear(e.target.value)}
+                    placeholder={currentLens.itemPlaceholder}
+                    className="w-full p-4 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm sm:text-base font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
+                  />
+                  {/* 1-Click Quick Add Inspiration Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mr-1">
+                      Quick Add:
+                    </span>
+                    {currentLens.itemPills.map((pill) => (
+                      <button
+                        key={pill}
+                        type="button"
+                        onClick={() => {
+                          const cleanPill = pill.replace(/^[^\s]+\s+/, '');
+                          setGear((prev) => (prev ? `${prev}, ${cleanPill}` : cleanPill));
+                        }}
+                        className="px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors cursor-pointer"
+                      >
+                        + {pill}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 5: CAST RELATIONSHIPS */}
           {activeTab === 'relationships' && (
