@@ -97,7 +97,20 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
-    const charsList = (characters || []).map((c: { name: string; appearance?: string; role?: string }) => `${c.name} (${c.appearance || c.role})`).join(' and ');
+    const validNames = (characters || []).map((c: { name: string }) => c.name.toLowerCase().trim());
+
+    // Enrich character descriptions so diffusion models accurately reflect character roles & clothing:
+    const charsList = (characters || []).map((c: { name: string; appearance?: string; role?: string; wardrobe?: string }) => {
+      const role = (c.role || '').toLowerCase();
+      const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
+      let desc = `${c.name} (${c.appearance || c.role || 'character'}`;
+      if (c.wardrobe) desc += `, wearing ${c.wardrobe}`;
+      if (isCivilian) {
+        desc += `, civilian everyday citizen, dressed in normal casual/work clothing, NOT a superhero, NOT wearing tactical battle armor, NOT performing martial arts`;
+      }
+      desc += `)`;
+      return desc;
+    }).join(' and ');
 
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
     let layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';

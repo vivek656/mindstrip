@@ -191,7 +191,17 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [spreadViewMode, setSpreadViewMode] = useState<'page' | 'panels'>('page');
 
   // Default seed prompt for granular editing (purged of all panel labels, numbers & timestamps)
-  const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
+  const charsSummary = world.characters
+    .map((c) => {
+      const role = (c.role || '').toLowerCase();
+      const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
+      let desc = `${c.name} (${c.appearance || c.role}`;
+      if (c.wardrobe) desc += `, wearing ${c.wardrobe}`;
+      if (isCivilian) desc += `, everyday civilian citizen in casual/work attire, NOT in tactical armor or combat gear`;
+      desc += `)`;
+      return desc;
+    })
+    .join(' and ');
 
   const buildSequentialPrompt = () => {
     const layout = selectedLayout || episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');

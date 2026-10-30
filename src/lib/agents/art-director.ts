@@ -74,9 +74,12 @@ export function directVisualArtwork(
   // 1. Compile Character Visual Anchors (with Character Visual RAG)
   const visualAnchors: string[] = [];
   const charDescriptions = characters.map((c) => {
+    const role = (c.role || '').toLowerCase();
+    const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
     const anchors: string[] = [];
     if (c.appearance) anchors.push(c.appearance);
     if (c.wardrobe) anchors.push(`wearing ${c.wardrobe}`);
+    if (isCivilian) anchors.push('civilian everyday citizen, regular clothing, non-combatant, NOT wearing tactical combat gear, NOT fighting');
     if (c.iconicItem) anchors.push(`signature ${c.iconicItem}`);
     if (c.imageUrl) anchors.push(`canonical model sheet match: ${c.imageUrl}`);
     if (c.portraitRefUrl) anchors.push(`face & eyes anchor: ${c.portraitRefUrl}`);
