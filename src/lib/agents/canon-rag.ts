@@ -40,7 +40,7 @@ export function queryCanonRag(
   const results: RagItem[] = [];
 
   // 1. Index and score past episodes (recaps, takeaways, open threads)
-  const episodes = pastEpisodes || world?.episodes || [];
+  const episodes = pastEpisodes !== undefined ? pastEpisodes : (world?.episodes || []);
   episodes.forEach((ep, idx) => {
     const epNum = ep.episodeNumber || idx + 1;
     const combined = `${ep.title} ${ep.rawBrainDump} ${ep.recap || ''} ${(ep.openThreads || []).join(' ')} ${(ep.newFacts || []).join(' ')}`;

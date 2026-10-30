@@ -235,6 +235,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [draftText, setDraftText] = useState('');
   const [isFullscreenZoom, setIsFullscreenZoom] = useState(false);
   const [isScriptExpanded, setIsScriptExpanded] = useState(false);
+  const [areBubblesVisible, setAreBubblesVisible] = useState(showBubbles);
 
   // Granular art custom style state
   const [isCustomArtStyle, setIsCustomArtStyle] = useState(false);
@@ -726,33 +727,51 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
       {/* View Mode Pill Deck: Full Page Spread vs Dynamic Sequential Strip */}
       <div className="flex items-center justify-between gap-3 pb-1 flex-wrap">
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => setSpreadViewMode('page')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              spreadViewMode === 'page'
-                ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
-                : 'text-zinc-500 hover:text-zinc-900'
-            }`}
-            title="View the synthesized graphic novel comic page"
-          >
-            <span>🖼️</span>
-            <span>Full Comic Page</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSpreadViewMode('panels')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              spreadViewMode === 'panels'
-                ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
-                : 'text-zinc-500 hover:text-zinc-900'
-            }`}
-            title="View the distinct sequential scenes as individual comic panels"
-          >
-            <span>📑</span>
-            <span>{panels.length}-Panel Sequential View</span>
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setSpreadViewMode('page')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                spreadViewMode === 'page'
+                  ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
+                  : 'text-zinc-500 hover:text-zinc-900'
+              }`}
+              title="View the completed graphic novel comic page (artwork + dialogue balloons)"
+            >
+              <span>🖼️</span>
+              <span>Full Comic Page</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSpreadViewMode('panels')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                spreadViewMode === 'panels'
+                  ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
+                  : 'text-zinc-500 hover:text-zinc-900'
+              }`}
+              title="View & edit scene scripts, dialogue lines, and character actions"
+            >
+              <span>📑</span>
+              <span>Script & Scene Beats ({panels.length})</span>
+            </button>
+          </div>
+
+          {spreadViewMode === 'page' && pageImage && (
+            <button
+              type="button"
+              onClick={() => setAreBubblesVisible(!areBubblesVisible)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                areBubblesVisible
+                  ? 'bg-purple-50 border-purple-200 text-purple-900'
+                  : 'bg-white border-zinc-200 text-zinc-600 hover:text-zinc-900'
+              }`}
+              title="Toggle speech bubbles on the comic page image"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
+              <span>{areBubblesVisible ? 'Speech Bubbles: ON' : 'Speech Bubbles: OFF'}</span>
+            </button>
+          )}
         </div>
 
         <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-2">
@@ -779,7 +798,21 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
         </div>
       ) : spreadViewMode === 'panels' ? (
         /* Sequential Strip / Grid View dynamically adapted to panel count */
-        <div className="space-y-5">
+        <div className="space-y-4">
+          <div className="p-3.5 bg-purple-50/80 border border-purple-200/80 rounded-2xl flex items-center justify-between text-xs text-purple-950 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📝</span>
+              <span><strong>Script & Scene Beats Studio:</strong> Direct and edit dialogue lines, character emotions, and visual cues. Your edits are dynamically reflected in the <strong>Full Comic Page</strong> view!</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSpreadViewMode('page')}
+              className="px-3 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs cursor-pointer transition-all shadow-2xs"
+            >
+              View Full Comic Page →
+            </button>
+          </div>
+
           <div className={`grid gap-5 ${
             panels.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto' :
             panels.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
@@ -933,9 +966,9 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           </div>
         </div>
       ) : pageImage ? (
-        /* Real Meta AI Generated Full-Page Comic Spread */
+        /* Real Meta AI Generated Full-Page Comic Spread with Authentic Dialogue Bubbles Overlay */
         <div className="w-full">
-          <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-300 shadow-xl bg-white">
+          <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-950 shadow-xl bg-white">
             <img
               src={pageImage}
               alt={`${world.title} — ${episode.title}`}
@@ -944,6 +977,120 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               }`}
               loading="eager"
             />
+
+            {/* Authentic Comic Page Dialogue & SFX Quadrant Overlay */}
+            {areBubblesVisible && !isSamActive && (
+              <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                {/* Dynamic Panel Grid Overlay matching the layout */}
+                <div
+                  className={`w-full h-full ${
+                    panels.length === 1
+                      ? 'p-4 sm:p-8 flex flex-col justify-between'
+                      : panels.length === 2
+                      ? 'grid grid-cols-2 grid-rows-1'
+                      : panels.length === 3
+                      ? 'grid grid-cols-1 grid-rows-3'
+                      : 'grid grid-cols-2 grid-rows-2'
+                  }`}
+                >
+                  {panels.map((p, pIdx) => {
+                    const bubbles = p.bubbles || [];
+                    const sound = p.soundEffect;
+                    if (bubbles.length === 0 && !sound) return <div key={p.panelNumber || pIdx} />;
+
+                    return (
+                      <div
+                        key={p.panelNumber || pIdx}
+                        className="relative p-2.5 sm:p-4 flex flex-col justify-between pointer-events-none overflow-hidden"
+                      >
+                        {/* Dialogue Bubbles Stack */}
+                        <div className="space-y-1.5 sm:space-y-2 pointer-events-auto max-w-[92%] sm:max-w-[82%]">
+                          {bubbles.map((b) => {
+                            const isEditing = editingBubbleId === b.id;
+                            const charEmoji = getCharacterEmoji(b.speaker);
+
+                            return (
+                              <div
+                                key={b.id}
+                                className="inline-block p-2 sm:p-2.5 rounded-xl bg-white/95 border-1.5 sm:border-2 border-zinc-950 shadow-md backdrop-blur-2xs text-[11px] sm:text-xs text-zinc-950 transition-all hover:scale-[1.01]"
+                              >
+                                <div className="flex items-center justify-between gap-1.5 text-[9px] sm:text-[10px] font-mono font-bold text-zinc-600 mb-0.5">
+                                  <span className="flex items-center gap-1">
+                                    <span>{charEmoji}</span>
+                                    <span className="truncate max-w-[100px]">{b.speaker}</span>
+                                    {b.type === 'thought' && (
+                                      <span className="opacity-70 italic text-[9px]">(thought)</span>
+                                    )}
+                                    {b.type === 'shout' && (
+                                      <span className="text-red-600 font-extrabold text-[9px]">!</span>
+                                    )}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      isEditing
+                                        ? handleSaveEdit(p.panelNumber, b.id)
+                                        : handleStartEdit(b.id, b.text)
+                                    }
+                                    className="text-zinc-400 hover:text-zinc-900 cursor-pointer ml-1"
+                                    title="Edit dialogue"
+                                  >
+                                    {isEditing ? (
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                    ) : (
+                                      <Edit2 className="w-2.5 h-2.5" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1.5 mt-1 pointer-events-auto">
+                                    <input
+                                      type="text"
+                                      value={draftText}
+                                      onChange={(e) => setDraftText(e.target.value)}
+                                      onKeyDown={(e) =>
+                                        e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)
+                                      }
+                                      autoFocus
+                                      className="w-full bg-zinc-50 border-b-2 border-blue-600 text-[11px] sm:text-xs py-0.5 outline-none font-medium"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEdit(p.panelNumber, b.id)}
+                                      className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold"
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p
+                                    onClick={() => handleStartEdit(b.id, b.text)}
+                                    className="leading-snug font-sans font-medium text-zinc-950 cursor-pointer hover:text-blue-600"
+                                    title="Click to edit speech bubble"
+                                  >
+                                    &ldquo;{b.text}&rdquo;
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Sound Effect Badge in Corner */}
+                        {sound && (
+                          <div className="self-end pointer-events-auto mt-1">
+                            <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-mono font-black uppercase bg-amber-400 text-zinc-950 border border-zinc-950 shadow-md rotate-[-3deg] inline-block tracking-wider">
+                              ⚡ {sound}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Meta SAM 3.1 Interactive Vision Segmentation Layer */}
             <SamVisionOverlay

@@ -97,7 +97,94 @@ export function auditEpisodeDraft(
     });
   });
 
-  // 2. Audit Image Prompts for "Panel 1", "Panel 2" or text labels
+  // 2. Audit Cast Integrity: All speaking and active characters MUST exist in the active World Bible cast
+  const validCastNames = characters.map((c) => c.name.toLowerCase().trim());
+  const activeCastDisplay = characters.map((c) => c.name).join(', ') || 'Protagonist';
+
+  draft.panels.forEach((panel) => {
+    // Check speech bubble speakers
+    panel.bubbles.forEach((b) => {
+      const speaker = b.speaker.trim();
+      const speakerLower = speaker.toLowerCase();
+      if (speakerLower !== 'narrator' && speakerLower !== 'caption' && !validCastNames.some((name) => speakerLower.includes(name) || name.includes(speakerLower))) {
+        violations.push({
+          code: 'DELETED_OR_UNKNOWN_CHARACTER',
+          severity: 'critical',
+          panelNumber: panel.panelNumber,
+          characterName: speaker,
+          description: `Panel ${panel.panelNumber} features speaker "${speaker}" who is not in the active World Bible cast.`,
+          critique: `The character "${speaker}" was removed or does not exist in the World Bible. Only current active cast members [${activeCastDisplay}] may appear or speak.`,
+          suggestedFix: `Replace "${speaker}" with an active character (${activeCastDisplay}) or Narrator.`
+        });
+      }
+    });
+
+    // Check panel.characters array
+    (panel.characters || []).forEach((charName) => {
+      const charLower = charName.toLowerCase().trim();
+      if (charLower !== 'narrator' && !validCastNames.some((name) => charLower.includes(name) || name.includes(charLower))) {
+        violations.push({
+          code: 'DELETED_OR_UNKNOWN_CHARACTER',
+          severity: 'critical',
+          panelNumber: panel.panelNumber,
+          characterName: charName,
+          description: `Panel ${panel.panelNumber} scripts character "${charName}" who was removed from the World Bible.`,
+          critique: `"${charName}" is not an active character in this universe. Clean all references to deleted characters.`,
+          suggestedFix: `Purge "${charName}" from Panel ${panel.panelNumber} and replace with an active cast member.`
+        });
+      }
+    });
+  });
+
+  // 3. Audit Civilian Non-Combatant Consistency: Civilian characters must NOT perform superhero combat
+  const civilians = characters.filter((c) => {
+    const role = (c.role || '').toLowerCase();
+    return !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
+  });
+
+  civilians.forEach((civilian) => {
+    draft.panels.forEach((panel) => {
+      const scene = panel.sceneDescription.toLowerCase();
+      const bubbles = panel.bubbles.map((b) => b.text.toLowerCase()).join(' ');
+      const combined = `${scene} ${bubbles}`;
+
+      if (combined.includes(civilian.name.toLowerCase())) {
+        const combatWords = [
+          'mid-kick',
+          'roundhouse',
+          'karate',
+          'martial arts',
+          'smashes drone',
+          'destroying a drone',
+          'flying kick',
+          'ninja',
+          'superhuman',
+          'swings sword',
+          'laser blast',
+          'tactical combat',
+          'night shift is mine',
+          'fights at night'
+        ];
+
+        for (const word of combatWords) {
+          if (combined.includes(word)) {
+            violations.push({
+              code: 'CIVILIAN_COMBAT_VIOLATION',
+              severity: 'critical',
+              panelNumber: panel.panelNumber,
+              characterName: civilian.name,
+              description: `Civilian character "${civilian.name}" (${civilian.role}) is performing superhero combat actions ("${word}") in Panel ${panel.panelNumber}.`,
+              critique: `"${civilian.name}" is defined as a civilian ${civilian.role}, NOT a superhero or night-shift fighter. They must not fight villains, do martial arts, or wield combat weapons.`,
+              suggestedFix: `Re-script "${civilian.name}" in Panel ${panel.panelNumber} to behave according to their actual civilian profession (${civilian.role}), reacting realistically without combat powers.`
+            });
+            break;
+          }
+        }
+      }
+    });
+  });
+
+  // 4. Audit Image Prompts for "Panel 1", "Panel 2" or text labels
   draft.panels.forEach((panel) => {
     const prompt = panel.imagePrompt || '';
     const panelLabelMatch = prompt.match(/\b(panel\s*\d+|panel\s*(one|two|three|four)|frame\s*\d+)\b/i);

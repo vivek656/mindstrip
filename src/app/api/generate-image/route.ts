@@ -49,19 +49,20 @@ export async function POST(req: NextRequest) {
     let sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
 
     // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt
-    if (!customPrompt && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
+    const hasExplicitCustom = Boolean(customPrompt && customPrompt.trim().length > 0 && !customPrompt.includes('sequential narrative frames'));
+    if (!hasExplicitCustom && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
-    } else if (!customPrompt && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
+    } else if (!hasExplicitCustom && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
       sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
-    } else if (!customPrompt && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
+    } else if (!hasExplicitCustom && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
       const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
       sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
-    } else if (!customPrompt && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
+    } else if (!hasExplicitCustom && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
       const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');

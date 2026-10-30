@@ -648,3 +648,33 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Preserves single unified light editorial theme (`#faf8f5`, white cards, zinc borders, and dark typography).
   5. **Verification**:
      - Verified with `npm run build` (0 TypeScript / Turbopack errors, all 12 routes clean).
+
+### Authentic Graphic Novel Dialogue Overlay & Robust Context Purging (2026-10-30)
+- **User Feedback Diagnosed**:
+  1. *Disconnect between Comic Image and Panel View*: In "Full Comic Page", creators only saw a raw wordless illustration with zero speech bubbles or sound effects. Meanwhile, the "4-Panel Sequential View" only showed text cards without the artwork. The user rightly asked: *"what is this panel view, because the comic at the end is not those panels but the image, but the image is matching neither the panel, nor the character"*.
+  2. *Stale / Deleted Character Context Leaking on Regeneration*: When a character was deleted or modified (e.g. removing sidekick "Vico" and defining "Meera" as a civilian who does NOT fight at night), clicking "Re-draw" or regenerating caused the old character to reappear fighting at night.
+- **Root Causes Diagnosed**:
+  1. `ComicPageSpread.tsx` only rendered dialogue bubbles in `spreadViewMode === 'panels'`, leaving `spreadViewMode === 'page'` completely silent.
+  2. `buildStoryContext()` in `src/lib/story-context.ts` only read `world.episodes` directly and lacked support for passing an explicit `priorEpisodes` subset. When regenerating Episode 1, Episode 1 was passed into its own past chronological continuity, re-injecting the old deleted character's scene descriptions into the AI's prompt!
+  3. `activeEpisode.rawBrainDump` was stale and never sanitized when cast members were deleted, passing obsolete character prompts to `generateMindStrip` and `/api/generate-image`.
+  4. Character deletion in `ZenComicReader.tsx` only removed the character from `world.characters` without cleaning up existing episode speaker references.
+  5. The Canon Auditor lacked rules to verify that characters in panels exist in the active World Bible cast, and that civilian non-combatants do not engage in superhero night combat.
+- **Architectural Solution Implemented**:
+  1. **Full Comic Page Dialogue & SFX Quadrant Overlay (`ComicPageSpread.tsx`)**:
+     - Speech bubbles, character avatars, speaker labels, and dynamic sound effects (`⚡ SFX`) are now rendered directly over the synthesized comic page in their respective quadrants/panels (4-panel 2x2, 2-panel, 1-panel, 3-panel).
+     - Includes a `[ 💬 Speech Bubbles: ON/OFF ]` toggle button in the toolbar so creators can toggle between reading dialogue and admiring unobstructed artwork.
+     - Renamed view mode pills to: `[ 🖼️ Full Comic Page (Art + Dialogue) ]` and `[ 📑 Script & Scene Beats ({panels.length}) ]` with an explanatory guide banner.
+  2. **Context Purging & Isolation on Regeneration (`page.tsx` & `story-context.ts`)**:
+     - `handleRegenerateCurrentEpisode` now strictly computes `priorEpisodes` (`ep.id !== activeEpisode.id && ep.episodeNumber < activeEpisode.episodeNumber`). When regenerating Episode 1, `priorEpisodes` is empty (`[]`), completely isolating the new generation from the old draft.
+     - `buildStoryContext()` now accepts and honors `episodesOverride`, preventing self-referential episode contamination.
+     - Automatic obsolete cast detection: if an episode's old panels reference deleted characters, `effectivePremise` is purged and rebuilt using the current World Bible and active cast.
+     - Updates `rawBrainDump` with the clean effective premise upon regeneration.
+  3. **Universe-Wide Cascade Deletion & Renaming (`ZenComicReader.tsx`)**:
+     - Deleting a character from `world.characters` cascades through `world.episodes`: reassigning dialogue spoken by deleted characters to active characters/Narrator and purging them from panel rosters.
+     - Renaming a character cascades through all existing episodes.
+  4. **Multi-Agent Cast Integrity & Civilian Role Fidelity (`canon-auditor.ts` & `showrunner.ts`)**:
+     - Added `DELETED_OR_UNKNOWN_CHARACTER` audit check: flags any character not in active World Bible cast.
+     - Added `CIVILIAN_COMBAT_VIOLATION` audit check: flags civilian characters performing superhero combat/martial arts.
+     - Showrunner prompt strictly forbids deleted characters and enforces civilian role constraints. Local self-correction loop automatically purges unknown characters and corrects civilian actions to grounded non-hero reactions.
+  5. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).

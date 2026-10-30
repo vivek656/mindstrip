@@ -437,12 +437,34 @@ export default function Home() {
     setIsLoading(true);
     setIsGeneratingArtwork(true);
     try {
+      // 1. Only include episodes strictly PRIOR to the current episode being regenerated
+      // This prevents the old draft of the episode being regenerated from contaminating its own RAG continuity!
+      const priorEpisodes = activeWorld.episodes.filter(
+        (ep) => ep.id !== activeEpisode.id && (ep.episodeNumber ?? 0) < (activeEpisode.episodeNumber ?? 1)
+      );
+
+      // 2. Sanitize premise against active cast
+      // If the old rawBrainDump contains characters who were removed from activeWorld.characters,
+      // purge the obsolete premise and ground in the current World Bible and current cast
+      const activeCastNames = activeWorld.characters.map((c) => c.name.toLowerCase());
+      const hasObsoleteCast = activeEpisode.panels?.some(p =>
+        p.characters?.some(name => !activeCastNames.some(acn => name.toLowerCase().includes(acn))) ||
+        p.bubbles?.some(b => b.speaker.toLowerCase() !== 'narrator' && !activeCastNames.some(acn => b.speaker.toLowerCase().includes(acn)))
+      );
+
+      let effectivePremise = activeEpisode.rawBrainDump || activeWorld.tagline;
+      if (hasObsoleteCast || !effectivePremise.trim()) {
+        const castRoles = activeWorld.characters.map((c) => `${c.name} (${c.role})`).join(', ');
+        effectivePremise = `${activeWorld.title}: ${activeWorld.tagline}. Featuring active cast: ${castRoles}.`;
+      }
+
       const regenContext = buildStoryContext(
         activeWorld,
-        activeEpisode.rawBrainDump || activeWorld.tagline
+        effectivePremise,
+        priorEpisodes
       );
       const generated = await generateMindStrip(
-        activeEpisode.rawBrainDump || activeWorld.tagline,
+        effectivePremise,
         activeWorld.artStyle,
         'candid',
         apiConfig,
@@ -452,7 +474,7 @@ export default function Home() {
         regenContext,
         activeEpisode.layoutStyle || 'auto',
         activeWorld,
-        activeWorld.episodes
+        priorEpisodes
       );
 
       // Re-draw fresh artwork for the newly regenerated episode
@@ -465,7 +487,7 @@ export default function Home() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              prompt: activeEpisode.rawBrainDump || activeEpisode.title,
+              prompt: effectivePremise,
               artStyle: activeWorld.artStyle,
               characters: activeWorld.characters,
               worldTitle: activeWorld.title,
@@ -494,6 +516,7 @@ export default function Home() {
         ...generated,
         ...writeRecap(generated),
         id: activeEpisode.id,
+        rawBrainDump: effectivePremise,
         episodeNumber: activeEpisode.episodeNumber || 1,
         title: activeEpisode.title || `${activeWorld.title}: Episode #${activeEpisode.episodeNumber || 1}`,
         pageImageUrl: freshImageUrl || activeEpisode.pageImageUrl

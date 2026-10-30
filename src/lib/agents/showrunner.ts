@@ -64,7 +64,9 @@ You script serialized comic episodes with intelligent narrative pacing, characte
 
 CRITICAL RULES:
 1. ANTAGONIST INTEGRITY: Any character with role="antagonist" MUST ACTIVELY OPPOSE, MENACE, MOCK, OR SABOTAGE THE HERO. They must NEVER help, sympathize with, or apologize to the hero!
-2. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
+2. MANDATORY CAST INTEGRITY: You MUST ONLY include characters that are explicitly present in the provided "Characters" list. Any character not in the provided list has been REMOVED/DELETED from this universe and DOES NOT EXIST. NEVER script or include deleted characters!
+3. MANDATORY CIVILIAN ROLE FIDELITY: If a character's role is a civilian / non-combatant (e.g. coworker, office dev, student, barista, normal person), they DO NOT engage in superhero combat, DO NOT fight villains at night, and DO NOT do martial arts! Keep their actions and dialogue strictly grounded in their defined everyday civilian profession.
+4. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
 ${critiquePrompt}
 ${layoutInstruction}
 
@@ -175,24 +177,41 @@ Episode Premise / Brain Dump: "${rawDump}"`;
   if (critiqueFeedback && critiqueFeedback.violations.length > 0) {
     const antagonist = characters.find((c) => (c.role || '').toLowerCase().includes('antagonist'));
     const protagonist = characters.find((c) => (c.role || '').toLowerCase().includes('protagonist')) || characters[0];
+    const validNames = new Set(characters.map((c) => c.name.toLowerCase()));
+    const primaryCivilian = characters.find((c) => {
+      const role = (c.role || '').toLowerCase();
+      return !role.includes('hero') && !role.includes('vigilante') && !role.includes('fighter');
+    });
 
     panels = panels.map((p) => {
-      // 1. Fix antagonist dialogue to be explicitly adversarial
-      const updatedBubbles = p.bubbles.map((b) => {
-        if (antagonist && b.speaker.toLowerCase().includes(antagonist.name.toLowerCase())) {
+      // 1. Purge deleted characters from speech bubbles and replace with active characters
+      let updatedBubbles = p.bubbles.map((b) => {
+        const isUnknown = b.speaker.toLowerCase() !== 'narrator' && !Array.from(validNames).some((n) => b.speaker.toLowerCase().includes(n));
+        const effectiveSpeaker = isUnknown ? (primaryCivilian?.name || protagonist?.name || 'Narrator') : b.speaker;
+
+        if (antagonist && effectiveSpeaker.toLowerCase().includes(antagonist.name.toLowerCase())) {
           return {
             ...b,
+            speaker: effectiveSpeaker,
             text: `Did you honestly think I would let you succeed, ${protagonist?.name || 'hero'}? You've stepped right into my trap.`,
             type: 'shout' as const
           };
         }
-        return b;
+        return {
+          ...b,
+          speaker: effectiveSpeaker
+        };
       });
 
-      // 2. Fix scene description to ensure antagonist opposes
+      // 2. Fix scene description to ensure antagonist opposes and civilians don't do superhero combat
       let scene = p.sceneDescription;
       if (antagonist && scene.includes(antagonist.name)) {
         scene = `${antagonist.name} ambushes the perimeter, deploying countermeasures to sabotage ${protagonist?.name || 'the protagonist'}.`;
+      }
+
+      // Check civilian combat violations
+      if (primaryCivilian && (scene.toLowerCase().includes('mid-kick') || scene.toLowerCase().includes('martial arts') || scene.toLowerCase().includes('night shift is mine'))) {
+        scene = `${primaryCivilian.name} watches with nervous anxiety from the terminal, holding a notepad and alerting ${protagonist?.name || 'the team'} to the surging voltage.`;
       }
 
       // 3. Fix visual prompt labels
@@ -200,8 +219,13 @@ Episode Premise / Brain Dump: "${rawDump}"`;
         .replace(/\b(panel\s*\d+|panel\s*(one|two|three|four)|frame\s*\d+)\b/gi, 'story beat')
         .trim();
 
+      // Ensure panel.characters only contains valid cast
+      const validPanelChars = (p.characters || []).filter((cn) => Array.from(validNames).some((vn) => cn.toLowerCase().includes(vn)));
+      if (validPanelChars.length === 0 && protagonist) validPanelChars.push(protagonist.name);
+
       return {
         ...p,
+        characters: validPanelChars,
         bubbles: updatedBubbles,
         sceneDescription: scene,
         imagePrompt: cleanedPrompt

@@ -228,23 +228,84 @@ export function ZenComicReader({
 
   const handleSaveCharacterDossier = (updatedChar: ComicCharacter) => {
     if (!onUpdateWorld) return;
-    const exists = world.characters.some((c) => c.id === updatedChar.id);
+    const oldChar = world.characters.find((c) => c.id === updatedChar.id);
+    const exists = Boolean(oldChar);
     const updatedChars = exists
       ? world.characters.map((c) => (c.id === updatedChar.id ? updatedChar : c))
       : [...world.characters, updatedChar];
 
+    // If existing character was renamed, propagate new name across episodes
+    let updatedEpisodes = world.episodes;
+    if (oldChar && oldChar.name !== updatedChar.name) {
+      updatedEpisodes = (world.episodes || []).map((ep) => {
+        const updatedPanels = (ep.panels || []).map((p) => {
+          const updatedPanelChars = (p.characters || []).map((cn) =>
+            cn.toLowerCase() === oldChar.name.toLowerCase() ? updatedChar.name : cn
+          );
+          const updatedBubbles = (p.bubbles || []).map((b) => {
+            if (b.speaker.toLowerCase() === oldChar.name.toLowerCase()) {
+              return { ...b, speaker: updatedChar.name };
+            }
+            return b;
+          });
+          return {
+            ...p,
+            characters: updatedPanelChars,
+            bubbles: updatedBubbles,
+          };
+        });
+        return {
+          ...ep,
+          panels: updatedPanels,
+        };
+      });
+    }
+
     const updatedWorld: ComicWorld = {
       ...world,
       characters: updatedChars,
+      episodes: updatedEpisodes,
     };
     onUpdateWorld(updatedWorld);
   };
 
   const handleDeleteCharacter = (charId: string) => {
     if (!onUpdateWorld) return;
+    const deletedChar = world.characters.find((c) => c.id === charId);
+    const updatedChars = world.characters.filter((c) => c.id !== charId);
+
+    // Propagate character deletion across existing episodes: purge deleted character from panels & speech bubbles
+    const updatedEpisodes = (world.episodes || []).map((ep) => {
+      const updatedPanels = (ep.panels || []).map((p) => {
+        const cleanedChars = (p.characters || []).filter((name) =>
+          deletedChar ? !name.toLowerCase().includes(deletedChar.name.toLowerCase()) : true
+        );
+        const cleanedBubbles = (p.bubbles || []).map((b) => {
+          if (deletedChar && b.speaker.toLowerCase().includes(deletedChar.name.toLowerCase())) {
+            return {
+              ...b,
+              speaker: updatedChars[0]?.name || 'Narrator',
+            };
+          }
+          return b;
+        });
+        return {
+          ...p,
+          characters: cleanedChars.length > 0 ? cleanedChars : [updatedChars[0]?.name || 'Protagonist'],
+          bubbles: cleanedBubbles,
+        };
+      });
+
+      return {
+        ...ep,
+        panels: updatedPanels,
+      };
+    });
+
     const updatedWorld: ComicWorld = {
       ...world,
-      characters: world.characters.filter((c) => c.id !== charId),
+      characters: updatedChars,
+      episodes: updatedEpisodes,
     };
     onUpdateWorld(updatedWorld);
   };

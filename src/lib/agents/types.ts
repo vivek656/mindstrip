@@ -37,7 +37,14 @@ export interface ShowrunnerDraft {
 }
 
 export interface CanonAuditViolation {
-  code: 'ANTAGONIST_OPPOSITION_FAILED' | 'WORLD_LAW_BREACH' | 'VOICE_TONE_MISMATCH' | 'TEXT_LABEL_IN_VISUAL' | 'CHARACTER_ANOMALY';
+  code:
+    | 'ANTAGONIST_OPPOSITION_FAILED'
+    | 'WORLD_LAW_BREACH'
+    | 'VOICE_TONE_MISMATCH'
+    | 'TEXT_LABEL_IN_VISUAL'
+    | 'CHARACTER_ANOMALY'
+    | 'DELETED_OR_UNKNOWN_CHARACTER'
+    | 'CIVILIAN_COMBAT_VIOLATION';
   severity: 'critical' | 'warning';
   panelNumber?: number;
   characterName?: string;

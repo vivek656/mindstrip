@@ -153,11 +153,17 @@ export function buildWorldBible(world: ComicWorld): string {
 export function buildStoryContext(
   world: ComicWorld,
   premise: string,
-  opts?: { budgetChars?: number }
+  episodesOverrideOrOpts?: ComicStrip[] | { budgetChars?: number; episodes?: ComicStrip[] }
 ): string {
-  const budget = opts?.budgetChars ?? 6000;
+  const episodesOverride = Array.isArray(episodesOverrideOrOpts)
+    ? episodesOverrideOrOpts
+    : (episodesOverrideOrOpts && 'episodes' in episodesOverrideOrOpts)
+    ? episodesOverrideOrOpts.episodes
+    : undefined;
+
+  const budget = (!Array.isArray(episodesOverrideOrOpts) && episodesOverrideOrOpts?.budgetChars) || 6000;
   const bible = buildWorldBible(world);
-  const episodes = world.episodes || [];
+  const episodes = episodesOverride !== undefined ? episodesOverride : (world.episodes || []);
 
   const canon = episodes
     .flatMap((ep) =>
