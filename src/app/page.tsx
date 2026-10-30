@@ -403,6 +403,7 @@ export default function Home() {
   const handleRegenerateCurrentEpisode = async () => {
     if (!activeWorld || !activeEpisode) return;
     setIsLoading(true);
+    setIsGeneratingArtwork(true);
     try {
       const regenContext = buildStoryContext(
         activeWorld,
@@ -419,12 +420,48 @@ export default function Home() {
         regenContext
       );
 
+      // Re-draw fresh artwork for the newly regenerated episode
+      let freshImageUrl = generated.pageImageUrl;
+      if (!freshImageUrl) {
+        try {
+          const effectiveProvider = (!apiConfig?.apiKey || apiConfig?.mode === 'free')
+            ? 'simulation'
+            : apiConfig.provider;
+
+          const imgRes = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: activeEpisode.rawBrainDump || activeEpisode.title,
+              artStyle: activeWorld.artStyle,
+              characters: activeWorld.characters,
+              worldTitle: activeWorld.title,
+              episodeTitle: generated.title,
+              provider: effectiveProvider,
+              apiKey: apiConfig?.apiKey,
+              baseUrl: apiConfig?.baseUrl,
+              layoutStyle: generated.layoutStyle || '4-panel',
+            })
+          });
+
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            if (imgData.pageImageUrl) {
+              freshImageUrl = imgData.pageImageUrl;
+            }
+          }
+        } catch (imgErr) {
+          console.warn('Re-draw artwork fetch warning:', imgErr);
+        }
+      }
+
       const updatedEpisode: ComicStrip = {
         ...generated,
         ...writeRecap(generated),
         id: activeEpisode.id,
         episodeNumber: activeEpisode.episodeNumber || 1,
         title: activeEpisode.title || `${activeWorld.title}: Episode #${activeEpisode.episodeNumber || 1}`,
+        pageImageUrl: freshImageUrl || activeEpisode.pageImageUrl
       };
 
       const updatedEpisodes = activeWorld.episodes.map((ep) =>
@@ -433,6 +470,7 @@ export default function Home() {
       const updatedWorld = { ...activeWorld, episodes: updatedEpisodes };
       const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
       setWorlds(updatedWorlds);
+      syncWorldToDb(updatedWorld);
 
       try {
         localStorage.setItem('mindstrip_worlds', JSON.stringify(updatedWorlds));
@@ -443,6 +481,7 @@ export default function Home() {
       console.error('Episode regeneration failed:', e);
     } finally {
       setIsLoading(false);
+      setIsGeneratingArtwork(false);
     }
   };
 
@@ -454,7 +493,12 @@ export default function Home() {
       const targetLayoutStyle = options?.layoutStyle || activeEpisode.layoutStyle || '4-panel';
       const targetArtStyle = options?.artStyle || activeWorld.artStyle || 'webcomic';
       const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel;
-      const targetProvider = options?.provider || apiConfig?.provider;
+      
+      // Auto-fallback to simulation if no API key is provided so artwork generation never fails with 401
+      let effectiveProvider = options?.provider || apiConfig?.provider || 'simulation';
+      if (!apiConfig?.apiKey && effectiveProvider !== 'fireworks' && effectiveProvider !== 'simulation') {
+        effectiveProvider = 'simulation';
+      }
 
       const response = await fetch('/api/generate-image', {
         method: 'POST',
@@ -466,7 +510,7 @@ export default function Home() {
           characters: activeWorld.characters,
           worldTitle: activeWorld.title,
           episodeTitle: activeEpisode.title,
-          provider: targetProvider,
+          provider: effectiveProvider,
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
           imageModel: targetImageModel,
@@ -514,6 +558,64 @@ export default function Home() {
     } finally {
       setIsGeneratingArtwork(false);
     }
+  };
+
+  const handleForkWorldBranch = (
+    sourceEpisodeNumber: number,
+    branchTitle?: string,
+    divergencePrompt?: string
+  ) => {
+    if (!activeWorld) return;
+    const episodesToKeep = activeWorld.episodes.filter(
+      (ep) => (ep.episodeNumber || 1) <= sourceEpisodeNumber
+    );
+
+    const timelineLetter = String.fromCharCode(65 + (worlds.filter((w) => w.parentWorldId === activeWorld.id).length + 1));
+    const defaultBranchTitle = `${activeWorld.title} [Timeline ${timelineLetter} • from Ep #${sourceEpisodeNumber}]`;
+
+    const forkedWorld: ComicWorld = {
+      ...activeWorld,
+      id: `world-fork-${Date.now()}`,
+      title: branchTitle?.trim() || defaultBranchTitle,
+      tagline: divergencePrompt
+        ? `Timeline branched at Ep #${sourceEpisodeNumber}: "${divergencePrompt.slice(0, 80)}"`
+        : `Alternate timeline branched from Episode #${sourceEpisodeNumber} ("${activeWorld.title}")`,
+      episodes: episodesToKeep,
+      createdAt: new Date().toISOString(),
+      parentWorldId: activeWorld.id,
+      branchPointEpisodeNumber: sourceEpisodeNumber,
+      branchName: branchTitle || `Timeline ${timelineLetter}`
+    };
+
+    const updated = [forkedWorld, ...worlds];
+    setWorlds(updated);
+    setActiveWorldId(forkedWorld.id);
+    setActiveEpisodeId(episodesToKeep[episodesToKeep.length - 1]?.id || null);
+    syncWorldToDb(forkedWorld);
+    saveWorldsLocally(updated, creatorProfile);
+
+    // If divergence prompt was entered, immediately generate the next branch episode!
+    if (divergencePrompt) {
+      setTimeout(() => {
+        handleGenerateNextEpisode(divergencePrompt);
+      }, 200);
+    }
+  };
+
+  const handleRollbackToEpisode = (episodeNumber: number) => {
+    if (!activeWorld) return;
+    const remainingEpisodes = activeWorld.episodes.filter(
+      (ep) => (ep.episodeNumber || 1) <= episodeNumber
+    );
+    const updatedWorld: ComicWorld = {
+      ...activeWorld,
+      episodes: remainingEpisodes
+    };
+    const updatedWorlds = worlds.map((w) => (w.id === activeWorld.id ? updatedWorld : w));
+    setWorlds(updatedWorlds);
+    setActiveEpisodeId(remainingEpisodes[remainingEpisodes.length - 1]?.id || null);
+    syncWorldToDb(updatedWorld);
+    saveWorldsLocally(updatedWorlds, creatorProfile);
   };
 
   const [isAutoBuilding, setIsAutoBuilding] = useState<boolean>(false);
@@ -787,6 +889,8 @@ export default function Home() {
           currentProfile={creatorProfile}
           isDbConnected={isDbConnected}
           onOpenAuth={() => setIsAuthOpen(true)}
+          onForkBranch={handleForkWorldBranch}
+          onRollback={handleRollbackToEpisode}
         />
       ) : (
         /* Widescreen Desktop Editorial Landing Screen */

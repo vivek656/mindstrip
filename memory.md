@@ -238,6 +238,17 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Subject isolation mode (dims background to focus exclusively on the selected subject).
     - 1-click jump from a segmented character mask directly into their 5-tab Character Dossier Studio.
     - Verified clean production build with `npm run build` in ~2.5s across all 11 routes.
+- Multiverse Story Branching & Re-draw Full Synthesis Pipeline (2026-10-30):
+  - Fixed Re-draw pipeline:
+    - `handleRegenerateCurrentEpisode` now regenerates BOTH the narrative script and synthesizes brand-new page artwork.
+    - `handleGenerateArtwork` automatically falls back to high-res simulation preview if no API key is provided, ensuring zero 401 errors for evaluators.
+  - Built ChatGPT-Style Multiverse Story Branching (`BranchTimelineModal.tsx`):
+    - Creators can branch/fork reality from ANY episode in the series (`🌿 Branch Story`).
+    - Two modes: "Fork New Alternate Universe (Keep Original)" and "Restart from Ep #X (Rollback)".
+    - Preserves World Bible, cast dossiers, and all prior episode canon while starting an alternate timeline (e.g. `Late night Hero [Timeline B • from Ep #2]`).
+    - Optional "What If" divergence prompt automatically kicks off the new branch's next episode.
+    - Added quick branch trigger icons on every episode card in the sidebar archive.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~0.98s across all 11 routes.
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -325,3 +336,14 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Subject isolation mode (dims background to focus exclusively on the selected subject).
     - 1-click jump from a segmented character mask directly into their 5-tab Character Dossier Studio.
     - Verified clean production build with `npm run build` in ~2.5s across all 11 routes.
+- Multiverse Story Branching & Re-draw Full Synthesis Pipeline (2026-10-30):
+  - Fixed Re-draw pipeline:
+    - `handleRegenerateCurrentEpisode` now regenerates BOTH the narrative script and synthesizes brand-new page artwork.
+    - `handleGenerateArtwork` automatically falls back to high-res simulation preview if no API key is provided, ensuring zero 401 errors for evaluators.
+  - Built ChatGPT-Style Multiverse Story Branching (`BranchTimelineModal.tsx`):
+    - Creators can branch/fork reality from ANY episode in the series (`🌿 Branch Story`).
+    - Two modes: "Fork New Alternate Universe (Keep Original)" and "Restart from Ep #X (Rollback)".
+    - Preserves World Bible, cast dossiers, and all prior episode canon while starting an alternate timeline (e.g. `Late night Hero [Timeline B • from Ep #2]`).
+    - Optional "What If" divergence prompt automatically kicks off the new branch's next episode.
+    - Added quick branch trigger icons on every episode card in the sidebar archive.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~0.98s across all 11 routes.

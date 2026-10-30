@@ -15,6 +15,7 @@ import { ApiConfig } from '@/lib/meta-models';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
+import { BranchTimelineModal } from './BranchTimelineModal';
 import {
   ArrowLeft,
   Menu,
@@ -50,6 +51,7 @@ import {
   AlertTriangle,
   Bot,
   ShieldCheck,
+  GitBranch,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -80,6 +82,8 @@ interface ZenComicReaderProps {
   currentProfile?: CreatorProfile | null;
   isDbConnected?: boolean;
   onOpenAuth?: () => void;
+  onForkBranch?: (episodeNumber: number, branchTitle?: string, divergencePrompt?: string) => void;
+  onRollback?: (episodeNumber: number) => void;
 }
 
 export function ZenComicReader({
@@ -104,6 +108,8 @@ export function ZenComicReader({
   currentProfile,
   isDbConnected = false,
   onOpenAuth,
+  onForkBranch,
+  onRollback,
 }: ZenComicReaderProps) {
   const [activeTab, setActiveTab] = useState<'comic' | 'universe' | 'agent'>(episode ? 'comic' : 'universe');
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>('auto');
@@ -115,6 +121,8 @@ export function ZenComicReader({
   const [isAddCharOpen, setIsAddCharOpen] = useState(false);
   const [isMidStoryIntro, setIsMidStoryIntro] = useState(false);
   const [isTraceModalOpen, setIsTraceModalOpen] = useState(false);
+  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+  const [branchTargetEpisode, setBranchTargetEpisode] = useState<ComicStrip | null>(null);
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
@@ -489,7 +497,25 @@ export function ZenComicReader({
                       </span>
                       <span className="truncate">{ep.title}</span>
                     </div>
-                    {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {onForkBranch && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBranchTargetEpisode(ep);
+                            setIsBranchModalOpen(true);
+                          }}
+                          className={`p-1 rounded-lg opacity-70 hover:opacity-100 transition-opacity ${
+                            isSelected ? 'hover:bg-zinc-800 text-emerald-300' : 'hover:bg-zinc-200 text-emerald-700'
+                          }`}
+                          title={`Fork story branch from Episode #${ep.episodeNumber || idx + 1}`}
+                        >
+                          <GitBranch className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />}
+                    </div>
                   </div>
                 );
               })
@@ -729,6 +755,22 @@ export function ZenComicReader({
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                 <span>Re-draw</span>
+              </button>
+            )}
+
+            {/* Multiverse Story Branch Button (ChatGPT-Style Branching) */}
+            {episode && onForkBranch && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBranchTargetEpisode(episode);
+                  setIsBranchModalOpen(true);
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 transition-all cursor-pointer shadow-2xs"
+                title="Fork an alternate timeline branch from this episode"
+              >
+                <GitBranch className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Branch Story</span>
               </button>
             )}
 
@@ -2139,6 +2181,21 @@ export function ZenComicReader({
         isOpen={isTraceModalOpen}
         onClose={() => setIsTraceModalOpen(false)}
         episode={episode || null}
+      />
+      {/* =========================================================================
+          MULTIVERSE STORY BRANCHING MODAL (CHATGPT-STYLE TIMELINE SPLIT)
+      ========================================================================= */}
+      <BranchTimelineModal
+        isOpen={isBranchModalOpen}
+        onClose={() => setIsBranchModalOpen(false)}
+        world={world}
+        episode={branchTargetEpisode || episode || null}
+        onForkBranch={(epNum, branchTitle, divPrompt) => {
+          if (onForkBranch) onForkBranch(epNum, branchTitle, divPrompt);
+        }}
+        onRollback={(epNum) => {
+          if (onRollback) onRollback(epNum);
+        }}
       />
     </div>
   );

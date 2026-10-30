@@ -191,6 +191,9 @@ export interface ComicWorld {
   laws?: WorldLaw[]; // Universal Laws & Constraints (Physics, Magic, Social, Taboo)
   locations?: WorldLocation[]; // Canonical locations & staging landmarks
   customAttributes?: CustomWorldAttribute[]; // Custom world parameters (Currency, Weather, Tech level, etc.)
+  parentWorldId?: string; // ID of parent universe if this timeline is branched
+  branchPointEpisodeNumber?: number; // Which episode this timeline branched from
+  branchName?: string; // e.g. "Timeline B: What If..."
 }
 
 export interface PresetScenario {
