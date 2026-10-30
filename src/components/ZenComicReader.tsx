@@ -52,6 +52,11 @@ import {
   Bot,
   ShieldCheck,
   GitBranch,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Moon,
+  Sun,
+  Maximize2,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -123,6 +128,11 @@ export function ZenComicReader({
   const [isTraceModalOpen, setIsTraceModalOpen] = useState(false);
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
   const [branchTargetEpisode, setBranchTargetEpisode] = useState<ComicStrip | null>(null);
+
+  // Cinematic Reading Experience States
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [readerTheme, setReaderTheme] = useState<'cinema' | 'studio'>('cinema');
+  const [readerWidth, setReaderWidth] = useState<'standard' | 'wide' | 'cinema'>('wide');
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
@@ -402,66 +412,29 @@ export function ZenComicReader({
     <div className="flex flex-col justify-between h-full space-y-6">
       <div className="space-y-6">
         {/* World Header Info */}
-        <div className="pb-4 border-b border-black/[0.08]">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-800 text-xs font-mono font-bold uppercase tracking-wider">
-              {world.genre}
-            </span>
-            <span className="text-xs text-zinc-500 capitalize font-medium">• {world.artStyle} style</span>
+        <div className="pb-4 border-b border-black/[0.08] flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-800 text-xs font-mono font-bold uppercase tracking-wider">
+                {world.genre}
+              </span>
+              <span className="text-xs text-zinc-500 capitalize font-medium">• {world.artStyle} style</span>
+            </div>
+            <h2 className="font-black text-xl text-zinc-950 leading-tight">
+              {world.title}
+            </h2>
+            <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed font-sans">
+              {world.tagline}
+            </p>
           </div>
-          <h2 className="font-black text-xl text-zinc-950 leading-tight">
-            {world.title}
-          </h2>
-          <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed font-sans">
-            {world.tagline}
-          </p>
-        </div>
-
-        {/* Studio View Selector */}
-        <div className="space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold mb-1.5 block">
-            Studio Views
-          </span>
-          <div className="grid grid-cols-3 gap-1 p-1 bg-zinc-100 rounded-xl border border-black/[0.06]">
-            <button
-              type="button"
-              onClick={() => setActiveTab('comic')}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'comic'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-950'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Comic</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('universe')}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'universe'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-950'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Lore</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('agent')}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'agent'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : 'text-zinc-600 hover:text-zinc-950'
-              }`}
-            >
-              <Brain className="w-3.5 h-3.5" />
-              <span>Brain</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(false)}
+            className="hidden lg:flex p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-black/5 transition-colors cursor-pointer shrink-0"
+            title="Collapse Sidebar (Cinema Mode)"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Episodes Archive Navigator */}
@@ -615,41 +588,82 @@ export function ZenComicReader({
   );
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] text-[#181716] flex flex-col selection:bg-zinc-200 w-full">
+    <div className={`min-h-screen flex flex-col selection:bg-zinc-200 w-full transition-colors duration-300 ${
+      readerTheme === 'cinema' && activeTab === 'comic'
+        ? 'bg-[#0c0d12] text-zinc-100'
+        : 'bg-[#faf8f5] text-[#181716]'
+    }`}>
       {/* =========================================================================
           TOP NAVIGATION BAR (FULL WIDTH WIDESCREEN)
       ========================================================================= */}
-      <header className="w-full border-b border-black/[0.08] bg-white/80 backdrop-blur-md sticky top-0 z-30">
-        <div className="w-full px-4 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-4">
+      <header className={`w-full border-b sticky top-0 z-30 transition-colors backdrop-blur-md ${
+        readerTheme === 'cinema' && activeTab === 'comic'
+          ? 'border-white/10 bg-zinc-950/85 text-white'
+          : 'border-black/[0.08] bg-white/80 text-zinc-900'
+      }`}>
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           {/* Breadcrumbs & Navigation */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={onBackToWorlds}
-              className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-950 transition-colors py-1.5 px-2.5 rounded-lg hover:bg-black/[0.04] cursor-pointer"
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors py-1.5 px-2.5 rounded-lg cursor-pointer ${
+                readerTheme === 'cinema' && activeTab === 'comic'
+                  ? 'text-zinc-400 hover:text-white hover:bg-white/10'
+                  : 'text-zinc-500 hover:text-zinc-950 hover:bg-black/[0.04]'
+              }`}
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Universes</span>
             </button>
 
-            <span className="text-zinc-300">/</span>
+            <span className="text-zinc-400">/</span>
 
-            <span className="font-bold text-sm text-zinc-950 truncate max-w-[160px] sm:max-w-xs">
+            <span className={`font-bold text-sm truncate max-w-[140px] sm:max-w-xs ${
+              readerTheme === 'cinema' && activeTab === 'comic' ? 'text-white' : 'text-zinc-950'
+            }`}>
               {world.title}
             </span>
 
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 font-mono font-semibold hidden md:inline border border-black/10">
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold hidden md:inline border ${
+              readerTheme === 'cinema' && activeTab === 'comic'
+                ? 'bg-zinc-900 text-zinc-300 border-white/15'
+                : 'bg-zinc-100 text-zinc-700 border-black/10'
+            }`}>
               {episode ? `Ep #${episode.episodeNumber || 1}` : 'World Bible Mode'}
             </span>
+
+            {/* Sidebar Toggle / Cinema Mode Button */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                isSidebarOpen
+                  ? readerTheme === 'cinema' && activeTab === 'comic'
+                    ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-white/20'
+                    : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
+                  : 'bg-blue-600 text-white border-blue-500 shadow-sm'
+              }`}
+              title={isSidebarOpen ? 'Hide Sidebar (Full-Width Cinema Mode)' : 'Show Studio Sidebar'}
+            >
+              {isSidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5 text-white" />}
+              <span>{isSidebarOpen ? 'Cinema' : 'Sidebar'}</span>
+            </button>
           </div>
 
           {/* Center Studio View Switcher */}
-          <div className="hidden sm:flex items-center gap-1 p-1 rounded-full bg-zinc-100 border border-black/[0.06]">
+          <div className={`hidden sm:flex items-center gap-1 p-1 rounded-full border ${
+            readerTheme === 'cinema' && activeTab === 'comic'
+              ? 'bg-zinc-900 border-white/10'
+              : 'bg-zinc-100 border-black/[0.06]'
+          }`}>
             <button
               type="button"
               onClick={() => setActiveTab('comic')}
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'comic'
                   ? 'bg-white text-zinc-950 shadow-xs'
+                  : readerTheme === 'cinema'
+                  ? 'text-zinc-400 hover:text-white'
                   : 'text-zinc-600 hover:text-zinc-950'
               }`}
             >
@@ -663,6 +677,8 @@ export function ZenComicReader({
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'universe'
                   ? 'bg-white text-zinc-950 shadow-xs'
+                  : readerTheme === 'cinema'
+                  ? 'text-zinc-400 hover:text-white'
                   : 'text-zinc-600 hover:text-zinc-950'
               }`}
             >
@@ -676,6 +692,8 @@ export function ZenComicReader({
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'agent'
                   ? 'bg-white text-zinc-950 shadow-xs'
+                  : readerTheme === 'cinema'
+                  ? 'text-zinc-400 hover:text-white'
                   : 'text-zinc-600 hover:text-zinc-950'
               }`}
             >
@@ -686,6 +704,72 @@ export function ZenComicReader({
 
           {/* Action Buttons & Dual Mode Switcher */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Reading Width Controls (Only in Comic view) */}
+            {activeTab === 'comic' && (
+              <div className={`hidden xl:flex items-center gap-0.5 p-0.5 rounded-full border ${
+                readerTheme === 'cinema' ? 'bg-zinc-900 border-white/10' : 'bg-zinc-100 border-black/10'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setReaderWidth('standard')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
+                    readerWidth === 'standard'
+                      ? 'bg-white text-zinc-950 shadow-xs'
+                      : readerTheme === 'cinema'
+                      ? 'text-zinc-400 hover:text-white'
+                      : 'text-zinc-500 hover:text-zinc-900'
+                  }`}
+                  title="Standard Width (896px)"
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReaderWidth('wide')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
+                    readerWidth === 'wide'
+                      ? 'bg-white text-zinc-950 shadow-xs'
+                      : readerTheme === 'cinema'
+                      ? 'text-zinc-400 hover:text-white'
+                      : 'text-zinc-500 hover:text-zinc-900'
+                  }`}
+                  title="Wide View (1150px) — Eliminates Side Margins"
+                >
+                  Wide
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReaderWidth('cinema')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
+                    readerWidth === 'cinema'
+                      ? 'bg-white text-zinc-950 shadow-xs'
+                      : readerTheme === 'cinema'
+                      ? 'text-zinc-400 hover:text-white'
+                      : 'text-zinc-500 hover:text-zinc-900'
+                  }`}
+                  title="Full Cinema Canvas (1400px)"
+                >
+                  Cinema
+                </button>
+              </div>
+            )}
+
+            {/* Dark Cinema / Studio Light Canvas Toggle */}
+            {activeTab === 'comic' && (
+              <button
+                type="button"
+                onClick={() => setReaderTheme(readerTheme === 'cinema' ? 'studio' : 'cinema')}
+                className={`p-1.5 rounded-full border transition-all cursor-pointer ${
+                  readerTheme === 'cinema'
+                    ? 'bg-zinc-900 text-amber-300 border-zinc-700 hover:bg-zinc-800'
+                    : 'bg-zinc-100 text-zinc-700 border-black/10 hover:bg-zinc-200'
+                }`}
+                title={readerTheme === 'cinema' ? 'Dark Cinema Reading Canvas Active (Click for Studio Light)' : 'Studio Light Canvas Active (Click for Dark Cinema)'}
+              >
+                {readerTheme === 'cinema' ? <Moon className="w-4 h-4 text-amber-300" /> : <Sun className="w-4 h-4 text-amber-600" />}
+              </button>
+            )}
+
             {/* Dual Mode Switcher */}
             {apiConfig?.mode === 'meta' ? (
               <div className="flex items-center gap-1 p-0.5 rounded-full bg-blue-50/90 border border-blue-200">
@@ -845,36 +929,46 @@ export function ZenComicReader({
       {/* =========================================================================
           STUDIO WORKSPACE LAYOUT (PERSISTENT DESKTOP SIDEBAR + EXPANSIVE CANVAS)
       ========================================================================= */}
-      <div className="flex-1 w-full flex overflow-hidden">
-        {/* DESKTOP PERMANENT STUDIO SIDEBAR (Visible on lg+ screens) */}
-        <aside className="hidden lg:block w-80 xl:w-88 border-r border-black/[0.08] bg-white/70 p-6 shrink-0 overflow-y-auto">
+      <div className="flex-1 w-full flex overflow-hidden relative">
+        {/* DESKTOP STUDIO SIDEBAR (Collapsible for Cinema Full-Width Mode) */}
+        <aside className={`hidden lg:block transition-all duration-300 border-r shrink-0 overflow-y-auto ${
+          readerTheme === 'cinema' && activeTab === 'comic'
+            ? 'border-white/10 bg-zinc-950/90 text-zinc-100'
+            : 'border-black/[0.08] bg-white/70 text-zinc-900'
+        } ${
+          isSidebarOpen ? 'w-80 xl:w-88 p-6' : 'w-0 p-0 overflow-hidden border-r-0'
+        }`}>
           {renderSidebarContent()}
         </aside>
 
+        {/* Floating Quick Re-open Sidebar Button when Collapsed */}
+        {!isSidebarOpen && (
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="hidden lg:flex fixed left-0 top-24 z-30 px-3 py-2 bg-zinc-900/90 hover:bg-zinc-800 text-white rounded-r-xl border-y border-r border-white/20 shadow-xl text-xs font-bold items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md"
+            title="Open Studio Sidebar"
+          >
+            <PanelLeftOpen className="w-4 h-4 text-purple-400" />
+            <span>Studio</span>
+          </button>
+        )}
+
         {/* MAIN STUDIO STAGE (CHANGES ACCORDING TO ACTIVE TAB) */}
-        <main className="flex-1 flex flex-col justify-between overflow-y-auto px-4 sm:px-8 lg:px-12 py-6 min-h-[calc(100vh-4rem)]">
+        <main className={`flex-1 flex flex-col justify-between overflow-y-auto min-h-[calc(100vh-4rem)] transition-all ${
+          readerWidth === 'cinema' ? 'px-2 sm:px-4 py-4' : 'px-4 sm:px-6 lg:px-8 py-5'
+        }`}>
           {/* TAB 1: COMIC SPREAD VIEW */}
           {activeTab === 'comic' && (
-            <div className="w-full max-w-5xl xl:max-w-6xl mx-auto flex flex-col items-center">
+            <div className={`w-full mx-auto flex flex-col items-center transition-all ${
+              readerWidth === 'standard'
+                ? 'max-w-4xl'
+                : readerWidth === 'wide'
+                ? 'max-w-5xl xl:max-w-6xl'
+                : 'max-w-6xl 2xl:max-w-7xl'
+            }`}>
               {episode ? (
                 <>
-                  {/* AI Director Pacing Rationale Badge */}
-                  {episode.directorReasoning && (
-                    <div className="w-full mb-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200/80 rounded-2xl px-5 py-3 flex items-center justify-between gap-3 text-xs shadow-2xs">
-                      <div className="flex items-center gap-2.5">
-                        <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-mono font-bold text-[10px] uppercase tracking-wider shrink-0">
-                          Episode #{episode.episodeNumber || 1} Pacing
-                        </span>
-                        <span className="text-zinc-800 font-medium italic">
-                          &ldquo;{episode.directorReasoning}&rdquo;
-                        </span>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-white border border-purple-200 font-mono text-[10px] font-bold text-purple-700 uppercase shrink-0">
-                        {episode.layoutStyle || '4-panel'}
-                      </span>
-                    </div>
-                  )}
-
                   {/* The Expansive Comic Spread */}
                   <ComicPageSpread
                     ref={stripRef}
@@ -890,6 +984,8 @@ export function ZenComicReader({
                     artworkError={artworkError}
                     apiConfig={apiConfig}
                     onSelectCharacterForDossier={handleOpenDossier}
+                    isCinemaTheme={readerTheme === 'cinema'}
+                    directorReasoning={episode.directorReasoning}
                   />
 
                   {/* Minimal Core Truth Reflection Banner */}
@@ -1966,7 +2062,13 @@ export function ZenComicReader({
           {/* =====================================================================
               BOTTOM CO-DIRECTOR COMMAND DOCK (WITH DYNAMIC LAYOUT SELECTOR)
           ===================================================================== */}
-          <div className="sticky bottom-4 w-full max-w-4xl mx-auto pt-6 z-20">
+          <div className={`sticky bottom-4 w-full mx-auto pt-4 z-20 transition-all ${
+            readerWidth === 'standard'
+              ? 'max-w-4xl'
+              : readerWidth === 'wide'
+              ? 'max-w-5xl xl:max-w-6xl'
+              : 'max-w-6xl 2xl:max-w-7xl'
+          }`}>
             {/* Quick Character & Plot Beat Suggestions + Layout Selector */}
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5 py-1">
               {/* Dynamic Layout Selector Pills */}

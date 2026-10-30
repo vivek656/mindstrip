@@ -26,7 +26,8 @@ import {
   Layers,
   Cpu,
   Ratio,
-  Scan
+  Scan,
+  Maximize2
 } from 'lucide-react';
 
 export interface GranularArtworkOptions {
@@ -52,6 +53,8 @@ interface ComicPageSpreadProps {
   apiConfig?: ApiConfig;
   className?: string;
   onSelectCharacterForDossier?: (character: ComicCharacter) => void;
+  isCinemaTheme?: boolean;
+  directorReasoning?: string;
 }
 
 const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
@@ -103,6 +106,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     apiConfig,
     className = '',
     onSelectCharacterForDossier,
+    isCinemaTheme = false,
+    directorReasoning = '',
   },
   ref
 ) {
@@ -110,6 +115,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [isGranularOpen, setIsGranularOpen] = useState(false);
   // Meta SAM 3.1 Vision Inspector Toggle
   const [isSamActive, setIsSamActive] = useState(false);
+  // Expandable director pacing reasoning drawer
+  const [showPacingDrawer, setShowPacingDrawer] = useState(false);
 
   // Granular state controls
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyle>(world.artStyle || 'webcomic');
@@ -275,91 +282,157 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   return (
     <div
       ref={ref}
-      className={`w-full max-w-4xl mx-auto bg-white rounded-3xl p-4 sm:p-7 border-2 border-zinc-950 shadow-lg text-zinc-900 transition-all ${className}`}
+      className={`w-full mx-auto transition-all ${className}`}
     >
       {/* =========================================================================
-          TOP BANNER & CONTROLS HEADER
+          AUTHENTIC GRAPHIC NOVEL ISSUE MASTHEAD & CONSOLIDATED TOOLBAR
       ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b-2 border-zinc-950 gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold text-zinc-900 uppercase tracking-widest bg-zinc-100 px-2.5 py-0.5 rounded-full border border-black/10">
-              ISSUE #{episode.episodeNumber || 1}
-            </span>
-            <span className="text-zinc-400 font-mono text-xs">•</span>
-            <span className="text-xs font-mono font-bold text-blue-600 uppercase">
-              {world.title}
-            </span>
+      <div className={`p-4 sm:p-5 rounded-2xl mb-4 border transition-all ${
+        isCinemaTheme
+          ? 'bg-zinc-900/90 border-white/10 text-white shadow-xl backdrop-blur-md'
+          : 'bg-white border-2 border-zinc-950 text-zinc-900 shadow-md'
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Left: Issue Eyebrow, Title & Clean Premise */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`font-mono text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full shadow-2xs ${
+                isCinemaTheme ? 'bg-white text-zinc-950' : 'bg-zinc-950 text-white'
+              }`}>
+                ISSUE #{episode.episodeNumber || 1}
+              </span>
+              <span className="text-zinc-400 font-mono text-xs">•</span>
+              <span className="font-mono text-xs font-bold text-blue-500 uppercase tracking-wider">
+                {world.title}
+              </span>
+              <span className="text-zinc-400 font-mono text-xs">•</span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase">
+                {selectedArtStyle}
+              </span>
+              {episode.layoutStyle && (
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
+                  {episode.layoutStyle}
+                </span>
+              )}
+              {directorReasoning && (
+                <button
+                  type="button"
+                  onClick={() => setShowPacingDrawer(!showPacingDrawer)}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 uppercase transition-colors cursor-pointer flex items-center gap-1"
+                  title="View director pacing rationale"
+                >
+                  <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                  <span>Pacing: {episode.layoutStyle || '4-panel'} {showPacingDrawer ? '▲' : '▼'}</span>
+                </button>
+              )}
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black font-serif tracking-tight leading-tight">
+              {episode.title}
+            </h1>
+
+            {episode.rawBrainDump && (
+              <p className={`text-xs italic line-clamp-2 max-w-3xl ${
+                isCinemaTheme ? 'text-zinc-400' : 'text-zinc-600'
+              }`}>
+                &ldquo;{episode.rawBrainDump}&rdquo;
+              </p>
+            )}
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black text-zinc-950 tracking-tight font-serif">
-            {episode.title}
-          </h2>
+          {/* Right: Consolidated Action Toolbar (Zero Overlap on Artwork!) */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Quick Art Style Pill */}
+            <button
+              type="button"
+              onClick={() => setIsGranularOpen(true)}
+              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5 ${
+                isCinemaTheme
+                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
+              }`}
+              title="Change Art Style & Rendering Engine"
+            >
+              <span>🎨</span>
+              <span className="capitalize">{selectedArtStyle}</span>
+            </button>
+
+            {/* Granular Control Deck Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsGranularOpen(!isGranularOpen)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
+                isGranularOpen
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20 ring-1 ring-blue-400'
+                  : isCinemaTheme
+                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
+              }`}
+              title="Fine-tune prompt, layout, engine, and modifiers"
+            >
+              <Sliders className="w-3.5 h-3.5 text-blue-400" />
+              <span>Granular Studio</span>
+            </button>
+
+            {/* Meta SAM 3.1 Vision Inspector Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsSamActive(!isSamActive)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
+                isSamActive
+                  ? 'bg-cyan-600 text-white border-cyan-500 ring-2 ring-cyan-400/50 shadow-cyan-500/20'
+                  : isCinemaTheme
+                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
+              }`}
+              title="Toggle Meta SAM 3.1 Multi-Modal Visual Segmentation"
+            >
+              <Scan className={`w-3.5 h-3.5 ${isSamActive ? 'text-white animate-pulse' : 'text-cyan-400'}`} />
+              <span>SAM 3.1</span>
+            </button>
+
+            {/* Re-draw Page Artwork */}
+            {onGenerateArtwork && (
+              <button
+                type="button"
+                onClick={() => handleExecuteGranularArtwork()}
+                disabled={isGeneratingArtwork}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                title="Re-draw this comic page"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
+                <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-draw Art'}</span>
+              </button>
+            )}
+
+            {/* Fullscreen / Height Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsFullscreenZoom(!isFullscreenZoom)}
+              className={`p-2 rounded-xl transition-all cursor-pointer border ${
+                isCinemaTheme
+                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
+              }`}
+              title={isFullscreenZoom ? 'Fit normal height' : 'Expand full natural height'}
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Quick Art Style Pill */}
-          <button
-            type="button"
-            onClick={() => setIsGranularOpen(true)}
-            className="px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-800 font-mono text-xs font-bold border border-blue-200 uppercase transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Click to adjust granular style & layout"
-          >
-            <span>🎨</span>
-            <span>{selectedArtStyle}</span>
-          </button>
-
-          {/* Quick Layout Pill */}
-          <button
-            type="button"
-            onClick={() => setIsGranularOpen(true)}
-            className="px-3 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-mono text-xs font-bold border border-zinc-300 uppercase transition-colors cursor-pointer flex items-center gap-1.5"
-            title="Click to adjust granular style & layout"
-          >
-            <span>📐</span>
-            <span>{selectedLayout}</span>
-          </button>
-
-          {/* Granular Control Deck Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsGranularOpen(!isGranularOpen)}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
-              isGranularOpen
-                ? 'bg-zinc-950 text-white border-zinc-950'
-                : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-zinc-400'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Granular Controls</span>
-          </button>
-
-          {/* Meta SAM 3.1 Vision Inspector Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsSamActive(!isSamActive)}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
-              isSamActive
-                ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-400/50 shadow-blue-500/20'
-                : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-blue-400'
-            }`}
-            title="Toggle Meta SAM 3.1 Multi-Modal Visual Segmentation"
-          >
-            <Scan className={`w-3.5 h-3.5 ${isSamActive ? 'text-white animate-pulse' : 'text-blue-600'}`} />
-            <span>SAM 3.1 Inspector</span>
-            {isSamActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-ping" />}
-          </button>
-        </div>
+        {/* Expandable Pacing Director Notes Drawer */}
+        {showPacingDrawer && directorReasoning && (
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-start gap-2.5 text-xs animate-in fade-in duration-150">
+            <span className="font-mono text-[10px] font-bold uppercase text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded shrink-0">
+              Pacing Rationale:
+            </span>
+            <p className="text-zinc-300 italic font-medium leading-relaxed">
+              &ldquo;{directorReasoning}&rdquo;
+            </p>
+          </div>
+        )}
       </div>
-
-      {/* Premise Subtitle Banner */}
-      {episode.rawBrainDump && (
-        <div className="mb-4 flex items-center gap-2 text-xs sm:text-sm text-zinc-700 font-serif italic bg-zinc-50 border border-black/[0.06] rounded-xl px-4 py-2.5">
-          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-          <span className="font-sans font-bold text-zinc-900 not-italic text-xs uppercase tracking-wider shrink-0">Premise:</span>
-          <span className="truncate">&ldquo;{episode.rawBrainDump}&rdquo;</span>
-        </div>
-      )}
 
       {/* =========================================================================
           GRANULAR ART DIRECTOR & MODEL STUDIO DECK (COLLAPSIBLE)
@@ -616,13 +689,13 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
       ========================================================================= */}
       {pageImage ? (
         /* Real Meta AI Generated Full-Page Comic Spread */
-        <div className="space-y-4">
-          <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-950 shadow-md bg-zinc-950">
+        <div className="w-full">
+          <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-950 shadow-2xl bg-zinc-950">
             <img
               src={pageImage}
               alt={`${world.title} — ${episode.title}`}
-              className={`w-full h-auto block object-cover transition-all duration-200 ${
-                isFullscreenZoom ? 'max-h-none' : 'max-h-[1100px]'
+              className={`w-full h-auto block object-contain mx-auto transition-all duration-200 ${
+                isFullscreenZoom ? 'max-h-none' : 'max-h-[1400px]'
               }`}
               loading="eager"
             />
@@ -636,56 +709,6 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               onSelectCharacterForDossier={onSelectCharacterForDossier}
               onUpdateDialogue={onUpdateDialogue}
             />
-
-            {/* Quick Action Overlay on Hover */}
-            <div className="absolute top-4 right-4 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity z-20">
-              <button
-                type="button"
-                onClick={() => setIsSamActive(!isSamActive)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer transition-all ${
-                  isSamActive
-                    ? 'bg-blue-600 text-white border-blue-400 font-bold'
-                    : 'bg-black/80 hover:bg-black text-white'
-                }`}
-                title="Toggle Meta SAM 3.1 Vision Segmentation"
-              >
-                <Scan className="w-3.5 h-3.5 text-cyan-300" />
-                <span>{isSamActive ? 'Exit SAM 3.1' : 'SAM 3.1 Vision'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsFullscreenZoom(!isFullscreenZoom)}
-                className="px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white text-xs font-medium backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer"
-                title={isFullscreenZoom ? 'Normal view' : 'Expand full height'}
-              >
-                {isFullscreenZoom ? <ZoomOut className="w-3.5 h-3.5" /> : <ZoomIn className="w-3.5 h-3.5" />}
-                <span>{isFullscreenZoom ? 'Fit' : 'Full Height'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsGranularOpen(!isGranularOpen)}
-                className="px-3 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-900 text-white text-xs font-medium backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer"
-                title="Tweak artwork with granular controls"
-              >
-                <Sliders className="w-3.5 h-3.5 text-blue-400" />
-                <span>Granular Studio</span>
-              </button>
-
-              {onGenerateArtwork && (
-                <button
-                  type="button"
-                  onClick={() => handleExecuteGranularArtwork()}
-                  disabled={isGeneratingArtwork}
-                  className="px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer transition-all disabled:opacity-50"
-                  title="Re-synthesize artwork"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
-                  <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-draw Art'}</span>
-                </button>
-              )}
-            </div>
           </div>
         </div>
       ) : (

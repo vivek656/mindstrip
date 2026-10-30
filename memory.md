@@ -270,6 +270,18 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Visual continuity indicators in `ZenComicReader.tsx` and `UniverseBuilderStudio.tsx`:
     - Character cards and headers display the locked character concept thumbnail with a pulsating `🟢 CANON RAG` / `📸 Model Sheet` badge.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.06s across all 12 routes.
+- Cinematic Comic Reader & Zero-Wasted-Space Overhaul (2026-10-30):
+  - Eliminated side margins and wasted whitespace on desktop:
+    - Added collapsible sidebar with 1-click **Cinema Mode** toggle (`[ ◀ Cinema Mode ]`).
+    - Added responsive canvas width selector (`Standard 896px`, `Wide 1152px`, `Cinema 1400px+`) allowing the comic spread to dynamically fill modern widescreen displays.
+    - Added dark cinema backdrop toggle (`[ 🌙 Cinema / ☀️ Studio ]`), giving reading pages an authentic, high-contrast digital graphic novel presentation.
+  - Eliminated scattered UI clutter:
+    - Removed obtrusive standalone purple pacing banner above the comic; consolidated into an elegant expandable badge in the comic masthead.
+    - Consolidated Issue #, Series Title, Episode Title, and Premise into ONE unified graphic novel masthead.
+    - Removed floating overlay buttons that obscured Panel 1 of the comic; consolidated all actions (`SAM 3.1`, `Granular Studio`, `Re-draw`, `Zoom`) into an unobstructed toolbar directly above the comic page.
+    - Removed duplicate `Studio Views` buttons from the sidebar.
+    - Synced bottom Co-Director dock width with the selected canvas reading width.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.39s across all 12 routes.
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -389,3 +401,15 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Visual continuity indicators in `ZenComicReader.tsx` and `UniverseBuilderStudio.tsx`:
     - Character cards and headers display the locked character concept thumbnail with a pulsating `🟢 CANON RAG` / `📸 Model Sheet` badge.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.06s across all 12 routes.
+- Cinematic Comic Reader & Zero-Wasted-Space Overhaul (2026-10-30):
+  - Eliminated side margins and wasted whitespace on desktop:
+    - Added collapsible sidebar with 1-click **Cinema Mode** toggle (`[ ◀ Cinema Mode ]`).
+    - Added responsive canvas width selector (`Standard 896px`, `Wide 1152px`, `Cinema 1400px+`) allowing the comic spread to dynamically fill modern widescreen displays.
+    - Added dark cinema backdrop toggle (`[ 🌙 Cinema / ☀️ Studio ]`), giving reading pages an authentic, high-contrast digital graphic novel presentation.
+  - Eliminated scattered UI clutter:
+    - Removed obtrusive standalone purple pacing banner above the comic; consolidated into an elegant expandable badge in the comic masthead.
+    - Consolidated Issue #, Series Title, Episode Title, and Premise into ONE unified graphic novel masthead.
+    - Removed floating overlay buttons that obscured Panel 1 of the comic; consolidated all actions (`SAM 3.1`, `Granular Studio`, `Re-draw`, `Zoom`) into an unobstructed toolbar directly above the comic page.
+    - Removed duplicate `Studio Views` buttons from the sidebar.
+    - Synced bottom Co-Director dock width with the selected canvas reading width.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.39s across all 12 routes.
