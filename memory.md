@@ -249,6 +249,27 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Optional "What If" divergence prompt automatically kicks off the new branch's next episode.
     - Added quick branch trigger icons on every episode card in the sidebar archive.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~0.98s across all 11 routes.
+- Multi-Angle Character Visual Reference & Model Sheet Studio (Character Visual RAG - 2026-10-30):
+  - Solved character visual drift by providing individual angle generation, preview, and canonical locking for character model sheets.
+  - Implemented `/api/generate-character-image` supporting 5 specialized reference views:
+    - 📋 **Complete Model Sheet** (Front, 3/4 & side profile turnaround lineup)
+    - 👤 **Face / Portrait Close-up** (Facial anatomy, eye color, expressions, hair details)
+    - 🧍 **Full-Body Concept** (Head-to-toe standing pose, torso, legs, boots, silhouette)
+    - 🔄 **Back View Turnaround** (Coat/jacket back, hair silhouette from behind)
+    - ⚔️ **Action Stance** (Dynamic heroic combat posture with signature gear)
+  - Built interactive **Character Visual RAG & Model Sheet Studio** inside `CharacterDossierModal.tsx`:
+    - View type selector pills with aspect ratio indicators.
+    - Live prompt augmentation combining Character Physical Appearance + Signature Wardrobe + Iconic Accessories.
+    - Concept gallery with individual view tags, timestamp, delete action, and full-resolution modal inspection.
+    - 1-Click **"Lock as Canon Reference"** button that flags the model sheet as primary reference (`character.imageUrl` and `isLockedCanon: true`).
+    - Option to paste direct custom image URLs.
+  - Integrated into **Character Visual RAG Pipeline**:
+    - `canon-rag.ts` indexes locked character references with `type: 'character_visual_ref'`.
+    - `art-director.ts` injects locked model sheets and visual references into diffusion conditioning tokens.
+    - Auto-archival into permanent Vercel Blob CDN (`persistToPermanentBlob`), returning persistent CDN URLs saved in MongoDB Atlas.
+  - Visual continuity indicators in `ZenComicReader.tsx` and `UniverseBuilderStudio.tsx`:
+    - Character cards and headers display the locked character concept thumbnail with a pulsating `🟢 CANON RAG` / `📸 Model Sheet` badge.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.06s across all 12 routes.
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -347,3 +368,24 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Optional "What If" divergence prompt automatically kicks off the new branch's next episode.
     - Added quick branch trigger icons on every episode card in the sidebar archive.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~0.98s across all 11 routes.
+- Multi-Angle Character Visual Reference & Model Sheet Studio (Character Visual RAG - 2026-10-30):
+  - Solved character visual drift by providing individual angle generation, preview, and canonical locking for character model sheets.
+  - Implemented `/api/generate-character-image` supporting 5 specialized reference views:
+    - 📋 **Complete Model Sheet** (Front, 3/4 & side profile turnaround lineup)
+    - 👤 **Face / Portrait Close-up** (Facial anatomy, eye color, expressions, hair details)
+    - 🧍 **Full-Body Concept** (Head-to-toe standing pose, torso, legs, boots, silhouette)
+    - 🔄 **Back View Turnaround** (Coat/jacket back, hair silhouette from behind)
+    - ⚔️ **Action Stance** (Dynamic heroic combat posture with signature gear)
+  - Built interactive **Character Visual RAG & Model Sheet Studio** inside `CharacterDossierModal.tsx`:
+    - View type selector pills with aspect ratio indicators.
+    - Live prompt augmentation combining Character Physical Appearance + Signature Wardrobe + Iconic Accessories.
+    - Concept gallery with individual view tags, timestamp, delete action, and full-resolution modal inspection.
+    - 1-Click **"Lock as Canon Reference"** button that flags the model sheet as primary reference (`character.imageUrl` and `isLockedCanon: true`).
+    - Option to paste direct custom image URLs.
+  - Integrated into **Character Visual RAG Pipeline**:
+    - `canon-rag.ts` indexes locked character references with `type: 'character_visual_ref'`.
+    - `art-director.ts` injects locked model sheets and visual references into diffusion conditioning tokens.
+    - Auto-archival into permanent Vercel Blob CDN (`persistToPermanentBlob`), returning persistent CDN URLs saved in MongoDB Atlas.
+  - Visual continuity indicators in `ZenComicReader.tsx` and `UniverseBuilderStudio.tsx`:
+    - Character cards and headers display the locked character concept thumbnail with a pulsating `🟢 CANON RAG` / `📸 Model Sheet` badge.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.06s across all 12 routes.

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ComicCharacter, ComicWorld, CharacterRelationship } from '@/types/comic';
+import { ComicCharacter, ComicWorld, CharacterRelationship, CharacterReferenceImage } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import {
   X,
@@ -18,7 +18,16 @@ import {
   RefreshCw,
   HelpCircle,
   Eye,
-  Tag
+  Tag,
+  Lock,
+  Unlock,
+  ExternalLink,
+  Maximize2,
+  Layers,
+  AlertCircle,
+  CheckCircle2,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface CharacterDossierModalProps {
@@ -59,6 +68,50 @@ const TRAIT_SUGGESTIONS = [
   'Technologically obsessed',
   'Quiet observer',
   'Unwavering moral code'
+];
+
+export const VIEW_TYPE_OPTIONS: {
+  id: 'model_sheet' | 'portrait' | 'full_body' | 'back_view' | 'action_pose';
+  label: string;
+  icon: string;
+  desc: string;
+  aspect: string;
+}[] = [
+  {
+    id: 'model_sheet',
+    label: 'Model Sheet',
+    icon: '📋',
+    desc: 'Multi-angle lineup (Front, 3/4 & side profile turnaround)',
+    aspect: '16:9',
+  },
+  {
+    id: 'portrait',
+    label: 'Face / Portrait',
+    icon: '👤',
+    desc: 'Close-up bust: facial features, eye color, expression & hair',
+    aspect: '1:1',
+  },
+  {
+    id: 'full_body',
+    label: 'Full-Body Concept',
+    icon: '🧍',
+    desc: 'Head-to-toe standing: torso, legs, boots & outfit silhouette',
+    aspect: '3:4',
+  },
+  {
+    id: 'back_view',
+    label: 'Back Turnaround',
+    icon: '🔄',
+    desc: 'Turnaround rear: silhouette from behind, back of hair & coat',
+    aspect: '3:4',
+  },
+  {
+    id: 'action_pose',
+    label: 'Action Stance',
+    icon: '⚔️',
+    desc: 'Dynamic heroic combat posture with signature gear/weapon',
+    aspect: '3:4',
+  },
 ];
 
 export function CharacterDossierModal({
@@ -117,6 +170,24 @@ export function CharacterDossierModal({
   const [isExpanding, setIsExpanding] = useState(false);
   const [expandNotice, setExpandNotice] = useState<string | null>(null);
 
+  // Character Visual Model Sheet & Reference Studio State (Character Visual RAG)
+  const [lockedImageUrl, setLockedImageUrl] = useState<string>(
+    character?.imageUrl || character?.characterSheetUrl || ''
+  );
+  const [referenceImages, setReferenceImages] = useState<CharacterReferenceImage[]>(
+    character?.referenceImages || []
+  );
+  const [selectedViewType, setSelectedViewType] = useState<
+    'model_sheet' | 'portrait' | 'full_body' | 'back_view' | 'action_pose'
+  >('model_sheet');
+  const [customViewPrompt, setCustomViewPrompt] = useState('');
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [generatingViewType, setGeneratingViewType] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
+  const [manualUrlInput, setManualUrlInput] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
   // Reset when character prop changes
   React.useEffect(() => {
     if (character) {
@@ -140,6 +211,27 @@ export function CharacterDossierModal({
       setAbilities(character.abilities || '');
       setGear(character.gear || '');
       setRelationships(character.relationships || []);
+
+      const initialUrl = character.imageUrl || character.characterSheetUrl || '';
+      setLockedImageUrl(initialUrl);
+
+      if (character.referenceImages && character.referenceImages.length > 0) {
+        setReferenceImages(character.referenceImages);
+      } else if (initialUrl) {
+        setReferenceImages([
+          {
+            id: `ref-initial-${character.id}`,
+            viewType: 'model_sheet',
+            label: 'Canonical Model Sheet',
+            imageUrl: initialUrl,
+            prompt: `${character.name} visual reference`,
+            createdAt: new Date().toISOString(),
+            isLockedCanon: true,
+          },
+        ]);
+      } else {
+        setReferenceImages([]);
+      }
     } else {
       setName('');
       setRole('sidekick');
@@ -161,6 +253,10 @@ export function CharacterDossierModal({
       setAbilities('');
       setGear('');
       setRelationships([]);
+      setLockedImageUrl('');
+      setReferenceImages([]);
+      setCustomViewPrompt('');
+      setGenerationError(null);
     }
   }, [character, isOpen]);
 
@@ -269,6 +365,111 @@ export function CharacterDossierModal({
     }
   };
 
+  const handleLockAsCanon = (imgUrl: string) => {
+    setLockedImageUrl(imgUrl);
+    setReferenceImages((prev) =>
+      prev.map((r) => ({
+        ...r,
+        isLockedCanon: r.imageUrl === imgUrl,
+      }))
+    );
+  };
+
+  const handleDeleteReference = (refId: string) => {
+    const target = referenceImages.find((r) => r.id === refId);
+    if (target && target.imageUrl === lockedImageUrl) {
+      setLockedImageUrl('');
+    }
+    setReferenceImages((prev) => prev.filter((r) => r.id !== refId));
+  };
+
+  const handleAddManualImage = () => {
+    if (!manualUrlInput.trim()) return;
+    const viewOpt = VIEW_TYPE_OPTIONS.find((v) => v.id === selectedViewType);
+    const newRef: CharacterReferenceImage = {
+      id: `ref-manual-${Date.now()}`,
+      viewType: selectedViewType,
+      label: `Custom ${viewOpt?.label || selectedViewType}`,
+      imageUrl: manualUrlInput.trim(),
+      prompt: 'Custom user provided reference',
+      createdAt: new Date().toISOString(),
+      isLockedCanon: !lockedImageUrl,
+    };
+    setReferenceImages((prev) => [newRef, ...prev]);
+    if (!lockedImageUrl) {
+      setLockedImageUrl(manualUrlInput.trim());
+    }
+    setManualUrlInput('');
+    setShowUrlInput(false);
+  };
+
+  const handleGenerateCharacterArt = async (
+    viewType: 'model_sheet' | 'portrait' | 'full_body' | 'back_view' | 'action_pose'
+  ) => {
+    if (!name.trim()) {
+      alert('Please enter a character name before generating concept art.');
+      return;
+    }
+    setIsGeneratingImage(true);
+    setGeneratingViewType(viewType);
+    setGenerationError(null);
+
+    try {
+      const res = await fetch('/api/generate-character-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          characterName: name.trim(),
+          role,
+          gender,
+          appearance,
+          wardrobe,
+          iconicItem,
+          viewType,
+          customPrompt: customViewPrompt.trim() || undefined,
+          artStyle: world.artStyle || 'webcomic',
+          apiKey: apiConfig?.apiKey,
+          baseUrl: apiConfig?.baseUrl,
+          provider: apiConfig?.provider,
+          imageModel: world.imageModel || (apiConfig?.provider === 'fireworks' ? 'flux-1-schnell' : 'muse-image-1.0'),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server responded with status ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data.imageUrl) {
+        throw new Error('No image URL returned by the generation engine');
+      }
+
+      const viewOpt = VIEW_TYPE_OPTIONS.find((v) => v.id === viewType);
+      const newRef: CharacterReferenceImage = {
+        id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        viewType,
+        label: viewOpt?.label || viewType,
+        imageUrl: data.imageUrl,
+        prompt: data.prompt || `${name} (${viewType})`,
+        createdAt: new Date().toISOString(),
+        isLockedCanon: !lockedImageUrl, // auto-lock first generated if none locked
+      };
+
+      setReferenceImages((prev) => [newRef, ...prev]);
+
+      if (!lockedImageUrl) {
+        setLockedImageUrl(data.imageUrl);
+      }
+    } catch (err: any) {
+      console.error('Character concept art generation error:', err);
+      setGenerationError(err.message || 'Failed to generate character concept art');
+    } finally {
+      setIsGeneratingImage(false);
+      setGeneratingViewType(null);
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -294,6 +495,12 @@ export function CharacterDossierModal({
       abilities: abilities.trim(),
       gear: gear.trim(),
       relationships,
+      imageUrl: lockedImageUrl || undefined,
+      characterSheetUrl: lockedImageUrl || undefined,
+      referenceImages: referenceImages.map((ref) => ({
+        ...ref,
+        isLockedCanon: ref.imageUrl === lockedImageUrl,
+      })),
     };
 
     onSaveCharacter(updatedChar);
@@ -309,9 +516,21 @@ export function CharacterDossierModal({
         ===================================================================== */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-black/[0.08] bg-zinc-50 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-2xl bg-zinc-950 text-white flex items-center justify-center text-xl shadow-xs">
-              {avatarEmoji}
-            </span>
+            <div className="relative">
+              <span className="w-10 h-10 rounded-2xl bg-zinc-950 text-white flex items-center justify-center text-xl shadow-xs overflow-hidden">
+                {lockedImageUrl ? (
+                  <img src={lockedImageUrl} alt={name} className="w-full h-full object-cover" />
+                ) : (
+                  avatarEmoji
+                )}
+              </span>
+              {lockedImageUrl && (
+                <span
+                  className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-2xs"
+                  title="Canonical reference locked for Character Visual RAG"
+                />
+              )}
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-bold text-base text-zinc-950">
@@ -320,6 +539,12 @@ export function CharacterDossierModal({
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-100 text-purple-700 uppercase">
                   {role}
                 </span>
+                {lockedImageUrl && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                    <Check className="w-2.5 h-2.5" />
+                    <span>CANON ART</span>
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-zinc-500">
                 Visual continuity anchors & deep-dive canon for {world.title}
@@ -503,7 +728,11 @@ export function CharacterDossierModal({
         ===================================================================== */}
         <div className="px-6 pt-2 border-b border-black/[0.08] bg-white flex items-center gap-2 overflow-x-auto shrink-0">
           {[
-            { id: 'visuals', label: '🎨 Visuals & Wardrobe', icon: Palette },
+            {
+              id: 'visuals',
+              label: `🎨 Visuals & Model Sheet (${referenceImages.length})`,
+              icon: Palette,
+            },
             { id: 'lore', label: '🧠 Psychology & Lore', icon: Brain },
             { id: 'voice', label: '💬 Voice & Dialogue', icon: MessageSquare },
             { id: 'gear', label: '⚡ Powers & Gear', icon: Zap },
@@ -534,68 +763,394 @@ export function CharacterDossierModal({
         ===================================================================== */}
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {/* TAB 1: VISUALS & WARDROBE ANCHORS */}
+          {/* TAB 1: VISUALS, MODEL SHEET & WARDROBE ANCHORS */}
           {activeTab === 'visuals' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-2xl flex items-start gap-3">
-                <span className="text-xl">🎨</span>
-                <div className="text-xs text-amber-900 leading-relaxed">
-                  <strong className="font-bold block text-amber-950">AI Visual Continuity Anchors:</strong>
-                  These details are embedded directly into every Meta Muse Image generation prompt so @{name || 'Character'} maintains identical clothing, hair, and silhouette across every episode!
+            <div className="space-y-6 animate-in fade-in duration-150">
+
+              {/* =========================================================================
+                  AI CHARACTER VISUAL RAG & MODEL SHEET STUDIO
+              ========================================================================= */}
+              <div className="bg-gradient-to-br from-indigo-950 via-zinc-900 to-black text-white p-5 rounded-3xl border border-indigo-500/30 shadow-xl space-y-5">
+                {/* Studio Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-xl shadow-inner shrink-0">
+                      📸
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-sm text-white">Character Visual RAG & Model Sheet Studio</h3>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                          Visual Consistency Engine
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400">
+                        Generate individual views (Face, Full-Body, Back, Model Sheet) and lock canonical artwork for zero-drift pipeline consistency.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status Pill */}
+                  {lockedImageUrl ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 self-start sm:self-auto shrink-0 shadow-xs">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Canonical Reference Locked</span>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 self-start sm:self-auto shrink-0">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>No Reference Locked Yet</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Canonical Reference Showcase (If Locked) */}
+                {lockedImageUrl && (
+                  <div className="bg-black/50 border border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="relative group rounded-xl overflow-hidden border border-white/15 shadow-lg bg-zinc-950 shrink-0 w-32 h-32 flex items-center justify-center">
+                      <img
+                        src={lockedImageUrl}
+                        alt={`Canonical model sheet for ${name}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        onClick={() => setPreviewImageModal(lockedImageUrl)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImageModal(lockedImageUrl)}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                        title="Inspect full resolution"
+                      >
+                        <Maximize2 className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="flex-1 space-y-2 text-center sm:text-left">
+                      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-600 text-white flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          ACTIVE CANONICAL SHEET
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-mono">
+                          Character Visual RAG Active
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-300 leading-relaxed">
+                        Every episode featuring <strong className="text-white">@{name || 'this character'}</strong> will condition on this exact visual reference, preserving facial bone structure, wardrobe, and silhouette.
+                      </p>
+                      <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImageModal(lockedImageUrl)}
+                          className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect Full-Res</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLockedImageUrl('')}
+                          className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          <span>Unlock Canon</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* View Selection Buttons */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      <span>1. Select Reference Angle / View Type:</span>
+                    </label>
+                    <span className="text-[10px] text-indigo-400">
+                      Click view to generate individual angle
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {VIEW_TYPE_OPTIONS.map((opt) => {
+                      const isSelected = selectedViewType === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setSelectedViewType(opt.id)}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-indigo-600/30 border-indigo-400 text-white shadow-sm ring-1 ring-indigo-400'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full mb-1">
+                            <span className="text-lg">{opt.icon}</span>
+                            <span className="text-[9px] font-mono text-zinc-400 uppercase">{opt.aspect}</span>
+                          </div>
+                          <div className="font-bold text-xs leading-snug">{opt.label}</div>
+                          <div className="text-[10px] text-zinc-400 line-clamp-2 mt-1 leading-tight">{opt.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Optional Custom View Directive Prompt */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase">
+                        Optional Prompt Refinements:
+                      </label>
+                      <span className="text-[10px] text-zinc-500">
+                        Auto-augmented with Appearance + Wardrobe
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={customViewPrompt}
+                      onChange={(e) => setCustomViewPrompt(e.target.value)}
+                      placeholder="e.g. Amber glowing eyes, intense focused gaze, high-collared trench coat..."
+                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-indigo-400"
+                    />
+                  </div>
+
+                  {/* Error Notification */}
+                  {generationError && (
+                    <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-xs text-red-300 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                        <span>{generationError}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setGenerationError(null)}
+                        className="text-red-400 hover:text-white text-xs underline cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Generation Actions Strip */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Instant Preview Engine (Hosted permanently on Vercel Blob CDN)</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowUrlInput(!showUrlInput)}
+                        className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-300 transition-colors cursor-pointer"
+                      >
+                        {showUrlInput ? 'Hide URL Input' : 'Paste Direct URL...'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateCharacterArt(selectedViewType)}
+                        disabled={!name.trim() || isGeneratingImage}
+                        className="px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        <Sparkles className={`w-4 h-4 ${isGeneratingImage ? 'animate-spin' : ''}`} />
+                        <span>
+                          {isGeneratingImage
+                            ? `Generating ${selectedViewType.replace('_', ' ')}...`
+                            : `✨ Generate ${VIEW_TYPE_OPTIONS.find((v) => v.id === selectedViewType)?.label || 'View'}`}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Direct Image URL input */}
+                  {showUrlInput && (
+                    <div className="p-3 bg-black/50 border border-white/10 rounded-xl flex items-center gap-2 animate-in fade-in duration-150">
+                      <input
+                        type="text"
+                        value={manualUrlInput}
+                        onChange={(e) => setManualUrlInput(e.target.value)}
+                        placeholder="https://... (direct image URL to character artwork)"
+                        className="flex-1 px-3 py-1.5 bg-black/60 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-indigo-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddManualImage}
+                        disabled={!manualUrlInput.trim()}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-40 cursor-pointer"
+                      >
+                        Add to Gallery
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Concept Gallery & Angle Lineup */}
+                <div className="space-y-3 pt-3 border-t border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-400" />
+                      <h4 className="font-bold text-xs text-white">
+                        Concept Gallery & Multi-Angle Lineup ({referenceImages.length})
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-zinc-400">
+                      Click 'Lock Canon' on any view to set as active pipeline reference
+                    </span>
+                  </div>
+
+                  {referenceImages.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-zinc-500 bg-white/5 rounded-2xl border border-dashed border-white/10">
+                      No character reference angles generated yet. Click "Generate Artwork" above to create face, full-body, back, or model sheet views!
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {referenceImages.map((ref) => {
+                        const isCanon = lockedImageUrl === ref.imageUrl;
+                        return (
+                          <div
+                            key={ref.id}
+                            className={`group relative rounded-2xl overflow-hidden border transition-all flex flex-col justify-between bg-zinc-950 ${
+                              isCanon
+                                ? 'border-emerald-500 ring-2 ring-emerald-500/50 shadow-md'
+                                : 'border-white/10 hover:border-white/30'
+                            }`}
+                          >
+                            {/* Image Preview */}
+                            <div className="relative aspect-square w-full overflow-hidden bg-black flex items-center justify-center">
+                              <img
+                                src={ref.imageUrl}
+                                alt={ref.label || ref.viewType}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+
+                              {/* View Type Badge */}
+                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-black/75 backdrop-blur-xs text-white uppercase border border-white/10">
+                                {ref.viewType?.replace('_', ' ') || 'view'}
+                              </div>
+
+                              {/* Canon Badge */}
+                              {isCanon && (
+                                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500 text-white flex items-center gap-1 shadow-xs">
+                                  <Check className="w-3 h-3" />
+                                  CANON
+                                </div>
+                              )}
+
+                              {/* Hover overlay actions */}
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewImageModal(ref.imageUrl)}
+                                  className="p-2 rounded-xl bg-white/20 hover:bg-white text-zinc-900 transition-colors cursor-pointer"
+                                  title="Zoom full image"
+                                >
+                                  <Maximize2 className="w-4 h-4 text-white hover:text-zinc-950" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReference(ref.id)}
+                                  className="p-2 rounded-xl bg-red-600/30 hover:bg-red-600 text-white transition-colors cursor-pointer"
+                                  title="Remove from gallery"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Card Footer: Lock as Canon Button */}
+                            <div className="p-2 bg-zinc-900/90 border-t border-white/10 flex items-center justify-between gap-1">
+                              <span className="text-[10px] text-zinc-400 truncate max-w-[90px]">
+                                {ref.label || ref.viewType}
+                              </span>
+
+                              {isCanon ? (
+                                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                                  <Lock className="w-3 h-3" />
+                                  Locked
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleLockAsCanon(ref.imageUrl)}
+                                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-white/10 hover:bg-emerald-600 hover:text-white text-zinc-300 transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="Lock as canonical reference for Character Visual RAG"
+                                >
+                                  <Lock className="w-3 h-3" />
+                                  Lock Canon
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center justify-between">
-                  <span>Physical Appearance (Face, Hair, Build)</span>
-                  <span className="text-[10px] text-zinc-400 font-mono">Image Anchor</span>
-                </label>
-                <textarea
-                  rows={2}
-                  value={appearance}
-                  onChange={(e) => setAppearance(e.target.value)}
-                  placeholder="e.g. Angular jawline, observant amber eyes, messy cropped silver hair, lean athletic build with an alert posture."
-                  className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
-                />
-              </div>
+              {/* Physical Appearance, Wardrobe & Iconic Item Details */}
+              <div className="space-y-4 pt-2">
+                <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-2xl flex items-start gap-3">
+                  <span className="text-xl">🎨</span>
+                  <div className="text-xs text-amber-900 leading-relaxed">
+                    <strong className="font-bold block text-amber-950">AI Visual Continuity Anchors:</strong>
+                    These details are embedded directly into every Meta Muse Image generation prompt so @{name || 'Character'} maintains identical clothing, hair, and silhouette across every episode!
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5">
-                    Signature Wardrobe & Color Palette
+                  <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center justify-between">
+                    <span>Physical Appearance (Face, Hair, Build)</span>
+                    <span className="text-[10px] text-zinc-400 font-mono">Image Anchor</span>
                   </label>
                   <textarea
                     rows={2}
-                    value={wardrobe}
-                    onChange={(e) => setWardrobe(e.target.value)}
-                    placeholder="e.g. Faded charcoal trench coat with roll-up sleeves over an indigo combat tunic and reinforced knee-boots."
+                    value={appearance}
+                    onChange={(e) => setAppearance(e.target.value)}
+                    placeholder="e.g. Angular jawline, observant amber eyes, messy cropped silver hair, lean athletic build with an alert posture."
                     className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
-                    <span>Iconic Accessory / Silhouette Item</span>
-                    <span className="text-[10px] text-purple-600 font-mono">(Key Prop)</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={iconicItem}
-                    onChange={(e) => setIconicItem(e.target.value)}
-                    placeholder="e.g. Cracked holographic wrist-chronometer, chipped mechanical katana, glowing neon cyber-goggles."
-                    className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-900 mb-1.5">
+                      Signature Wardrobe & Color Palette
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={wardrobe}
+                      onChange={(e) => setWardrobe(e.target.value)}
+                      placeholder="e.g. Faded charcoal trench coat with roll-up sleeves over an indigo combat tunic and reinforced knee-boots."
+                      className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                    />
+                  </div>
 
-              {/* Live Meta Image Prompt Fragment Preview */}
-              <div className="p-3.5 bg-zinc-900 text-zinc-200 rounded-xl font-mono text-[11px] space-y-1">
-                <span className="text-zinc-500 uppercase text-[9px] tracking-wider block">
-                  Meta Muse Image Injected Continuity Token:
-                </span>
-                <p className="text-emerald-400">
-                  {name || 'Hero'} ({role}): {appearance || 'Expressive look'}, wearing {wardrobe || 'signature attire'} with {iconicItem || 'distinctive accessories'}.
-                </p>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
+                      <span>Iconic Accessory / Silhouette Item</span>
+                      <span className="text-[10px] text-purple-600 font-mono">(Key Prop)</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={iconicItem}
+                      onChange={(e) => setIconicItem(e.target.value)}
+                      placeholder="e.g. Cracked holographic wrist-chronometer, chipped mechanical katana, glowing neon cyber-goggles."
+                      className="w-full p-3 bg-zinc-50 border border-black/10 rounded-xl text-xs text-zinc-900 outline-none focus:bg-white focus:border-zinc-950 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Meta Image Prompt Fragment Preview */}
+                <div className="p-3.5 bg-zinc-900 text-zinc-200 rounded-xl font-mono text-[11px] space-y-1">
+                  <span className="text-zinc-500 uppercase text-[9px] tracking-wider block">
+                    Meta Muse Image Injected Continuity Token:
+                  </span>
+                  <p className="text-emerald-400">
+                    {name || 'Hero'} ({role}): {appearance || 'Expressive look'}, wearing {wardrobe || 'signature attire'} with {iconicItem || 'distinctive accessories'}.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -906,6 +1461,69 @@ export function CharacterDossierModal({
           </div>
         </form>
       </div>
+
+      {/* =========================================================================
+          FULL-RESOLUTION CHARACTER ARTWORK INSPECTOR MODAL
+      ========================================================================= */}
+      {previewImageModal && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setPreviewImageModal(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] w-full bg-zinc-950 border border-white/20 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-white">@{name} — Visual Concept Inspection</span>
+                {lockedImageUrl === previewImageModal && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    Active Canon Model Sheet
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {lockedImageUrl !== previewImageModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleLockAsCanon(previewImageModal);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Lock as Canonical Reference</span>
+                  </button>
+                )}
+                <a
+                  href={previewImageModal}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Open original image link"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImageModal(null)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/60">
+              <img
+                src={previewImageModal}
+                alt="Character full inspection"
+                className="max-h-[75vh] w-auto object-contain rounded-xl shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,16 @@ export interface CharacterRelationship {
   dynamicDescription: string;
 }
 
+export interface CharacterReferenceImage {
+  id: string;
+  viewType: 'portrait' | 'full_body' | 'back_view' | 'model_sheet' | 'action_pose';
+  label: string; // e.g. "Portrait / Face", "Full-Body Outfit", "Back Turnaround", "Model Sheet"
+  imageUrl: string;
+  prompt: string;
+  createdAt: string;
+  isLockedCanon?: boolean;
+}
+
 export interface ComicCharacter {
   id: string;
   name: string;
@@ -40,6 +50,10 @@ export interface ComicCharacter {
   wardrobe?: string; // Detailed everyday clothing and color scheme
   iconicItem?: string; // Signature silhouette accessory (e.g. cracked goggles, robotic arm)
   relationships?: CharacterRelationship[]; // Cast relationship dynamics
+  // Character Visual Model Sheet & Reference Studio (Character Visual RAG)
+  imageUrl?: string; // Primary locked canonical reference image
+  characterSheetUrl?: string; // Multi-angle model sheet
+  referenceImages?: CharacterReferenceImage[]; // Angle/view gallery (face, full-body, back, etc.)
 }
 
 export interface SpeechBubble {

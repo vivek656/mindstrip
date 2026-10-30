@@ -123,6 +123,18 @@ export function queryCanonRag(
         relevanceScore: Math.round(score * 100) / 100
       });
     }
+
+    // Index locked visual reference image (Character Visual RAG)
+    if (char.imageUrl) {
+      results.push({
+        id: `rag-char-vis-${char.id}`,
+        type: 'character_visual_ref',
+        title: `Visual Model Sheet: @${char.name}`,
+        content: `Locked canonical reference image. Features: ${char.appearance || 'Standard'}. Wardrobe: ${char.wardrobe || 'Standard'}. Props: ${char.iconicItem || 'None'}. Visual URL: ${char.imageUrl}`,
+        imageUrl: char.imageUrl,
+        relevanceScore: 0.98
+      });
+    }
   });
 
   // Sort descending by relevance score and take the top 5

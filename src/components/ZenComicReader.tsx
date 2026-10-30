@@ -1239,11 +1239,28 @@ export function ZenComicReader({
                         {/* Header: Avatar, Name, Role */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-3">
-                            <span className="w-12 h-12 rounded-xl bg-zinc-100 border border-black/10 flex items-center justify-center text-2xl shadow-2xs">
-                              {char.avatarEmoji}
-                            </span>
+                            {char.imageUrl ? (
+                              <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-black/15 shadow-2xs group-hover:border-purple-600 transition-colors bg-zinc-100 shrink-0">
+                                <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover" />
+                                <span className="absolute bottom-0 right-0 text-[10px] bg-black/70 backdrop-blur-xs px-1 rounded-tl text-white">
+                                  {char.avatarEmoji}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="w-12 h-12 rounded-xl bg-zinc-100 border border-black/10 flex items-center justify-center text-2xl shadow-2xs shrink-0">
+                                {char.avatarEmoji}
+                              </span>
+                            )}
                             <div>
-                              <h3 className="font-bold text-base text-zinc-950 leading-snug">{char.name}</h3>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h3 className="font-bold text-base text-zinc-950 leading-snug">{char.name}</h3>
+                                {char.imageUrl && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-0.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span>CANON RAG</span>
+                                  </span>
+                                )}
+                              </div>
                               {char.gender && (
                                 <span className="text-xs text-zinc-500 capitalize">{char.gender}</span>
                               )}
@@ -1282,8 +1299,13 @@ export function ZenComicReader({
                         )}
 
                         {/* Deep-dive Badges (Wardrobe, Motivation, Ties) */}
-                        {(char.wardrobe || char.motivation || char.flaws || (char.relationships && char.relationships.length > 0)) && (
+                        {(char.imageUrl || char.wardrobe || char.motivation || char.flaws || (char.relationships && char.relationships.length > 0)) && (
                           <div className="flex flex-wrap gap-1 pt-1">
+                            {char.imageUrl && (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-[10px] font-mono font-bold text-emerald-700 border border-emerald-200">
+                                📸 Model Sheet Canon
+                              </span>
+                            )}
                             {char.wardrobe && (
                               <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-[10px] font-mono text-zinc-700">
                                 👔 Wardrobe Locked
@@ -1312,7 +1334,7 @@ export function ZenComicReader({
                           title="Open detailed character dossier studio"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                          <span>Deep Dossier</span>
+                          <span>{char.imageUrl ? '📸 Dossier & Sheet' : 'Deep Dossier'}</span>
                         </button>
 
                         <button

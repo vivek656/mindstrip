@@ -565,12 +565,26 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                       className="p-4 rounded-2xl bg-zinc-50 border border-black/[0.06] flex items-start justify-between gap-3 relative group"
                     >
                       <div className="flex items-start gap-3">
-                        <span className="text-2xl p-2 rounded-xl bg-white border border-black/[0.06] shadow-2xs">
-                          {char.avatarEmoji}
-                        </span>
+                        {char.imageUrl ? (
+                          <div className="relative w-11 h-11 rounded-xl overflow-hidden border border-black/10 shadow-2xs bg-white shrink-0">
+                            <img src={char.imageUrl} alt={char.name} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-0 right-0 text-[9px] bg-black/70 px-1 rounded-tl text-white">
+                              {char.avatarEmoji}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-2xl p-2 rounded-xl bg-white border border-black/[0.06] shadow-2xs shrink-0">
+                            {char.avatarEmoji}
+                          </span>
+                        )}
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-sm text-zinc-950">{char.name}</span>
+                            {char.imageUrl && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-mono font-bold border border-emerald-300">
+                                📸 Model Sheet
+                              </span>
+                            )}
                             <span className="px-2 py-0.5 rounded-md bg-zinc-200/80 text-zinc-700 text-[10px] font-mono uppercase font-semibold">
                               {char.gender || 'unspecified'}
                             </span>
@@ -598,10 +612,10 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                           type="button"
                           onClick={() => handleOpenDossier(char)}
                           className="px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
-                          title="Open detailed character studio"
+                          title="Open detailed character studio & model sheet"
                         >
                           <Sparkles className="w-3 h-3 text-purple-600" />
-                          <span>Dossier</span>
+                          <span>{char.imageUrl ? '📸 Dossier & Sheet' : 'Dossier'}</span>
                         </button>
 
                         <button

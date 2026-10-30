@@ -25,15 +25,16 @@ export function directVisualArtwork(
   const artStyle: ArtStyle = context.artStyle || context.world?.artStyle || 'webcomic';
   const layout = draft.layoutStyle || '4-panel';
 
-  // 1. Compile Character Visual Anchors
+  // 1. Compile Character Visual Anchors (with Character Visual RAG)
   const visualAnchors: string[] = [];
   const charDescriptions = characters.map((c) => {
     const anchors: string[] = [];
     if (c.appearance) anchors.push(c.appearance);
     if (c.wardrobe) anchors.push(`wearing ${c.wardrobe}`);
     if (c.iconicItem) anchors.push(`signature ${c.iconicItem}`);
+    if (c.imageUrl) anchors.push(`canonical model sheet match: ${c.imageUrl}`);
     const anchorStr = anchors.length > 0 ? anchors.join(', ') : 'distinct expressive comic design';
-    visualAnchors.push(`${c.name}: ${anchorStr}`);
+    visualAnchors.push(`${c.name}${c.imageUrl ? ' (Model Sheet Locked)' : ''}: ${anchorStr}`);
     return `${c.name} (${anchorStr})`;
   });
 

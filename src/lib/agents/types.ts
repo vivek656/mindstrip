@@ -56,10 +56,11 @@ export interface CanonAuditResult {
 
 export interface RagItem {
   id: string;
-  type: 'past_episode' | 'world_law' | 'location' | 'character_lore' | 'open_thread';
+  type: 'past_episode' | 'world_law' | 'location' | 'character_lore' | 'open_thread' | 'character_visual_ref';
   title: string;
   content: string;
   relevanceScore: number; // 0.0 - 1.0
+  imageUrl?: string;
 }
 
 export interface ProductionRoomResult {
