@@ -466,6 +466,7 @@ export default function Home() {
               apiKey: apiConfig?.apiKey,
               baseUrl: apiConfig?.baseUrl,
               layoutStyle: generated.layoutStyle || '4-panel',
+              panels: generated.panels,
             })
           });
 
@@ -536,7 +537,8 @@ export default function Home() {
           baseUrl: apiConfig?.baseUrl,
           imageModel: targetImageModel,
           layoutStyle: targetLayoutStyle,
-          aspectRatio: options?.aspectRatio
+          aspectRatio: options?.aspectRatio,
+          panels: activeEpisode.panels
         })
       });
 

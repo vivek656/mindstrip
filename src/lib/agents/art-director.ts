@@ -137,7 +137,16 @@ export function directVisualArtwork(
 
   // 5. Build Unified Full-Page Image Prompt (for Meta Muse Image 1.0 & FLUX.1)
   const charsSummary = charDescriptions.length > 0 ? charDescriptions.join(' and ') : 'comic characters';
-  const premiseSnippet = cleanPromptForWordlessArtwork(context.rawDump || draft.title || 'dynamic comic scene');
+  let premiseSnippet = cleanPromptForWordlessArtwork(context.rawDump || draft.title || 'dynamic comic scene');
+
+  if (layout === '4-panel' && draft.panels.length >= 4) {
+    const p1 = cleanPromptForWordlessArtwork(draft.panels[0]?.imagePrompt || draft.panels[0]?.sceneDescription || '');
+    const p2 = cleanPromptForWordlessArtwork(draft.panels[1]?.imagePrompt || draft.panels[1]?.sceneDescription || '');
+    const p3 = cleanPromptForWordlessArtwork(draft.panels[2]?.imagePrompt || draft.panels[2]?.sceneDescription || '');
+    const p4 = cleanPromptForWordlessArtwork(draft.panels[3]?.imagePrompt || draft.panels[3]?.sceneDescription || '');
+    layoutDescriptor = 'a four-panel comic strip page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
+    premiseSnippet = `Four sequential narrative frames in a 2x2 comic grid: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+  }
 
   const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${TEXTLESS_ARTWORK_DIRECTIVE} Dynamic composition, cinematic lighting.`;
 

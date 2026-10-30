@@ -133,43 +133,6 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     episode.layoutStyle === '1-panel' ? '16:9' : '3:4'
   );
 
-  // Default seed prompt for granular editing (purged of all panel labels, numbers & timestamps)
-  const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
-  const cleanNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
-  const defaultPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
-  const [customPrompt, setCustomPrompt] = useState<string>(defaultPrompt);
-
-  // Sync customPrompt whenever episode changes or art style is updated
-  useEffect(() => {
-    const freshNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
-    const freshPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${freshNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
-    setCustomPrompt(freshPrompt);
-  }, [episode.id, selectedArtStyle, charsSummary]);
-
-  // Script & Dialogue editing state
-  const [editingBubbleId, setEditingBubbleId] = useState<string | null>(null);
-  const [draftText, setDraftText] = useState('');
-  const [isFullscreenZoom, setIsFullscreenZoom] = useState(false);
-  const [isScriptExpanded, setIsScriptExpanded] = useState(false);
-
-  // Granular art custom style state
-  const [isCustomArtStyle, setIsCustomArtStyle] = useState(false);
-  const [customArtStyleText, setCustomArtStyleText] = useState('');
-
-  // Add dialogue form state
-  const [addingBubblePanel, setAddingBubblePanel] = useState<number | null>(null);
-  const [newSpeaker, setNewSpeaker] = useState(world.characters[0]?.name || 'Protagonist');
-  const [isCustomSpeaker, setIsCustomSpeaker] = useState(false);
-  const [customSpeakerText, setCustomSpeakerText] = useState('');
-  const [newBubbleText, setNewBubbleText] = useState('');
-  const [newBubbleType, setNewBubbleType] = useState<SpeechBubble['type']>('speech');
-  const [isCustomBubbleType, setIsCustomBubbleType] = useState(false);
-  const [customBubbleTypeText, setCustomBubbleTypeText] = useState('');
-
-  // Edit sound effect state
-  const [editingSoundPanel, setEditingSoundPanel] = useState<number | null>(null);
-  const [soundDraft, setSoundDraft] = useState('');
-
   // 4 narrative frames of the comic episode
   const p1: ComicPanel = episode.panels[0] || {
     panelNumber: 1,
@@ -220,6 +183,56 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   };
 
   const panels = [p1, p2, p3, p4];
+
+  // View mode switcher: 'page' (full-page AI spread) vs 'panels' (4-panel sequential comic strip)
+  const [spreadViewMode, setSpreadViewMode] = useState<'page' | 'panels'>('page');
+
+  // Default seed prompt for granular editing (purged of all panel labels, numbers & timestamps)
+  const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
+
+  const buildSequentialPrompt = () => {
+    if (selectedLayout === '4-panel' && panels.length >= 4) {
+      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      const s3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
+      const s4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
+      return `${selectedArtStyle} comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}. Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Wordless visual sequential storytelling, clean graphic novel publication.`;
+    }
+    const cleanNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
+    return `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
+  };
+
+  const defaultPrompt = buildSequentialPrompt();
+  const [customPrompt, setCustomPrompt] = useState<string>(defaultPrompt);
+
+  // Sync customPrompt whenever episode changes or art style is updated
+  useEffect(() => {
+    setCustomPrompt(buildSequentialPrompt());
+  }, [episode.id, selectedArtStyle, charsSummary, selectedLayout]);
+
+  // Script & Dialogue editing state
+  const [editingBubbleId, setEditingBubbleId] = useState<string | null>(null);
+  const [draftText, setDraftText] = useState('');
+  const [isFullscreenZoom, setIsFullscreenZoom] = useState(false);
+  const [isScriptExpanded, setIsScriptExpanded] = useState(false);
+
+  // Granular art custom style state
+  const [isCustomArtStyle, setIsCustomArtStyle] = useState(false);
+  const [customArtStyleText, setCustomArtStyleText] = useState('');
+
+  // Add dialogue form state
+  const [addingBubblePanel, setAddingBubblePanel] = useState<number | null>(null);
+  const [newSpeaker, setNewSpeaker] = useState(world.characters[0]?.name || 'Protagonist');
+  const [isCustomSpeaker, setIsCustomSpeaker] = useState(false);
+  const [customSpeakerText, setCustomSpeakerText] = useState('');
+  const [newBubbleText, setNewBubbleText] = useState('');
+  const [newBubbleType, setNewBubbleType] = useState<SpeechBubble['type']>('speech');
+  const [isCustomBubbleType, setIsCustomBubbleType] = useState(false);
+  const [customBubbleTypeText, setCustomBubbleTypeText] = useState('');
+
+  // Edit sound effect state
+  const [editingSoundPanel, setEditingSoundPanel] = useState<number | null>(null);
+  const [soundDraft, setSoundDraft] = useState('');
 
   // Pure AI image check: only accept real image URLs or base64 data URIs
   const pageImage =
@@ -691,10 +704,197 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
         </div>
       )}
 
+      {/* View Mode Pill Deck: Full Page Spread vs 4-Scene Sequential Strip */}
+      <div className="flex items-center justify-between gap-3 pb-1 flex-wrap">
+        <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setSpreadViewMode('page')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              spreadViewMode === 'page'
+                ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
+                : 'text-zinc-500 hover:text-zinc-900'
+            }`}
+            title="View the synthesized graphic novel comic page"
+          >
+            <span>🖼️</span>
+            <span>Full Comic Page</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSpreadViewMode('panels')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              spreadViewMode === 'panels'
+                ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
+                : 'text-zinc-500 hover:text-zinc-900'
+            }`}
+            title="View the 4 distinct sequential scenes as individual comic panels"
+          >
+            <span>📑</span>
+            <span>4 Sequential Panels</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-2">
+          <span>Format: <strong className="text-zinc-900 uppercase">{episode.layoutStyle || '4-panel'}</strong></span>
+          <span>•</span>
+          <span>{panels.length} Story Scenes</span>
+        </div>
+      </div>
+
       {/* =========================================================================
           PAGE CONTENT: REAL META AI IMAGE OR CLEAN COMIC DRAFTING STAGE
       ========================================================================= */}
-      {pageImage ? (
+      {spreadViewMode === 'panels' ? (
+        /* 4-Panel Sequential Strip / Grid View */
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {panels.map((p, idx) => {
+              const sceneTitle =
+                idx === 0 ? 'Scene 1: The Setup' :
+                idx === 1 ? 'Scene 2: Rising Tension' :
+                idx === 2 ? 'Scene 3: The Breakthrough' :
+                'Scene 4: The Outcome';
+
+              return (
+                <div
+                  key={p.panelNumber}
+                  className="bg-white border-2 border-zinc-200 rounded-2xl overflow-hidden shadow-md flex flex-col justify-between transition-all hover:border-zinc-300"
+                >
+                  {/* Panel Header */}
+                  <div className="px-4 py-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-zinc-900 text-white font-mono text-[10px] font-black flex items-center justify-center">
+                        {p.panelNumber}
+                      </span>
+                      <span className="font-bold text-zinc-900 font-mono text-[11px]">
+                        {sceneTitle}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {p.soundEffect && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-amber-100 text-amber-900 border border-amber-200">
+                          ⚡ {p.soundEffect}
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-200 text-zinc-700">
+                        {p.mood}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Panel Canvas Area with Dialogue Overlay */}
+                  <div className="relative min-h-[220px] bg-gradient-to-b from-zinc-100 to-zinc-50 p-4 flex flex-col justify-between border-b border-zinc-100 overflow-hidden">
+                    {/* Scene Illustration or Graphic Backdrop */}
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt={`Scene ${p.panelNumber}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                        style={{
+                          backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)',
+                          backgroundSize: '24px 24px'
+                        }}
+                      />
+                    )}
+
+                    {/* Speech Bubbles floating over the scene */}
+                    <div className="relative z-10 space-y-2.5">
+                      {p.bubbles && p.bubbles.length > 0 ? (
+                        p.bubbles.map((b) => {
+                          const isEditing = editingBubbleId === b.id;
+                          const charEmoji = getCharacterEmoji(b.speaker);
+
+                          return (
+                            <div key={b.id} className="max-w-[85%]">
+                              <div className="p-2.5 rounded-xl bg-white/95 border-2 border-zinc-900 shadow-sm text-xs text-zinc-900">
+                                <div className="flex items-center justify-between gap-2 text-[10px] font-mono font-bold text-zinc-500 mb-0.5">
+                                  <span className="flex items-center gap-1">
+                                    <span>{charEmoji}</span>
+                                    <span>{b.speaker}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => isEditing ? handleSaveEdit(p.panelNumber, b.id) : handleStartEdit(b.id, b.text)}
+                                    className="text-zinc-400 hover:text-zinc-900 cursor-pointer"
+                                  >
+                                    {isEditing ? <Check className="w-3 h-3 text-emerald-600" /> : <Edit2 className="w-2.5 h-2.5" />}
+                                  </button>
+                                </div>
+
+                                {isEditing ? (
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <input
+                                      type="text"
+                                      value={draftText}
+                                      onChange={(e) => setDraftText(e.target.value)}
+                                      onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)}
+                                      autoFocus
+                                      className="w-full bg-zinc-50 border-b-2 border-blue-600 text-xs py-0.5 outline-none font-medium"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEdit(p.panelNumber, b.id)}
+                                      className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold"
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p
+                                    onClick={() => handleStartEdit(b.id, b.text)}
+                                    className="leading-snug cursor-pointer hover:text-blue-600"
+                                    title="Click to edit speech bubble"
+                                  >
+                                    &ldquo;{b.text}&rdquo;
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="p-3 bg-white/80 border border-zinc-200 rounded-xl text-xs text-zinc-500 italic text-center">
+                          (Pure visual storytelling beat — action pose)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Action / Scene Note */}
+                    <div className="relative z-10 pt-3">
+                      <p className="text-[11px] font-serif italic text-zinc-600 line-clamp-2 bg-white/90 p-2 rounded-lg border border-zinc-200 shadow-2xs">
+                        &ldquo;{p.sceneDescription}&rdquo;
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Panel Footer: Visual Metaphor & Studio Link */}
+                  <div className="px-4 py-2.5 bg-zinc-50 text-[11px] text-zinc-500 flex items-center justify-between">
+                    <span className="truncate pr-2">
+                      <strong className="text-zinc-700">Metaphor:</strong> {p.visualMetaphor}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGranularOpen(true);
+                        setCustomPrompt(`${selectedArtStyle} comic frame: ${cleanPromptForWordlessArtwork(p.imagePrompt || p.sceneDescription)}. Dynamic composition, textless comic art.`);
+                      }}
+                      className="text-blue-600 hover:text-blue-700 font-bold text-[10px] underline shrink-0 cursor-pointer"
+                    >
+                      Focus Frame in Studio
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : pageImage ? (
         /* Real Meta AI Generated Full-Page Comic Spread */
         <div className="w-full">
           <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-300 shadow-xl bg-white">

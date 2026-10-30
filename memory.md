@@ -593,3 +593,15 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   3. **Frontend Sync & 1-Click Clean Re-Draw**:
      - `ComicPageSpread.tsx` now sanitizes narrative seeds and syncs prompt state on episode navigation.
      - Enhanced `🎨 Clean Re-Draw` buttons in reader and spread toolbars so creators can instantly re-render clean, unlettered graphic novel artwork with zero printed labels.
+
+### 4-Scene Comic Grid Architecture & View Switcher (2026-10-30)
+- **Why Re-Draw was generating a single full image**:
+  - The image generation payload previously sent a consolidated summary of the story without sending the 4 panel beat objects, and the layout prompt was set to "borderless frame compositions", prompting diffusion models (FLUX/Meta Muse) to blend the entire story into 1 single panoramic illustration.
+  - Furthermore, `ComicPageSpread` lacked a toggle between the full synthesized comic spread and individual sequential scene panels.
+- **Architectural Solution**:
+  1. **Spatial 2x2 Grid Prompting**:
+     - `src/app/page.tsx` now passes the episode's `panels` array to `/api/generate-image`.
+     - When `layoutStyle === '4-panel'`, `/api/generate-image/route.ts` and `art-director.ts` construct explicit spatial quadrant mapping: `Four sequential narrative frames in a 2x2 comic grid: Top-left frame depicts [Scene 1]. Top-right frame depicts [Scene 2]. Bottom-left frame depicts [Scene 3]. Bottom-right frame depicts [Scene 4].` separated by crisp white comic gutters.
+  2. **Dual View Mode Switcher in Comic Page Spread**:
+     - Added a segmented pill toggle: `🖼️ Full Comic Page` vs `📑 4 Sequential Panels`.
+     - In `4 Sequential Panels` view, creators see all 4 scenes rendered as distinct comic panels with speech bubbles overlaid, sound effect badges (`⚡ BAM!`), character avatars, and inline dialogue editing.

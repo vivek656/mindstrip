@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
       layoutStyle = '4-panel',
       imageModel,
       customPrompt,
-      aspectRatio: userAspectRatio
+      aspectRatio: userAspectRatio,
+      panels = []
     } = body;
 
     // Intelligent AI Layout Decision if 'auto' is selected
@@ -38,7 +39,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Thoroughly scrub all metadata, panel numbers, timestamps, and typography triggers so diffusion models never paint text
-    const sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
+    let sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
+
+    // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt
+    if (!customPrompt && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
+      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
+      const p4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
+      sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+    } else if (!customPrompt && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
+      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      sanitizedPrompt = `Two sequential narrative frames side by side: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+    } else if (!customPrompt && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
+      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
+      sanitizedPrompt = `Three sequential narrative vertical frames: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+    }
 
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
@@ -70,7 +89,7 @@ export async function POST(req: NextRequest) {
     const charsList = (characters || []).map((c: { name: string; appearance?: string; role?: string }) => `${c.name} (${c.appearance || c.role})`).join(' and ');
 
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
-    let layoutDescriptor = 'multi-frame graphic novel comic page spread, sequential visual storytelling divided by clean white gutters, borderless frame compositions';
+    let layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
     let calculatedAspect = userAspectRatio || '3:4';
 
     if (effectiveLayout === '1-panel') {
@@ -81,6 +100,9 @@ export async function POST(req: NextRequest) {
       calculatedAspect = userAspectRatio || '3:4';
     } else if (effectiveLayout === '3-panel') {
       layoutDescriptor = 'three sequential vertical graphic novel frames, progressive visual action with clean white gutters';
+      calculatedAspect = userAspectRatio || '3:4';
+    } else {
+      layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
       calculatedAspect = userAspectRatio || '3:4';
     }
 
