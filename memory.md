@@ -707,3 +707,22 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   4. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
+### RAG Dialogue Injection Pipeline (Native Comic Image Generation, Zero Overlays) (2026-10-31)
+- **User Insight**:
+  - The user rejected overlays completely (*"i dont like the solution we have today of overlay at all"*), and recommended using the existing RAG pipeline and multi-agent system to inject dialogues, speech balloons, and sound effects correctly into the image generation prompt so that the image is natively a complete, published comic page.
+- **Architectural Solution Implemented**:
+  1. **Scrubbing Structural Metadata vs Preserving Dialogue**:
+     - Created `cleanStructuralMetadata()` in `src/lib/agents/art-director.ts` to strictly scrub structural noise (`Panel 1:`, `[Beat 2]`, `09:00`, `THE SETUP:`) that previously triggered diffusion models to paint literal `"PANEL 1"` banners.
+     - Preserves dialogue, character actions, and quotation marks.
+  2. **RAG-Grounded Frame Dialogue Formatter (`formatFrameWithRagDialogue`)**:
+     - Formulates each frame's visual description alongside its RAG-grounded dialogue and sound effects:
+       `${visualDesc}, featuring ${speaker} speech balloon saying "${cleanText}", sound effect "${sfx}"`.
+  3. **Comic Page Publication Directive**:
+     - Replaced the old "silent textless/wordless" directive with `COMIC_PAGE_PUBLICATION_DIRECTIVE`:
+       `authentic published graphic novel comic book page, clean white gutters separating sequential frames, expressive comic speech balloons with dialogue, comic sound effects, professional comic publication.`
+  4. **Integrated Pipeline**:
+     - Upgraded `directVisualArtwork` in `art-director.ts`, `/api/generate-image/route.ts`, and `ComicPageSpread.tsx` to automatically condition every sequential frame with its RAG dialogue.
+     - Zero overlays or canvas stickers defacing the artwork.
+  5. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
+
