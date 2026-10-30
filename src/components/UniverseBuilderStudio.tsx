@@ -711,10 +711,12 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                       }}
                       className="w-full px-3 py-2 rounded-xl bg-white border border-black/[0.08] text-xs text-zinc-900 outline-none focus:border-zinc-950"
                     >
+                      <option value="love-interest">Love Interest / Romance 💕</option>
+                      <option value="colleague">Coworker / Colleague 💼</option>
                       <option value="protagonist">Protagonist 🌟</option>
                       <option value="sidekick">Sidekick / Partner 🤝</option>
                       <option value="antagonist">Antagonist / Foil 😈</option>
-                      <option value="supporting">Supporting / Mentor 🧙‍♂️</option>
+                      <option value="supporting">Supporting / Mentor ☕</option>
                       <option value="__custom__">✨ Custom Story Role...</option>
                     </select>
                     {isCustomRole && (

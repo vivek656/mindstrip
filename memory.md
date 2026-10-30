@@ -525,3 +525,31 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Updated presets to `Protagonist`, `Ally / Partner / Friend`, `Antagonist / Rival`, and `Supporting Cast`.
   - Upgraded `/api/expand-character`: Meta AI character generation prompt is now strictly genre-aware, generating realistic daily professions and belongings for slice-of-life and comedy universes instead of combat weapons.
   - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.
+
+- Dual-Pane AI Character Co-Writer Deck & Non-Superhero Role Expansion (2026-10-30):
+  - Addressed User Feedback: When creating female characters (e.g. office romance), the creator was restricted to superhero roles like `Sidekick`, text boxes were hard to fill without an explicit directive side box, and users couldn't tell the AI: *"She is an office love of the hero nothing else, she is not a hero that saves earth"*.
+  - Added Non-Superhero Narrative Roles across Schema & UI:
+    - Added `love-interest` (`💕 Love Interest / Romantic Lead`) and `colleague` (`💼 Coworker / Colleague`) to `ComicCharacter['role']` in `src/types/comic.ts`.
+    - Added to `ROLE_PRESETS` in `CharacterDossierModal.tsx` and `UniverseBuilderStudio.tsx`.
+  - Built **AI Character Co-Writer Deck** (Side Directive Panel):
+    - Persistent Dual-Pane Workspace: Left pane contains the spacious character form & tabs, while the right pane (`w-80 lg:w-96`) hosts the interactive AI Co-Writer Deck.
+    - Modal width expands to `max-w-6xl xl:max-w-7xl` when the Co-Writer Deck is active.
+    - **Natural Language Directive Box**: Creators type their vision in plain English (e.g. *"She is an office love of the hero nothing else, she is not a hero that saves earth. Works in marketing, warm, funny, keeps him grounded with filter coffee..."*).
+    - **1-Click Quick Story Archetypes**:
+      - `💕 Office Romance / Love Interest`: automatically populates realistic office romance directive, sets role to `love-interest`, gender to `female`.
+      - `💼 Workplace Colleague / Teammate`: sets professional colleague directive and `colleague` role.
+      - `☕ Grounded Coffee Shop Confidante`: sets neighborhood café anchor directive.
+      - `🕵️ Tenacious City Reporter`: sets investigative journalist directive.
+      - `⚡ Heroic Tactical Companion`: sets action combat directive.
+    - **Action Controls**:
+      - `✨ Fill Empty Boxes with Meta AI` (preserves existing creator text and fills blanks).
+      - `🔄 Overwrite & Rewrite All Boxes` (re-synthesizes the full dossier to match directive).
+    - **Targeted On-Demand Field Drafters**:
+      - Individual draft buttons in the side deck for `📖 Origin Lore`, `🎯 Motivation`, `⚠️ Fatal Flaw`, `🔒 Secret Truth`, `🎨 Face & Body`, `👔 Outfit / Style`, `💬 Voice Cadence`, `🧠 Personality`, `💼 Skills / Job`, and `🎒 Belongings`.
+  - Individual Field `✨ AI Fill` Buttons:
+    - Placed individual `✨ AI Fill` buttons on every single field label across all tabs (Appearance, Wardrobe, Iconic Prop, Backstory, Motivation, Flaw, Secret, Voice Cadence, Catchphrase, Personality, Skills, and Belongings).
+  - Backend Directive Priority Enforcement in `/api/expand-character`:
+    - Reads `userDirective` and `targetField`.
+    - System prompt strictly instructs Meta AI: *"If the creator specifies a non-superhero civilian (e.g. office romance, coworker, student, teacher, barista), STRICTLY OBEY and DO NOT invent combat powers, armor, weapons, or villain threats. Ground the skills in their actual profession or hobbies, and gear in everyday personal belongings."*
+    - Fallback heuristic ensures romance/office leads get realistic workplace skills and belongings if offline.
+  - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.

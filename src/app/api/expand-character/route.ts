@@ -10,7 +10,9 @@ export async function POST(req: NextRequest) {
       existingCharacters = [],
       apiKey,
       baseUrl,
-      provider = 'meta-api'
+      provider = 'meta-api',
+      userDirective = '',
+      targetField = '',
     } = body;
 
     const charName = character?.name || 'Character';
@@ -33,31 +35,57 @@ export async function POST(req: NextRequest) {
         const model = targetBaseUrl.includes('api.meta.ai') ? 'muse-spark-1.3' : 'accounts/fireworks/models/llama-v3p3-70b-instruct';
 
         const systemPrompt = `You are the MindStrip Lead Character Architect for the comic universe "${worldTitle || 'Untitled Universe'}" (${genre}).
-Your job is to expand the character "${charName}" (${charRole}, ${charGender}) into a deep, three-dimensional comic book figure with distinct visual anchors, psychological depth, and interpersonal ties.
+Your job is to expand the character "${charName}" (${charRole}, ${charGender}) into a deep, three-dimensional figure with distinct visual anchors, psychological depth, and interpersonal ties.
 
 Other characters in this universe: ${existingCharacters.filter((n: string) => n.toLowerCase() !== charName.toLowerCase()).join(', ') || 'None yet'}
 
 Respond ONLY with valid JSON matching this schema:
 {
   "appearance": "Visual physical traits: hair style/color, eyes, build, posture",
-  "wardrobe": "Signature everyday clothing, color palette, distinctive textures or armor",
-  "iconicItem": "One memorable silhouette accessory or prop (e.g. cracked aviators, customized sidearm, holographic watch)",
+  "wardrobe": "Signature everyday clothing, color palette, distinctive textures, or professional/casual attire",
+  "iconicItem": "One memorable silhouette accessory, jewelry, keepsake or prop",
   "backstory": "2-3 sentences of compelling formative origin, past trials, or life before the comic begins",
-  "motivation": "Core psychological desire or driving ambition",
+  "motivation": "Core psychological desire, emotional yearning, or driving ambition",
   "flaws": "Fatal flaw, blindspot, or vulnerability that creates drama",
-  "secret": "A hidden classified truth or burden they keep to themselves",
-  "abilities": "Specialized skills, profession, talent, tradecraft, magic, or powers tailored to the universe genre (${genre}). If Slice-of-Life/Comedy, focus on jobs, culinary, artistic, or social talents; if Mystery, deduction/forensics; if Sci-Fi/Fantasy/Action, tech/magic/powers.",
-  "gear": "Signature items, belongings, tools, or gear carried by this character tailored to (${genre}). If Slice-of-Life, personal items like bags, cameras, sketchbooks, mugs; if Detective/Action/SciFi, field gear, devices, or weapons.",
-  "voiceTone": "Dialogue cadence and speech habits (e.g. sharp cynical humor, cryptic brevity, energetic slang)",
-  "catchphrase": "A punchy, memorable signature catchphrase",
+  "secret": "A hidden truth, emotional burden, or plot twist they keep to themselves",
+  "abilities": "Specialized skills, profession, talent, tradecraft, or powers tailored to the universe genre (${genre}). If Slice-of-Life/Romance/Comedy, focus on profession, interpersonal talents, or creative skills; if Mystery, deduction/forensics; if Sci-Fi/Fantasy/Action, tech/magic/powers.",
+  "gear": "Signature items, belongings, tools, or gear carried by this character tailored to (${genre}). If Slice-of-Life/Romance, personal items like bags, cameras, sketchbooks, mugs; if Detective/Action/SciFi, field gear, devices, or weapons.",
+  "voiceTone": "Dialogue cadence and speech habits (e.g. warm teasing wit, sharp cynical humor, cryptic brevity, energetic slang)",
+  "catchphrase": "A punchy, memorable signature catchphrase or recurring line",
   "suggestedRelationships": [
     {
       "targetCharacterName": "Name from other characters if available, or archetype",
-      "relationType": "ally" | "rival" | "mentor" | "nemesis" | "family" | "frenemy",
-      "dynamicDescription": "One sentence explaining their mutual friction or loyalty"
+      "relationType": "ally" | "rival" | "mentor" | "nemesis" | "family" | "frenemy" | "love-interest",
+      "dynamicDescription": "One sentence explaining their mutual friction, romance, or loyalty"
     }
   ]
 }`;
+
+        const userPrompt = userDirective
+          ? `Develop full deep-dive profile for @${charName} (${charRole}, ${charGender}) in "${worldTitle}" (${genre}).
+CREATOR'S EXPLICIT CONCEPT & VISION:
+"${userDirective}"
+
+Current character draft notes:
+- Backstory: "${character?.backstory || ''}"
+- Description: "${character?.description || ''}"
+- Appearance: "${character?.appearance || ''}"
+- Personality: "${character?.personality || ''}"
+- Motivation: "${character?.motivation || ''}"
+- Flaws: "${character?.flaws || ''}"
+- Abilities / Skills: "${character?.abilities || ''}"
+- Gear / Belongings: "${character?.gear || ''}"
+
+CRITICAL INSTRUCTIONS:
+1. STRICTLY OBEY the creator's explicit vision above! If the creator states this character is an everyday office worker, love interest, coworker, or normal person and NOT a hero saving earth, DO NOT give her superpowers, combat styles, or tactical weapons!
+2. Fill out realistic, emotionally resonant details that match her role as ${charRole} in this universe.
+3. If targetField is specified ("${targetField}"), ensure that field is particularly deep and polished.`
+          : `Develop full deep-dive profile for @${charName} (${charRole}, ${charGender}) in "${worldTitle}" (${genre}).
+Current draft notes:
+- Backstory: "${character?.backstory || ''}"
+- Description: "${character?.description || ''}"
+- Appearance: "${character?.appearance || ''}"
+- Personality: "${character?.personality || ''}"`;
 
         const res = await fetch(`${cleanBase}/chat/completions`, {
           method: 'POST',
@@ -69,7 +97,7 @@ Respond ONLY with valid JSON matching this schema:
             model,
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Develop full deep-dive profile for @${charName} in ${worldTitle}. Current notes: "${character.description || ''} ${character.appearance || ''} ${character.personality || ''}"` }
+              { role: 'user', content: userPrompt }
             ],
             temperature: 0.75,
             response_format: { type: 'json_object' }
@@ -94,9 +122,30 @@ Respond ONLY with valid JSON matching this schema:
     const isVillain = charRole === 'antagonist';
     const otherCast = existingCharacters.filter((n: string) => n.toLowerCase() !== charName.toLowerCase());
     const gLower = (genre || '').toLowerCase();
-    const isDaily = gLower.includes('slice') || gLower.includes('daily') || gLower.includes('comedy') || gLower.includes('romance') || gLower.includes('office') || gLower.includes('drama');
+    const dLower = (userDirective || '').toLowerCase();
+    const isRomanceOrOffice = charRole === 'love-interest' || charRole === 'colleague' || dLower.includes('love') || dLower.includes('romance') || dLower.includes('office') || dLower.includes('not a hero');
+    const isDaily = isRomanceOrOffice || gLower.includes('slice') || gLower.includes('daily') || gLower.includes('comedy') || gLower.includes('romance') || gLower.includes('office') || gLower.includes('drama');
 
-    const fallbackExpansion = isDaily ? {
+    const fallbackExpansion = isRomanceOrOffice ? {
+      appearance: character.appearance || `${charName} possesses warm, perceptive hazel eyes, soft shoulder-length dark hair, and a grounded, confident posture that instantly cuts through workplace tension.`,
+      wardrobe: character.wardrobe || `Tailored business-casual blazer in warm dusty rose over an ivory silk blouse, relaxed dark trousers, and comfortable pointed-toe leather flats.`,
+      iconicItem: character.iconicItem || `A delicate gold pendant on a fine chain, and a thermal ceramic coffee tumbler.`,
+      backstory: character.backstory || (userDirective || `Works as a sharp brand strategist at the corporate agency where the protagonist works by day. Their connection deepened over late-night pitch decks, shared takeout, and quiet moments between deadlines. She is his emotional anchor to ordinary reality—someone who loves him for who he is, without expecting him to carry the weight of the world alone.`),
+      motivation: character.motivation || `To build a peaceful, authentic future with the person she loves, and rise to creative director without compromising her integrity.`,
+      flaws: character.flaws || `Often swallows her own anxieties so she doesn't add to his stress; struggles to voice her need for him to stay when duty calls him away.`,
+      secret: character.secret || `Quietly discovered his secret double identity weeks ago after finding his emergency kit in his desk, but keeps quiet so he always has a safe, normal haven to come home to.`,
+      abilities: character.abilities || `High-stakes client negotiation, corporate crisis navigation, empathetic conflict de-escalation, and an uncanny radar for when someone is burning out.`,
+      gear: character.gear || `Leather commuter tote bag, noise-canceling earbuds, fountain pen, and a shared set of apartment keys.`,
+      voiceTone: character.voiceTone || `Warm, witty, and grounded; delivers dry teasing remarks that playfully deflate superhero drama.`,
+      catchphrase: character.catchphrase || `The world will still be there in twenty minutes — sit down and have lunch first.`,
+      suggestedRelationships: otherCast.length > 0 ? [
+        {
+          targetCharacterName: otherCast[0],
+          relationType: 'love-interest',
+          dynamicDescription: `Deep mutual affection tempered by the quiet tension of his double life.`
+        }
+      ] : []
+    } : isDaily ? {
       appearance: character.appearance || `${charName} possesses warm, expressive eyes, tousled dark hair, and a casual, animated posture that puts people immediately at ease.`,
       wardrobe: character.wardrobe || `Oversized cable-knit cardigan over an organic cotton graphic tee, relaxed-fit dark denim, and classic worn canvas sneakers.`,
       iconicItem: character.iconicItem || `A battered stainless steel coffee tumbler covered in quirky indie band and art cafe stickers.`,

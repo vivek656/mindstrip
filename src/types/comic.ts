@@ -31,7 +31,7 @@ export interface CharacterReferenceImage {
 export interface ComicCharacter {
   id: string;
   name: string;
-  role: 'protagonist' | 'sidekick' | 'antagonist' | 'supporting' | (string & {}); // Custom roles allowed!
+  role: 'protagonist' | 'sidekick' | 'antagonist' | 'supporting' | 'love-interest' | 'colleague' | (string & {}); // Custom roles allowed!
   gender?: 'male' | 'female' | 'non-binary' | 'robot-ai' | 'creature-other' | 'unspecified' | (string & {}); // Custom entities allowed!
   appearance?: string; // Visual details: hair, clothing, signature accessories, physical style
   personality?: string; // Archetype or emotional vibe (e.g. sarcastic, hyper-focused, stoic)

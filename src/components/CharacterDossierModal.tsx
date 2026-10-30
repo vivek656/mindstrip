@@ -29,7 +29,13 @@ import {
   Camera,
   Image as ImageIcon,
   Target,
-  Briefcase
+  Briefcase,
+  Bot,
+  Wand2,
+  Send,
+  Lightbulb,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 
 interface CharacterDossierModalProps {
@@ -45,10 +51,12 @@ interface CharacterDossierModalProps {
 const EMOJI_PRESETS = ['⚡', '🕵️', '🔥', '🛡️', '🧠', '🗡️', '🤖', '👑', '🌌', '💥', '🐺', '🌙', '💀', '🎯', '🚀', '🥷', '☕', '🎨', '📷', '🎸', '📖'];
 
 const ROLE_PRESETS: { id: ComicCharacter['role']; label: string; desc: string }[] = [
-  { id: 'protagonist', label: 'Protagonist', desc: 'Central character driving the story' },
-  { id: 'sidekick', label: 'Ally / Partner / Friend', desc: 'Trusted companion, best friend, or partner' },
-  { id: 'antagonist', label: 'Antagonist / Rival', desc: 'Foil, opponent, rival, or competing force' },
-  { id: 'supporting', label: 'Supporting Cast', desc: 'Family, mentor, coworker, or acquaintance' },
+  { id: 'love-interest', label: '💕 Love Interest / Romantic Lead', desc: 'Romantic partner, crush, spouse, or emotional anchor' },
+  { id: 'colleague', label: '💼 Coworker / Colleague', desc: 'Office peer, teammate, coworker, or workplace partner' },
+  { id: 'protagonist', label: '⭐ Protagonist / Lead', desc: 'Central character driving the story' },
+  { id: 'sidekick', label: '🤝 Ally / Best Friend / Partner', desc: 'Trusted companion, best friend, or partner' },
+  { id: 'antagonist', label: '😈 Antagonist / Rival / Boss', desc: 'Opponent, rival, foil, demanding boss, or competing force' },
+  { id: 'supporting', label: '☕ Supporting Cast / Family', desc: 'Family member, neighbor, barista, or mentor' },
 ];
 
 export type GearLensId = 'slice-of-life' | 'detective' | 'scifi' | 'fantasy' | 'action';
@@ -266,6 +274,11 @@ export function CharacterDossierModal({
   const [isExpanding, setIsExpanding] = useState(false);
   const [expandNotice, setExpandNotice] = useState<string | null>(null);
 
+  // AI Character Co-Writer Deck State (Directive Side-Panel)
+  const [coWriterDirective, setCoWriterDirective] = useState('');
+  const [isCoWriterOpen, setIsCoWriterOpen] = useState(true);
+  const [fieldFleshing, setFieldFleshing] = useState<string | null>(null);
+
   // Character Visual Model Sheet & Reference Studio State (Character Visual RAG)
   const [lockedImageUrl, setLockedImageUrl] = useState<string>(
     character?.imageUrl || character?.characterSheetUrl || ''
@@ -417,9 +430,19 @@ export function CharacterDossierModal({
     });
   };
 
-  const handleFleshOutWithAi = async () => {
-    if (!name.trim()) return;
-    setIsExpanding(true);
+  const handleExecuteCoWriter = async (
+    directiveOverride?: string,
+    targetFieldParam?: string,
+    overwriteAll: boolean = false
+  ) => {
+    if (!name.trim()) {
+      alert('Please enter a character name first so Meta AI knows who to write for.');
+      return;
+    }
+
+    const effectiveDirective = directiveOverride !== undefined ? directiveOverride : coWriterDirective;
+    if (targetFieldParam) setFieldFleshing(targetFieldParam);
+    else setIsExpanding(true);
     setExpandNotice(null);
 
     try {
@@ -449,38 +472,61 @@ export function CharacterDossierModal({
           existingCharacters: world.characters.map((c) => c.name),
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
-          provider: apiConfig?.provider,
+          provider: apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api',
+          userDirective: effectiveDirective.trim() || backstory.trim() || undefined,
+          targetField: targetFieldParam,
         }),
       });
 
       if (!res.ok) throw new Error('Expansion call failed');
       const data = await res.json();
 
-      if (data.appearance && !appearance) setAppearance(data.appearance);
-      if (data.wardrobe && !wardrobe) setWardrobe(data.wardrobe);
-      if (data.iconicItem && !iconicItem) setIconicItem(data.iconicItem);
-      if (data.backstory && !backstory) setBackstory(data.backstory);
-      if (data.motivation && !motivation) setMotivation(data.motivation);
-      if (data.flaws && !flaws) setFlaws(data.flaws);
-      if (data.secret && !secret) setSecret(data.secret);
-      if (data.abilities && !abilities) setAbilities(data.abilities);
-      if (data.gear && !gear) setGear(data.gear);
-      if (data.voiceTone && !voiceTone) setVoiceTone(data.voiceTone);
-      if (data.catchphrase && !catchphrase) setCatchphrase(data.catchphrase);
+      if (targetFieldParam) {
+        if (targetFieldParam === 'backstory' && data.backstory) setBackstory(data.backstory);
+        if (targetFieldParam === 'motivation' && data.motivation) setMotivation(data.motivation);
+        if (targetFieldParam === 'flaws' && data.flaws) setFlaws(data.flaws);
+        if (targetFieldParam === 'secret' && data.secret) setSecret(data.secret);
+        if (targetFieldParam === 'voiceTone' && data.voiceTone) setVoiceTone(data.voiceTone);
+        if (targetFieldParam === 'catchphrase' && data.catchphrase) setCatchphrase(data.catchphrase);
+        if (targetFieldParam === 'personality' && data.personality) setPersonality(data.personality);
+        if (targetFieldParam === 'abilities' && data.abilities) setAbilities(data.abilities);
+        if (targetFieldParam === 'gear' && data.gear) setGear(data.gear);
+        if (targetFieldParam === 'wardrobe' && data.wardrobe) setWardrobe(data.wardrobe);
+        if (targetFieldParam === 'appearance' && data.appearance) setAppearance(data.appearance);
+        if (targetFieldParam === 'iconicItem' && data.iconicItem) setIconicItem(data.iconicItem);
+        setExpandNotice(`Drafted ${targetFieldParam} with ${data.provider || 'Meta AI'}!`);
+      } else {
+        if (data.appearance && (overwriteAll || !appearance)) setAppearance(data.appearance);
+        if (data.wardrobe && (overwriteAll || !wardrobe)) setWardrobe(data.wardrobe);
+        if (data.iconicItem && (overwriteAll || !iconicItem)) setIconicItem(data.iconicItem);
+        if (data.backstory && (overwriteAll || !backstory)) setBackstory(data.backstory);
+        if (data.motivation && (overwriteAll || !motivation)) setMotivation(data.motivation);
+        if (data.flaws && (overwriteAll || !flaws)) setFlaws(data.flaws);
+        if (data.secret && (overwriteAll || !secret)) setSecret(data.secret);
+        if (data.abilities && (overwriteAll || !abilities)) setAbilities(data.abilities);
+        if (data.gear && (overwriteAll || !gear)) setGear(data.gear);
+        if (data.voiceTone && (overwriteAll || !voiceTone)) setVoiceTone(data.voiceTone);
+        if (data.catchphrase && (overwriteAll || !catchphrase)) setCatchphrase(data.catchphrase);
+        if (data.personality && (overwriteAll || !personality)) setPersonality(data.personality);
 
-      if (data.suggestedRelationships && relationships.length === 0) {
-        setRelationships(data.suggestedRelationships);
+        if (data.suggestedRelationships && relationships.length === 0) {
+          setRelationships(data.suggestedRelationships);
+        }
+
+        setExpandNotice(`Populated dossier with ${data.provider || 'Meta AI'}!`);
       }
 
-      setExpandNotice(`Fleshed out with ${data.provider || 'Meta AI'}!`);
       setTimeout(() => setExpandNotice(null), 3500);
     } catch (e) {
       console.error(e);
       setExpandNotice('Could not reach AI, using heuristic suggestions.');
     } finally {
       setIsExpanding(false);
+      setFieldFleshing(null);
     }
   };
+
+  const handleFleshOutWithAi = () => handleExecuteCoWriter(coWriterDirective, undefined, false);
 
   const handleLockAsCanon = (imgUrl: string) => {
     setLockedImageUrl(imgUrl);
@@ -851,8 +897,8 @@ export function CharacterDossierModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
-      <div className="relative w-full max-w-5xl bg-white border-2 border-zinc-950 rounded-3xl shadow-2xl overflow-hidden text-zinc-900 my-auto max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/65 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
+      <div className={`relative w-full ${isCoWriterOpen ? 'max-w-6xl xl:max-w-7xl' : 'max-w-5xl'} bg-white border-2 border-zinc-950 rounded-3xl shadow-2xl overflow-hidden text-zinc-900 my-auto max-h-[94vh] flex flex-col transition-all duration-200`}>
         
         {/* =====================================================================
             TOP TITLE BAR
@@ -896,6 +942,22 @@ export function CharacterDossierModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* AI Co-Writer Deck Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsCoWriterOpen(!isCoWriterOpen)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                isCoWriterOpen
+                  ? 'bg-purple-100 text-purple-900 border-purple-300 shadow-2xs'
+                  : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
+              }`}
+              title="Toggle AI Co-Writer side panel"
+            >
+              <Bot className="w-3.5 h-3.5 text-purple-600" />
+              <span className="hidden sm:inline">{isCoWriterOpen ? 'Co-Writer Deck' : 'Open Co-Writer'}</span>
+              <span className="sm:hidden">AI</span>
+            </button>
+
             {/* 1-Click Meta AI Character Flesh-Out Button */}
             <button
               type="button"
@@ -1102,9 +1164,10 @@ export function CharacterDossierModal({
         </div>
 
         {/* =====================================================================
-            TAB PANELS CONTENT (SCROLLABLE BODY)
+            DUAL-PANE WORKSPACE: TABS FORM (LEFT) + AI CO-WRITER DECK (RIGHT)
         ===================================================================== */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+          <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           
           {/* TAB 1: VISUALS, MODEL SHEET & WARDROBE ANCHORS */}
           {activeTab === 'visuals' && (
@@ -1491,10 +1554,22 @@ export function CharacterDossierModal({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center justify-between">
-                    <span>Physical Appearance (Face, Hair, Build)</span>
-                    <span className="text-[10px] text-zinc-400 font-mono">Image Anchor</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                      <span>Physical Appearance (Face, Hair, Build)</span>
+                      <span className="text-[10px] text-zinc-400 font-mono">Image Anchor</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'appearance', true)}
+                      disabled={fieldFleshing === 'appearance' || isExpanding || !name.trim()}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      title="AI Draft appearance based on your directive"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'appearance' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'appearance' ? '...' : 'AI Fill'}</span>
+                    </button>
+                  </div>
                   <textarea
                     rows={3}
                     value={appearance}
@@ -1506,9 +1581,21 @@ export function CharacterDossierModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-900 mb-1.5">
-                      Signature Wardrobe & Color Palette
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-zinc-900">
+                        Signature Wardrobe & Color Palette
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'wardrobe', true)}
+                        disabled={fieldFleshing === 'wardrobe' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="AI Draft wardrobe based on your directive"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'wardrobe' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'wardrobe' ? '...' : 'AI Fill'}</span>
+                      </button>
+                    </div>
                     <textarea
                       rows={3}
                       value={wardrobe}
@@ -1519,10 +1606,22 @@ export function CharacterDossierModal({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
-                      <span>Iconic Accessory / Silhouette Item</span>
-                      <span className="text-[10px] text-purple-600 font-mono">(Key Prop)</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                        <span>Iconic Accessory / Silhouette Item</span>
+                        <span className="text-[10px] text-purple-600 font-mono">(Key Prop)</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'iconicItem', true)}
+                        disabled={fieldFleshing === 'iconicItem' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="AI Draft iconic item based on your directive"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'iconicItem' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'iconicItem' ? '...' : 'AI Fill'}</span>
+                      </button>
+                    </div>
                     <textarea
                       rows={3}
                       value={iconicItem}
@@ -1550,9 +1649,21 @@ export function CharacterDossierModal({
           {activeTab === 'lore' && (
             <div className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-2">
-                  Origin & Formative Backstory
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
+                    Origin & Formative Backstory
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteCoWriter(coWriterDirective, 'backstory', true)}
+                    disabled={fieldFleshing === 'backstory' || isExpanding}
+                    className="px-2.5 py-1 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                    title="Draft or enhance backstory using your co-writer vision"
+                  >
+                    <Sparkles className={`w-3 h-3 ${fieldFleshing === 'backstory' ? 'animate-spin' : ''}`} />
+                    <span>{fieldFleshing === 'backstory' ? 'Writing...' : 'AI Fill'}</span>
+                  </button>
+                </div>
                 <textarea
                   rows={5}
                   value={backstory}
@@ -1564,44 +1675,77 @@ export function CharacterDossierModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
-                    <span>Core Motivation / Driving Desire</span>
-                    <span className="text-[10px] text-blue-600 font-mono">(What they want)</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                      <span>Core Motivation</span>
+                      <span className="text-[10px] text-blue-600 font-mono">(What they want)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'motivation', true)}
+                      disabled={fieldFleshing === 'motivation' || isExpanding}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'motivation' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'motivation' ? '...' : 'AI Fill'}</span>
+                    </button>
+                  </div>
                   <textarea
                     rows={3}
                     value={motivation}
                     onChange={(e) => setMotivation(e.target.value)}
-                    placeholder="e.g. To open their own independent bakery, redeem their family's name, or uncover the truth behind the lost expedition."
+                    placeholder="e.g. To open their own independent bakery, redeem their family's name, or build a quiet life together away from chaos."
                     className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
-                    <span>Fatal Flaw / Blindspot</span>
-                    <span className="text-[10px] text-amber-600 font-mono">(What trips them up)</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                      <span>Fatal Flaw / Blindspot</span>
+                      <span className="text-[10px] text-amber-600 font-mono">(What trips them up)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'flaws', true)}
+                      disabled={fieldFleshing === 'flaws' || isExpanding}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'flaws' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'flaws' ? '...' : 'AI Fill'}</span>
+                    </button>
+                  </div>
                   <textarea
                     rows={3}
                     value={flaws}
                     onChange={(e) => setFlaws(e.target.value)}
-                    placeholder="e.g. Chronic perfectionism; avoids confrontation until a breaking point; holds grudges; impulsive overconfidence."
+                    placeholder="e.g. Chronic perfectionism; avoids confrontation until a breaking point; overworks to hide vulnerability."
                     className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-900 mb-1.5 flex items-center gap-1.5">
-                  <span>Classified Secret / Hidden Truth</span>
-                  <span className="text-[10px] text-purple-600 font-mono">(Plot Twist Fuel)</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                    <span>Classified Secret / Hidden Truth</span>
+                    <span className="text-[10px] text-purple-600 font-mono">(Plot Twist Fuel)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteCoWriter(coWriterDirective, 'secret', true)}
+                    disabled={fieldFleshing === 'secret' || isExpanding}
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                  >
+                    <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'secret' ? 'animate-spin' : ''}`} />
+                    <span>{fieldFleshing === 'secret' ? '...' : 'AI Fill'}</span>
+                  </button>
+                </div>
                 <textarea
                   rows={2}
                   value={secret}
                   onChange={(e) => setSecret(e.target.value)}
-                  placeholder="e.g. Secretly the anonymous author of the city's viral blog, or harbors an unpaid debt to an old rival."
+                  placeholder="e.g. Secretly knows his double life after discovering his emergency kit, but keeps quiet to preserve a normal sanctuary."
                   className="w-full p-3.5 bg-white border-2 border-zinc-200 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10 rounded-2xl text-sm font-medium text-zinc-950 outline-none transition-all leading-relaxed shadow-2xs"
                 />
               </div>
@@ -1613,9 +1757,21 @@ export function CharacterDossierModal({
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
-                    Dialogue Cadence & Voice Tone
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
+                      Dialogue Cadence & Voice Tone
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'voiceTone', true)}
+                      disabled={fieldFleshing === 'voiceTone' || isExpanding || !name.trim()}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      title="AI Draft voice tone based on directive"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'voiceTone' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'voiceTone' ? '...' : 'AI Fill'}</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={voiceTone}
@@ -1626,9 +1782,21 @@ export function CharacterDossierModal({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
-                    Signature Catchphrase or Motto
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
+                      Signature Catchphrase or Motto
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'catchphrase', true)}
+                      disabled={fieldFleshing === 'catchphrase' || isExpanding || !name.trim()}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      title="AI Draft catchphrase based on directive"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'catchphrase' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'catchphrase' ? '...' : 'AI Fill'}</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={catchphrase}
@@ -1640,9 +1808,21 @@ export function CharacterDossierModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 mb-1.5">
-                  Personality Summary
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
+                    Personality Summary
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteCoWriter(coWriterDirective, 'personality', true)}
+                    disabled={fieldFleshing === 'personality' || isExpanding || !name.trim()}
+                    className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                    title="AI Draft personality based on directive"
+                  >
+                    <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'personality' ? 'animate-spin' : ''}`} />
+                    <span>{fieldFleshing === 'personality' ? '...' : 'AI Fill'}</span>
+                  </button>
+                </div>
                 <textarea
                   rows={3}
                   value={personality}
@@ -1736,9 +1916,21 @@ export function CharacterDossierModal({
                 {/* Field 1: Skills, Profession or Abilities */}
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <label className="block text-sm font-bold text-zinc-950">
-                      {currentLens.skillLabel}
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="block text-sm font-bold text-zinc-950">
+                        {currentLens.skillLabel}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'abilities', true)}
+                        disabled={fieldFleshing === 'abilities' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="AI Draft skills based on directive"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'abilities' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'abilities' ? '...' : 'AI Fill'}</span>
+                      </button>
+                    </div>
                     <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
                       {currentLens.skillHelper}
                     </span>
@@ -1774,9 +1966,21 @@ export function CharacterDossierModal({
                 {/* Field 2: Signature Items, Belongings, Tools or Gear */}
                 <div>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <label className="block text-sm font-bold text-zinc-950">
-                      {currentLens.itemLabel}
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="block text-sm font-bold text-zinc-950">
+                        {currentLens.itemLabel}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'gear', true)}
+                        disabled={fieldFleshing === 'gear' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="AI Draft belongings based on directive"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'gear' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'gear' ? '...' : 'AI Fill'}</span>
+                      </button>
+                    </div>
                     <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
                       {currentLens.itemHelper}
                     </span>
@@ -1932,7 +2136,188 @@ export function CharacterDossierModal({
             </div>
           </div>
         </form>
+
+        {/* =========================================================================
+            AI CHARACTER CO-WRITER DECK (SIDE DIRECTIVE PANEL)
+        ========================================================================= */}
+        {isCoWriterOpen && (
+          <aside className="w-full md:w-80 lg:w-96 border-t md:border-t-0 md:border-l border-black/[0.08] bg-zinc-50 flex flex-col shrink-0 overflow-y-auto max-h-[42vh] md:max-h-none">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-purple-900 via-indigo-950 to-zinc-900 text-white shrink-0 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-purple-500/30 border border-purple-400/40 flex items-center justify-center text-purple-200">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs tracking-tight text-white flex items-center gap-1.5">
+                    <span>AI Co-Writer Deck</span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-500/40 text-purple-200 border border-purple-400/30">
+                      Meta AI
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-zinc-300">
+                    Direct character creation in plain English
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCoWriterOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Hide side panel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 flex-1">
+              {/* Directive Text Area */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Character Vision / Directive</span>
+                  </label>
+                  <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                    Highest Priority
+                  </span>
+                </div>
+                <textarea
+                  rows={4}
+                  value={coWriterDirective}
+                  onChange={(e) => setCoWriterDirective(e.target.value)}
+                  placeholder="e.g. She is an office love of the hero nothing else, she is not a hero that saves earth. Works in marketing, warm, funny, keeps him grounded with filter coffee..."
+                  className="w-full p-3 bg-white border-2 border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-500/20 rounded-xl text-xs font-medium text-zinc-900 outline-none leading-relaxed shadow-2xs resize-y"
+                />
+                <p className="text-[10px] text-zinc-500 leading-tight">
+                  💡 Type plain instructions here: whether an office romance, schoolteacher, barista, or detective. Meta AI will strictly obey and avoid combat/superhero tropes!
+                </p>
+              </div>
+
+              {/* 1-Click Quick Archetype Presets */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block">
+                  Quick Story Archetypes:
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {[
+                    {
+                      label: '💕 Office Romance / Love Interest',
+                      roleId: 'love-interest',
+                      genderId: 'female',
+                      directive: 'She is an everyday office love interest of the protagonist at their company. A warm, perceptive marketing colleague who has zero superpowers and saves no worlds, but keeps the hero emotionally grounded through shared coffee breaks, witty banters, and genuine care.',
+                    },
+                    {
+                      label: '💼 Workplace Colleague / Teammate',
+                      roleId: 'colleague',
+                      genderId: 'female',
+                      directive: 'Ambitious, sharp-witted colleague at the company. Professional, pragmatic, works on tight deadlines, drinks espresso, carries a leather portfolio. Grounded everyday corporate reality.',
+                    },
+                    {
+                      label: '☕ Grounded Coffee Shop Confidante',
+                      roleId: 'supporting',
+                      genderId: 'female',
+                      directive: 'Warm neighborhood café owner who serves as a safe haven and emotional anchor away from the city chaos. Observant, witty, makes the best brew in town.',
+                    },
+                    {
+                      label: '🕵️ Tenacious City Reporter',
+                      roleId: 'sidekick',
+                      genderId: 'female',
+                      directive: 'Street-smart investigative journalist digging into municipal corruption. Armed with a pocket notebook, audio recorder, and an uncompromising drive for the truth.',
+                    },
+                    {
+                      label: '⚡ Heroic Tactical Companion',
+                      roleId: 'sidekick',
+                      genderId: 'female',
+                      directive: 'Disciplined tactical ally with martial arts expertise and high-tech combat equipment fighting alongside the protagonist.',
+                    },
+                  ].map((arch) => (
+                    <button
+                      key={arch.label}
+                      type="button"
+                      onClick={() => {
+                        setCoWriterDirective(arch.directive);
+                        setRole(arch.roleId);
+                        setGender(arch.genderId);
+                      }}
+                      className="px-2.5 py-1.5 text-left text-xs bg-white hover:bg-purple-50 border border-zinc-200 hover:border-purple-300 rounded-xl font-medium text-zinc-800 transition-all cursor-pointer flex items-center justify-between group"
+                    >
+                      <span>{arch.label}</span>
+                      <span className="text-[10px] text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold">Use →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Main Execution Actions */}
+              <div className="pt-2 space-y-2 border-t border-zinc-200">
+                <button
+                  type="button"
+                  onClick={() => handleExecuteCoWriter(coWriterDirective, undefined, false)}
+                  disabled={!name.trim() || isExpanding}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isExpanding ? 'animate-spin' : ''}`} />
+                  <span>{isExpanding ? 'Meta AI Writing...' : '✨ Fill Empty Boxes with Meta AI'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Rewrite all dossier boxes for @${name || 'this character'} using your current directive?`)) {
+                      handleExecuteCoWriter(coWriterDirective, undefined, true);
+                    }
+                  }}
+                  disabled={!name.trim() || isExpanding}
+                  className="w-full py-2 px-3 rounded-xl bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-700 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  <RefreshCw className="w-3 h-3 text-zinc-500" />
+                  <span>🔄 Overwrite & Rewrite All Boxes</span>
+                </button>
+              </div>
+
+              {/* 1-Click Targeted Field Drafters */}
+              <div className="pt-2 space-y-2 border-t border-zinc-200">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block">
+                  Draft Individual Fields On-Demand:
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'backstory', label: '📖 Origin Lore' },
+                    { id: 'motivation', label: '🎯 Motivation' },
+                    { id: 'flaws', label: '⚠️ Fatal Flaw' },
+                    { id: 'secret', label: '🔒 Secret Truth' },
+                    { id: 'appearance', label: '🎨 Face & Body' },
+                    { id: 'wardrobe', label: '👔 Outfit / Style' },
+                    { id: 'voiceTone', label: '💬 Voice Cadence' },
+                    { id: 'personality', label: '🧠 Personality' },
+                    { id: 'abilities', label: '💼 Skills / Job' },
+                    { id: 'gear', label: '🎒 Belongings' },
+                  ].map((field) => (
+                    <button
+                      key={field.id}
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, field.id, true)}
+                      disabled={fieldFleshing === field.id || isExpanding || !name.trim()}
+                      className="px-2 py-1.5 text-xs text-left bg-white hover:bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-700 font-medium transition-colors flex items-center justify-between cursor-pointer disabled:opacity-40"
+                    >
+                      <span className="truncate">{field.label}</span>
+                      <Sparkles className={`w-2.5 h-2.5 text-purple-600 shrink-0 ${fieldFleshing === field.id ? 'animate-spin' : ''}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer status info */}
+            <div className="p-3 bg-zinc-100 border-t border-zinc-200 text-[10px] text-zinc-500 flex items-center justify-between shrink-0 font-mono">
+              <span>Llama 3.3 70B / Muse Spark</span>
+              <span className="text-emerald-700 font-bold">● Active Co-Director</span>
+            </div>
+          </aside>
+        )}
       </div>
+    </div>
 
       {/* =========================================================================
           FULL-RESOLUTION CHARACTER ARTWORK INSPECTOR MODAL
