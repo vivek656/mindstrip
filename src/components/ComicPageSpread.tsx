@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, forwardRef } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, ComicCharacter } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
+import { cleanPromptForWordlessArtwork } from '@/lib/agents/art-director';
 import { SamVisionOverlay } from './SamVisionOverlay';
 import {
   Sparkles,
@@ -132,10 +133,18 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     episode.layoutStyle === '1-panel' ? '16:9' : '3:4'
   );
 
-  // Default seed prompt for granular editing
+  // Default seed prompt for granular editing (purged of all panel labels, numbers & timestamps)
   const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
-  const defaultPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative beat: ${episode.rawBrainDump || episode.title}. Dynamic composition, expressive graphic novel layout with clean gutters, strictly textless artwork without printed labels or panel numbers.`;
+  const cleanNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
+  const defaultPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
   const [customPrompt, setCustomPrompt] = useState<string>(defaultPrompt);
+
+  // Sync customPrompt whenever episode changes or art style is updated
+  useEffect(() => {
+    const freshNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
+    const freshPrompt = `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${freshNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
+    setCustomPrompt(freshPrompt);
+  }, [episode.id, selectedArtStyle, charsSummary]);
 
   // Script & Dialogue editing state
   const [editingBubbleId, setEditingBubbleId] = useState<string | null>(null);
@@ -261,7 +270,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     if (!onGenerateArtwork) return;
     const selectedProvider = MODEL_ENGINES.find((m) => m.id === selectedEngine)?.provider || 'meta-api';
     onGenerateArtwork({
-      customPrompt: customPrompt.trim(),
+      customPrompt: cleanPromptForWordlessArtwork(customPrompt.trim()),
       artStyle: selectedArtStyle,
       layoutStyle: selectedLayout,
       imageModel: selectedEngine,
@@ -396,10 +405,10 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 onClick={() => handleExecuteGranularArtwork()}
                 disabled={isGeneratingArtwork}
                 className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                title="Re-draw this comic page"
+                title="Re-draw this comic page with clean wordless artwork (no panel numbers or text labels)"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
-                <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-draw Art'}</span>
+                <span>{isGeneratingArtwork ? 'Drawing Art...' : '🎨 Clean Re-Draw'}</span>
               </button>
             )}
 

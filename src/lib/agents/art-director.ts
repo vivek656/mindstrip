@@ -17,6 +17,52 @@ export interface ArtDirectorResult {
  * 3. Strips all panel labels, numbers, and text references from prompts.
  * 4. Injects strict textless negative prompts to prevent diffusion models from drawing words/numbers.
  */
+/**
+ * Thoroughly sanitizes text intended for image diffusion models.
+ * Strips panel numbers, scene headers, timestamps (e.g. 09:00, 22:30), 
+ * title badges (e.g. THE CALL, SAVING EARTH), quotes, and structural jargon
+ * that cause diffusion models (like FLUX.1 or Meta Muse) to physically paint 
+ * text badges or banners onto the comic artwork.
+ */
+export function cleanPromptForWordlessArtwork(raw: string): string {
+  if (!raw) return '';
+  return raw
+    // Strip timestamps like 09:00, 22:30, 09:00 am
+    .replace(/\b\d{1,2}:\d{2}(\s*(am|pm))?\b/gi, ' ')
+    // Strip brackets around panel headers e.g. "[Panel 1]", "(Frame 2)", "[Beat 3]"
+    .replace(/\[\s*(panel|scene|frame|beat)?\s*#?\s*\d*\s*\]/gi, ' ')
+    .replace(/\(\s*(panel|scene|frame|beat)?\s*#?\s*\d*\s*\)/gi, ' ')
+    // Strip panel/scene/frame/beat headers with optional number, e.g. "Panel 1:", "Panel 1 —", "Scene #2 -", "Beat 4:"
+    .replace(/\b(panel|scene|frame|beat)\s*#?\s*\d+\s*([—\-\:\.]\s*)?/gi, ' ')
+    // Strip word numbers: "panel one:", "scene two -"
+    .replace(/\b(panel|scene|frame|beat)\s*(one|two|three|four|five|six)\s*([—\-\:\.]\s*)?/gi, ' ')
+    // Strip "4-panel", "3-panel", "1-panel"
+    .replace(/\b\d+\s*-\s*panels?\b/gi, ' ')
+    // Strip all-caps titles with colons like "THE CALL:", "SAVING EARTH:", "THE SETUP:"
+    .replace(/\b[A-Z0-9\s]{2,25}:(?=\s)/g, ' ')
+    // Strip standalone words: panel, panels, speech bubble, dialogue box, caption
+    .replace(/\b(panels?|speech bubbles?|dialogue box(es)?|captions?)\b/gi, ' ')
+    // Strip quotes so diffusion models never treat quoted text as text to paint
+    .replace(/["'“”‘’«»]/g, ' ')
+    // Clean up empty parentheses or brackets
+    .replace(/[\(\[\{]\s*[\)\]\}]/g, ' ')
+    // Strip leftover leading dashes, colons, punctuation clumps
+    .replace(/[:—–-]{2,}/g, ' ')
+    .replace(/\s*([,:—–-])\s*([,:—–-])+/g, '$1')
+    .replace(/^\s*[,:—–-]\s*/, '')
+    // Collapse whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Textless directive formulated using purely positive descriptive keywords.
+ * CRITICAL: Never include quoted strings like 'NO "Panel 1"' because diffusion
+ * models will attend to the quotes and draw the quoted text as a visual badge!
+ */
+export const TEXTLESS_ARTWORK_DIRECTIVE =
+  'clean wordless sequential art, mute graphic novel illustration, unlettered clean comic art, pristine visual storytelling, silent comic page without typography, professional graphic novel publication.';
+
 export function directVisualArtwork(
   draft: ShowrunnerDraft,
   context: AgentContext
@@ -76,12 +122,7 @@ export function directVisualArtwork(
   // 4. Sanitize and update each panel's imagePrompt in the draft
   const sanitizedPanels = draft.panels.map((panel) => {
     const rawPrompt = panel.imagePrompt || panel.sceneDescription || '';
-    const cleaned = rawPrompt
-      .replace(/\b(panel\s*\d+|panel\s*(one|two|three|four)|frame\s*\d+)\b/gi, 'story beat')
-      .replace(/panel/gi, 'scene')
-      .replace(/speech bubble/gi, 'action pose')
-      .trim();
-
+    const cleaned = cleanPromptForWordlessArtwork(rawPrompt);
     const sanitized = `${styleDescriptor}. ${cleaned}. Pure visual illustration, cinematic composition, textless comic art.`;
     return {
       ...panel,
@@ -94,14 +135,11 @@ export function directVisualArtwork(
     panels: sanitizedPanels
   };
 
-  // 5. Build Unified Full-Page Image Prompt (for Meta Muse Image 1.0)
-  const textlessDirective = 'STRICTLY TEXTLESS ARTWORK: pure visual sequential illustration, absolutely NO printed text, NO numbers, NO panel titles, NO "Panel 1" or "Panel 2" labels, NO watermarks, NO captions, NO speech bubbles, professional published comic book art.';
+  // 5. Build Unified Full-Page Image Prompt (for Meta Muse Image 1.0 & FLUX.1)
   const charsSummary = charDescriptions.length > 0 ? charDescriptions.join(' and ') : 'comic characters';
-  const premiseSnippet = (context.rawDump || draft.title)
-    .replace(/\b(panel\s*\d+|frame\s*\d+)\b/gi, '')
-    .trim();
+  const premiseSnippet = cleanPromptForWordlessArtwork(context.rawDump || draft.title || 'dynamic comic scene');
 
-  const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative beat: ${premiseSnippet}. ${textlessDirective} Dynamic composition, cinematic lighting.`;
+  const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${TEXTLESS_ARTWORK_DIRECTIVE} Dynamic composition, cinematic lighting.`;
 
   return {
     sanitizedDraft,

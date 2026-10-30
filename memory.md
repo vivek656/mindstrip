@@ -576,3 +576,20 @@ Users don't just generate disconnected one-off strips. They build **persistent c
       - Redesigned Granular Art Director Deck from `bg-zinc-950` to `bg-white text-zinc-900 border-2 border-zinc-200 shadow-md`.
       - Converted all art style, layout, engine, and aspect ratio selector pills to clean light mode styling.
     - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.
+
+### Textless Graphic Novel Art & Diffusion Prompt Sanitizer (2026-10-30)
+- **Root Cause Identified for In-Image Text Banners ("PANEL 1", "09:00 THE CALL", "SAVING EARTH")**:
+  - Diffusion models (FLUX.1 Schnell and Meta Muse Image) possess strong text-rendering attention heads. Quoting negative targets in the positive prompt like `NO "Panel 1" or "Panel 2" labels` acted as a strong positive visual conditioning trigger, commanding the model to draw rectangular title banners containing `"PANEL 1"` and `"PANEL 2"`.
+  - Furthermore, raw storyboard dumps containing timestamps (`09:00`, `22:30`) and all-caps scene headers (`THE CALL:`, `SAVING EARTH:`) were leaking into the image generation prompt string.
+- **Architectural Solution Implemented**:
+  1. **Strict Sanitizer Engine (`cleanPromptForWordlessArtwork`)**:
+     - Strips all panel/scene/frame/beat numbering (`panel #? \d+`, `panel one`, `4-panel`).
+     - Strips standalone timestamps (`\d{1,2}:\d{2}`).
+     - Strips brackets, empty parentheses, and all-caps titles with colons (`THE CALL:`, `SAVING EARTH:`).
+     - Strips any quotes (`"`, `'`, `“”`) so diffusion text-renderers never treat them as printable typography.
+  2. **Pure Positive Visual Directive (`TEXTLESS_ARTWORK_DIRECTIVE`)**:
+     - Completely removed quoted negative instructions.
+     - Formulated using positive graphic novel terminology: `clean wordless sequential art, mute graphic novel illustration, unlettered clean comic art, pristine visual storytelling, silent comic page without typography, professional graphic novel publication.`
+  3. **Frontend Sync & 1-Click Clean Re-Draw**:
+     - `ComicPageSpread.tsx` now sanitizes narrative seeds and syncs prompt state on episode navigation.
+     - Enhanced `🎨 Clean Re-Draw` buttons in reader and spread toolbars so creators can instantly re-render clean, unlettered graphic novel artwork with zero printed labels.

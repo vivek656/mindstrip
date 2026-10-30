@@ -1044,7 +1044,7 @@ export function ZenComicReader({
                         className="p-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
-                        <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-draw Art'}</span>
+                        <span>{isGeneratingArtwork ? 'Drawing Art...' : '🎨 Clean Re-Draw'}</span>
                       </button>
                     )}
 

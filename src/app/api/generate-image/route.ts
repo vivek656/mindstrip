@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
+import { cleanPromptForWordlessArtwork, TEXTLESS_ARTWORK_DIRECTIVE } from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,12 +37,8 @@ export async function POST(req: NextRequest) {
       effectiveLayout = layoutStyle;
     }
 
-    // Sanitize any accidental "panel 1", "panel 2" mentions from user or episode prompt to prevent models from drawing text labels
-    const sanitizedPrompt = (customPrompt || prompt || episodeTitle || 'epic confrontation')
-      .replace(/panel\s*\d+/gi, 'story beat')
-      .replace(/panel\s*(one|two|three|four)/gi, 'story beat')
-      .replace(/\bpanel\b/gi, 'frame')
-      .trim();
+    // Thoroughly scrub all metadata, panel numbers, timestamps, and typography triggers so diffusion models never paint text
+    const sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
 
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
@@ -77,18 +74,17 @@ export async function POST(req: NextRequest) {
     let calculatedAspect = userAspectRatio || '3:4';
 
     if (effectiveLayout === '1-panel') {
-      layoutDescriptor = 'cinematic full-page dramatic graphic novel splash illustration, single panoramic widescreen frame, borderless dynamic composition, atmospheric lighting';
+      layoutDescriptor = 'cinematic full-page dramatic graphic novel splash illustration, single panoramic widescreen composition, borderless dynamic frame, atmospheric lighting';
       calculatedAspect = userAspectRatio || '16:9';
     } else if (effectiveLayout === '2-panel') {
-      layoutDescriptor = 'two-frame split graphic novel page spread, vertical white comic gutter, two progressive confrontation and reaction frames';
+      layoutDescriptor = 'two sequential graphic novel frames side by side, vertical white comic gutter, confrontation and reaction storytelling';
       calculatedAspect = userAspectRatio || '3:4';
     } else if (effectiveLayout === '3-panel') {
-      layoutDescriptor = 'three-frame sequential vertical strip, progressive visual action frames with clean white gutters';
+      layoutDescriptor = 'three sequential vertical graphic novel frames, progressive visual action with clean white gutters';
       calculatedAspect = userAspectRatio || '3:4';
     }
 
-    const textlessDirective = 'STRICTLY TEXTLESS ARTWORK: pure visual sequential illustration, absolutely NO printed text, NO numbers, NO panel titles, NO "Panel 1" or "Panel 2" labels, NO watermarks, NO captions, NO speech bubbles, professional published comic book art.';
-
+    const textlessDirective = TEXTLESS_ARTWORK_DIRECTIVE;
     const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${sanitizedPrompt}. ${textlessDirective} Dynamic composition, cinematic lighting.`;
 
     if (isFireworks) {
