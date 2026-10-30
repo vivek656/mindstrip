@@ -43,24 +43,6 @@ export async function POST(req: NextRequest) {
       .replace(/\bpanel\b/gi, 'frame')
       .trim();
 
-    // Simulation / Free Preview Provider ($0.00 Zero Cost)
-    if (provider === 'simulation' || imageModel === 'simulation') {
-      const cleanPrompt = encodeURIComponent(
-        `${sanitizedPrompt} ${artStyle} graphic novel spread pure visual art textless no text no numbers no labels`.slice(0, 140)
-      );
-      const mockUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=1024&height=1365&nologo=true&seed=${Date.now()}`;
-      
-      // Auto-archive into permanent Vercel Blob if configured
-      const blobResult = await persistToPermanentBlob(mockUrl, `preview-${worldTitle || 'world'}`);
-      
-      return NextResponse.json({
-        pageImageUrl: blobResult.url,
-        provider: blobResult.isPermanent ? 'Vercel Blob CDN (Archived)' : 'Instant Preview Engine (Free)',
-        layoutStyle: effectiveLayout,
-        isPermanent: blobResult.isPermanent
-      });
-    }
-
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
 
@@ -75,11 +57,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (!targetApiKey) {
-      const providerName = isFireworks ? 'Fireworks AI' : 'Meta Model';
-      return NextResponse.json(
-        { error: `${providerName} API Key not detected. Add your key in Settings, or select "Free Preview ($0.00)" for instant zero-cost artwork.` },
-        { status: 401 }
-      );
+      // Fallback check if Fireworks key exists when Meta key is missing
+      if (process.env.FIREWORKS_API_KEY) {
+        targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
+        targetApiKey = process.env.FIREWORKS_API_KEY;
+      } else {
+        return NextResponse.json(
+          { error: `Meta Model API Key not detected. Please configure META_MODEL_API_KEY in .env.local to generate official comic page artwork.` },
+          { status: 401 }
+        );
+      }
     }
 
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');

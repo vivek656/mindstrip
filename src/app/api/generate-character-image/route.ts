@@ -61,34 +61,35 @@ export async function POST(req: NextRequest) {
       ? `${artStyle} character art: ${customPrompt}. ${viewDescriptor}. ${textlessDirective}`
       : `${artStyle} character concept design of ${characterName} ${charGender} (${role}). ${viewDescriptor}. ${anchorDetails}. ${textlessDirective} Masterpiece comic art, crisp lines, consistent character anatomy.`;
 
-    // 2. Free Preview Mode / Zero-Cost Fallback
-    const effectiveProvider = (!apiKey && provider !== 'fireworks' && provider !== 'simulation')
-      ? 'simulation'
-      : provider;
+    // 2. Resolve Target Keys & Provider
+    const targetMetaKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
+    const targetFireworksKey = (provider === 'fireworks' ? apiKey : '') || process.env.FIREWORKS_API_KEY || '';
+    const cleanBase = (baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1').replace(/\/+$/, '');
 
-    if (effectiveProvider === 'simulation' || imageModel === 'simulation') {
-      const cleanPrompt = encodeURIComponent(
-        `${prompt.slice(0, 160)} clean character concept art`
-      );
-      const width = aspect === '16:9' ? 1280 : aspect === '3:4' ? 960 : 1024;
-      const height = aspect === '16:9' ? 720 : aspect === '3:4' ? 1280 : 1024;
-      const mockUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=${width}&height=${height}&nologo=true&seed=${Date.now()}`;
+    // Determine effective provider:
+    // If fireworks requested and has fireworks key -> fireworks
+    // If targetMetaKey is present -> ALWAYS use official Meta Model API ('meta-api' / 'muse-image-1.0')
+    // If targetFireworksKey is present -> fireworks
+    let effectiveProvider = provider;
+    if (provider === 'fireworks' && targetFireworksKey) {
+      effectiveProvider = 'fireworks';
+    } else if (targetMetaKey) {
+      effectiveProvider = 'meta-api';
+    } else if (targetFireworksKey) {
+      effectiveProvider = 'fireworks';
+    } else {
+      effectiveProvider = 'none';
+    }
 
-      // Automatically archive into permanent Vercel Blob CDN
-      const blobResult = await persistToPermanentBlob(mockUrl, `char-${characterName}-${viewType}`);
-
+    if (effectiveProvider === 'none') {
       return NextResponse.json({
-        imageUrl: blobResult.url,
-        viewType,
-        prompt,
-        provider: blobResult.isPermanent ? 'Vercel Blob CDN (Archived)' : 'Instant Concept Engine (Free)',
-        isPermanent: blobResult.isPermanent
-      });
+        error: 'Meta Model API Key not detected. Please ensure META_MODEL_API_KEY is set in .env.local to generate official character concept art with Meta Muse Image 1.0.'
+      }, { status: 401 });
     }
 
     // 3. Fireworks AI (FLUX.1 Schnell)
     if (effectiveProvider === 'fireworks' || imageModel === 'flux-1-schnell') {
-      const targetKey = apiKey || process.env.FIREWORKS_API_KEY || '';
+      const targetKey = targetFireworksKey;
       if (!targetKey) {
         return NextResponse.json({ error: 'Fireworks API Key not configured' }, { status: 401 });
       }
@@ -126,12 +127,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Meta Model API (muse-image-1.0)
-    const targetKey = apiKey || process.env.META_MODEL_API_KEY || '';
+    const targetKey = targetMetaKey;
     if (!targetKey) {
       return NextResponse.json({ error: 'Meta Model API Key not configured' }, { status: 401 });
     }
 
-    const cleanBase = (baseUrl || 'https://api.meta.ai/v1').replace(/\/+$/, '');
     const imgRes = await fetch(`${cleanBase}/images/generations`, {
       method: 'POST',
       headers: {

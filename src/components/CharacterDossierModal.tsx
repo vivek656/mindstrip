@@ -219,15 +219,21 @@ export function CharacterDossierModal({
       setGear(character.gear || '');
       setRelationships(character.relationships || []);
 
-      const initialUrl = character.imageUrl || character.characterSheetUrl || '';
+      // Automatically filter out any stale pollinations or rate-limited placeholder images
+      const isCleanUrl = (u?: string) => Boolean(u && !u.includes('pollinations.ai'));
+      const initialUrl = isCleanUrl(character.imageUrl)
+        ? character.imageUrl!
+        : (isCleanUrl(character.characterSheetUrl) ? character.characterSheetUrl! : '');
+
       setLockedImageUrl(initialUrl);
-      setPortraitRefUrl(character.portraitRefUrl || '');
-      setFullBodyRefUrl(character.fullBodyRefUrl || '');
-      setBackViewRefUrl(character.backViewRefUrl || '');
-      setActionPoseRefUrl(character.actionPoseRefUrl || '');
+      setPortraitRefUrl(isCleanUrl(character.portraitRefUrl) ? character.portraitRefUrl! : '');
+      setFullBodyRefUrl(isCleanUrl(character.fullBodyRefUrl) ? character.fullBodyRefUrl! : '');
+      setBackViewRefUrl(isCleanUrl(character.backViewRefUrl) ? character.backViewRefUrl! : '');
+      setActionPoseRefUrl(isCleanUrl(character.actionPoseRefUrl) ? character.actionPoseRefUrl! : '');
 
       if (character.referenceImages && character.referenceImages.length > 0) {
-        setReferenceImages(character.referenceImages);
+        const cleanRefs = character.referenceImages.filter((r) => isCleanUrl(r.imageUrl));
+        setReferenceImages(cleanRefs);
       } else if (initialUrl) {
         setReferenceImages([
           {
@@ -445,7 +451,7 @@ export function CharacterDossierModal({
           artStyle: world.artStyle || 'webcomic',
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
-          provider: apiConfig?.provider,
+          provider: apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api',
           imageModel: world.imageModel || (apiConfig?.provider === 'fireworks' ? 'flux-1-schnell' : 'muse-image-1.0'),
         }),
       });
@@ -634,7 +640,7 @@ export function CharacterDossierModal({
             artStyle: world.artStyle || 'webcomic',
             apiKey: apiConfig?.apiKey,
             baseUrl: apiConfig?.baseUrl,
-            provider: apiConfig?.provider,
+            provider: apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api',
             imageModel: world.imageModel || (apiConfig?.provider === 'fireworks' ? 'flux-1-schnell' : 'muse-image-1.0'),
           }),
         });

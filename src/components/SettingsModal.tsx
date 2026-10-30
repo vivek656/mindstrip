@@ -49,7 +49,7 @@ export function SettingsModal({ isOpen, onClose, config, onSaveConfig }: Setting
     e.preventDefault();
     onSaveConfig({
       mode,
-      provider: mode === 'free' ? 'simulation' : provider,
+      provider: provider || 'meta-api',
       apiKey: apiKey.trim() || undefined,
       baseUrl: baseUrl.trim() || undefined,
       modelName: modelName.trim() || undefined,

@@ -491,3 +491,17 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Reader & Cast List Integration:
     - In `src/components/ZenComicReader.tsx`: Character cards in the left sidebar and right Studio Deck feature direct `📸 Visuals` / `🎨` studio buttons with live visual avatar previews.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.06s across all 12 routes.
+
+- Total Purge of Pollinations AI & Official Meta Muse Image 1.0 Enforcement (2026-10-30):
+  - Root Cause Diagnosed:
+    - The client-side frontend was checking `!apiConfig?.apiKey` (browser state) and forcibly downgrading requests to `provider: 'simulation'`.
+    - `/api/generate-character-image` and `/api/generate-image` previously fell back to `image.pollinations.ai` when `provider === 'simulation'`.
+    - Pollinations recently enacted a strict 45-second public rate-limit ("1 free image every 45 seconds") returning a bright yellow advertisement banner that invaded character dossiers and comic pages.
+    - Meanwhile, the user already had valid `META_MODEL_API_KEY` configured in `.env.local` on the server!
+  - Fixes Implemented:
+    - **Total Purge of Pollinations**: Removed `image.pollinations.ai` fallback completely across `/api/generate-character-image`, `/api/generate-image`, and `ComicPageSpread.tsx`.
+    - **Server-Side Key Auto-Detection**: Backend routes automatically detect `META_MODEL_API_KEY` / `FIREWORKS_API_KEY` from `.env.local` and route directly to official Meta Muse Image 1.0 (`cleanBase + '/images/generations'`) or Fireworks FLUX without requiring client-side key entry.
+    - **`/api/auth` GET Health Check**: Exposes secure zero-secret boolean status (`hasMetaKey: true`) so frontend boots directly into `mode: 'meta'` and `provider: 'meta-api'`.
+    - **Automatic Cache Purge**: `upgradeWorlds` in `page.tsx` and `CharacterDossierModal.tsx` automatically detects and scrubs any stale `pollinations.ai` URLs from characters, model sheets, and reference lineups, replacing them with clean official Meta Muse generation.
+    - Verified direct Meta Muse Image 1.0 generation returns HTTP 200 with 643KB high-res artwork.
+    - Verified clean Next.js 16 Turbopack build with `npm run build` across all 12 routes.

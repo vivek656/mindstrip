@@ -75,9 +75,8 @@ const LAYOUT_FORMATS: { id: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-pane
 ];
 
 const MODEL_ENGINES = [
-  { id: 'simulation', provider: 'simulation', name: 'Free Preview', badge: 'Free • $0.00' },
-  { id: 'flux-1-schnell', provider: 'fireworks', name: 'FLUX.1 Schnell', badge: 'Ultra-Low • ~$0.003' },
-  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image', badge: 'Studio • ~$0.015' },
+  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image', badge: 'Official Meta AI' },
+  { id: 'flux-1-schnell', provider: 'fireworks', name: 'FLUX.1 Schnell', badge: 'Fireworks AI • ~$0.003' },
 ];
 
 const PROMPT_TAGS = [
@@ -123,11 +122,10 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>(
     'auto'
   );
-  // Default to ultra-low cost $0.003 or Free $0.00 intelligently
   const resolveInitialEngine = () => {
     if (episode.imageModel) return episode.imageModel;
-    if (apiConfig?.mode === 'free' || apiConfig?.provider === 'simulation') return 'simulation';
-    return 'flux-1-schnell';
+    if (apiConfig?.provider === 'fireworks') return 'flux-1-schnell';
+    return 'muse-image-1.0';
   };
   const [selectedEngine, setSelectedEngine] = useState<string>(resolveInitialEngine);
   const [selectedAspect, setSelectedAspect] = useState<string>(
@@ -794,9 +792,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                     onClick={() => handleExecuteGranularArtwork()}
                     disabled={isGeneratingArtwork}
                     className={`px-7 py-3 rounded-full font-bold text-xs shadow-xl flex items-center gap-2.5 cursor-pointer transition-all disabled:opacity-50 hover:scale-105 active:scale-95 ${
-                      selectedEngine === 'simulation'
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                        : selectedEngine === 'flux-1-schnell'
+                      selectedEngine === 'flux-1-schnell'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
                         : 'bg-zinc-950 hover:bg-zinc-800 text-white'
                     }`}
@@ -810,11 +806,9 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                       <>
                         <Palette className="w-4 h-4" />
                         <span>
-                          {selectedEngine === 'simulation'
-                            ? 'Draw Free Preview ($0.00)'
-                            : selectedEngine === 'flux-1-schnell'
+                          {selectedEngine === 'flux-1-schnell'
                             ? 'Draw with FLUX (~$0.003)'
-                            : 'Draw with Muse Image (~$0.015)'}
+                            : 'Draw with Meta Muse Image (Official)'}
                         </span>
                       </>
                     )}

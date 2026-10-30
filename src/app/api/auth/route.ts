@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb, isMongoConfigured } from '@/lib/mongodb';
 import { CreatorProfile } from '@/types/comic';
 
+export async function GET() {
+  const hasMetaKey = Boolean(process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY);
+  const hasFireworksKey = Boolean(process.env.FIREWORKS_API_KEY);
+  const isMongo = isMongoConfigured();
+
+  return NextResponse.json({
+    hasMetaKey,
+    hasFireworksKey,
+    isMongo,
+    defaultProvider: hasMetaKey ? 'meta-api' : (hasFireworksKey ? 'fireworks' : 'meta-api'),
+    defaultImageModel: hasMetaKey ? 'muse-image-1.0' : (hasFireworksKey ? 'flux-1-schnell' : 'muse-image-1.0'),
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

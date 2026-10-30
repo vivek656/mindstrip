@@ -34,7 +34,7 @@ export async function draftEpisodeBeats(
   // Check if real Meta API or Partner inference is available
   const hasApiKey = Boolean(apiKey || (provider === 'fireworks' && process.env.FIREWORKS_API_KEY) || (provider === 'groq' && process.env.GROQ_API_KEY) || process.env.META_MODEL_API_KEY);
 
-  if (hasApiKey && provider !== 'simulation') {
+  if (hasApiKey) {
     try {
       const cleanBase = (baseUrl || 'https://api.meta.ai/v1').replace(/\/+$/, '');
       const targetModel = modelName || (provider === 'fireworks' ? 'accounts/fireworks/models/llama-v3p3-70b-instruct' : provider === 'groq' ? 'llama-3.3-70b-versatile' : 'muse-spark-1.3');

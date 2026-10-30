@@ -14,8 +14,8 @@ import { generateComicStripMock } from '@/lib/comic-generator';
 import { buildStoryContext, writeRecap } from '@/lib/story-context';
 
 const DEFAULT_CONFIG: ApiConfig = {
-  mode: 'free',
-  provider: 'simulation',
+  mode: 'meta',
+  provider: 'meta-api',
   modelName: 'muse-spark-1.3',
 };
 
@@ -24,8 +24,20 @@ const DEFAULT_CONFIG: ApiConfig = {
  * Pure: reads nothing, writes nothing.
  */
 function upgradeWorlds(parsedWorlds: ComicWorld[]): ComicWorld[] {
+  const isCleanUrl = (url?: string) => Boolean(url && !url.includes('pollinations.ai'));
   return parsedWorlds.map((w) => ({
     ...w,
+    characters: (w.characters || []).map((c) => ({
+      ...c,
+      imageUrl: isCleanUrl(c.imageUrl) ? c.imageUrl : (isCleanUrl(c.characterSheetUrl) ? c.characterSheetUrl : undefined),
+      characterSheetUrl: isCleanUrl(c.characterSheetUrl) ? c.characterSheetUrl : undefined,
+      portraitRefUrl: isCleanUrl(c.portraitRefUrl) ? c.portraitRefUrl : undefined,
+      fullBodyRefUrl: isCleanUrl(c.fullBodyRefUrl) ? c.fullBodyRefUrl : undefined,
+      backViewRefUrl: isCleanUrl(c.backViewRefUrl) ? c.backViewRefUrl : undefined,
+      actionPoseRefUrl: isCleanUrl(c.actionPoseRefUrl) ? c.actionPoseRefUrl : undefined,
+      modelSheetRefUrl: isCleanUrl(c.modelSheetRefUrl) ? c.modelSheetRefUrl : undefined,
+      referenceImages: (c.referenceImages || []).filter((r) => isCleanUrl(r.imageUrl)),
+    })),
     episodes: w.episodes.map((ep) => {
       // Purge any stale Pollinations AI URLs from cache completely
       const cleanPageImage =
@@ -201,13 +213,28 @@ export default function Home() {
           : (parsed.modelName || 'muse-spark-1.3');
 
         setApiConfig({
-          mode: parsed.mode || 'free',
-          provider: parsed.provider || 'simulation',
+          mode: parsed.provider === 'simulation' ? 'meta' : (parsed.mode || 'meta'),
+          provider: parsed.provider === 'simulation' ? 'meta-api' : (parsed.provider || 'meta-api'),
           apiKey: parsed.apiKey,
           baseUrl: parsed.baseUrl,
           modelName: normalizedModel,
         });
       }
+
+      // Check if server-side environment has official Meta keys configured
+      fetch('/api/auth')
+        .then((r) => r.json())
+        .then((status) => {
+          if (status.hasMetaKey) {
+            setApiConfig((prev) => ({
+              ...prev,
+              mode: 'meta',
+              provider: prev.provider === 'simulation' ? 'meta-api' : prev.provider,
+              modelName: prev.modelName || 'muse-spark-1.3',
+            }));
+          }
+        })
+        .catch(() => {});
     } catch (e) {
       console.warn('Failed to load local storage state:', e);
     }
@@ -424,9 +451,7 @@ export default function Home() {
       let freshImageUrl = generated.pageImageUrl;
       if (!freshImageUrl) {
         try {
-          const effectiveProvider = (!apiConfig?.apiKey || apiConfig?.mode === 'free')
-            ? 'simulation'
-            : apiConfig.provider;
+          const effectiveProvider = apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api';
 
           const imgRes = await fetch('/api/generate-image', {
             method: 'POST',
@@ -494,11 +519,7 @@ export default function Home() {
       const targetArtStyle = options?.artStyle || activeWorld.artStyle || 'webcomic';
       const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel;
       
-      // Auto-fallback to simulation if no API key is provided so artwork generation never fails with 401
-      let effectiveProvider = options?.provider || apiConfig?.provider || 'simulation';
-      if (!apiConfig?.apiKey && effectiveProvider !== 'fireworks' && effectiveProvider !== 'simulation') {
-        effectiveProvider = 'simulation';
-      }
+      const effectiveProvider = options?.provider || apiConfig?.provider || 'meta-api';
 
       const response = await fetch('/api/generate-image', {
         method: 'POST',
