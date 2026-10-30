@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { persistToPermanentBlob } from '@/lib/blob-storage';
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +49,16 @@ export async function POST(req: NextRequest) {
         `${sanitizedPrompt} ${artStyle} graphic novel spread pure visual art textless no text no numbers no labels`.slice(0, 140)
       );
       const mockUrl = `https://image.pollinations.ai/prompt/${cleanPrompt}?width=1024&height=1365&nologo=true&seed=${Date.now()}`;
-      return NextResponse.json({ pageImageUrl: mockUrl, provider: 'Instant Preview Engine (Free)', layoutStyle: effectiveLayout });
+      
+      // Auto-archive into permanent Vercel Blob if configured
+      const blobResult = await persistToPermanentBlob(mockUrl, `preview-${worldTitle || 'world'}`);
+      
+      return NextResponse.json({
+        pageImageUrl: blobResult.url,
+        provider: blobResult.isPermanent ? 'Vercel Blob CDN (Archived)' : 'Instant Preview Engine (Free)',
+        layoutStyle: effectiveLayout,
+        isPermanent: blobResult.isPermanent
+      });
     }
 
     let targetBaseUrl = 'https://api.meta.ai/v1';
@@ -115,7 +125,16 @@ export async function POST(req: NextRequest) {
 
       const imgData = await imgRes.json();
       const rawImg = imgData.data?.[0]?.url || imgData.image_url;
-      return NextResponse.json({ pageImageUrl: rawImg, provider: 'Fireworks FLUX.1', layoutStyle: effectiveLayout });
+
+      // Auto-archive into permanent Vercel Blob if configured
+      const blobResult = await persistToPermanentBlob(rawImg, `fireworks-${worldTitle || 'world'}`);
+
+      return NextResponse.json({
+        pageImageUrl: blobResult.url,
+        provider: blobResult.isPermanent ? 'Fireworks FLUX.1 + Vercel Blob' : 'Fireworks FLUX.1',
+        layoutStyle: effectiveLayout,
+        isPermanent: blobResult.isPermanent
+      });
     } else {
       // Official Meta Model API (muse-image-1.0)
       const imgRes = await fetch(`${cleanBase}/images/generations`, {
@@ -143,11 +162,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Meta Muse Image did not return image data' }, { status: 500 });
       }
 
-      const pageImageUrl = rawImg.startsWith('http') || rawImg.startsWith('data:')
+      const formattedImg = rawImg.startsWith('http') || rawImg.startsWith('data:')
         ? rawImg
         : `data:image/webp;base64,${rawImg}`;
 
-      return NextResponse.json({ pageImageUrl, provider: 'Meta Muse Image 1.0', layoutStyle: effectiveLayout });
+      // Auto-archive into permanent Vercel Blob if configured
+      const blobResult = await persistToPermanentBlob(formattedImg, `meta-muse-${worldTitle || 'world'}`);
+
+      return NextResponse.json({
+        pageImageUrl: blobResult.url,
+        provider: blobResult.isPermanent ? 'Meta Muse Image 1.0 + Vercel Blob' : 'Meta Muse Image 1.0',
+        layoutStyle: effectiveLayout,
+        isPermanent: blobResult.isPermanent
+      });
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

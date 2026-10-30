@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runProductionRoom, buildComicStripFromProduction } from '@/lib/agents/orchestrator';
+import { persistToPermanentBlob } from '@/lib/blob-storage';
 
 export async function POST(req: NextRequest) {
   try {
@@ -160,10 +161,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (generatedPageImage) {
+      const blobResult = await persistToPermanentBlob(generatedPageImage, `page-${worldTitle || 'world'}`);
       comicStrip = {
         ...comicStrip,
-        pageImageUrl: generatedPageImage,
-        generationNotice: `${providerLabel} (${targetModel}) + ${imageGenerationNotice}`
+        pageImageUrl: blobResult.url,
+        generationNotice: `${providerLabel} (${targetModel}) + ${imageGenerationNotice}${blobResult.isPermanent ? ' [Vercel Blob CDN]' : ''}`
       };
     }
 

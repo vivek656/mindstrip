@@ -219,6 +219,14 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Added `AgentDirectorTraceModal.tsx` and interactive `[ ⚡ Production Room (Canon Score: 98%) ]` pill in `ZenComicReader.tsx`.
     - Enhanced Tab 3 (`activeTab === 'agent'`) with multi-agent architecture cards and deliberation trace preview.
   - Production build clean across all 11 routes (`npm run build` passed with 0 errors).
+- Permanent CDN Storage via Vercel Blob (2026-10-30):
+  - Installed `@vercel/blob` and created [`src/lib/blob-storage.ts`](src/lib/blob-storage.ts) with `persistToPermanentBlob`.
+  - Architected automatic archival of all generated comic page artwork (Meta Muse Image, Fireworks FLUX, or preview) to our own high-speed Vercel Blob CDN.
+  - Decoupled image persistence from ephemeral third-party servers: images now load from permanent edge URLs (`blob.vercel-storage.com`) without cache eviction or regeneration drift.
+  - Preserved MongoDB Atlas database health: Mongo continues to store only lightweight text URLs (<1KB), ensuring zero bloat and 100% free operation on Atlas M0.
+  - Updated `/api/generate-image` and `/api/generate` with automatic permanent archival and non-blocking fallback if Blob token is unlinked.
+  - Documented `BLOB_READ_WRITE_TOKEN` in `.env.example`.
+  - Clean build verified with `npm run build` (Turbopack, Next.js 16.4.3).
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -287,3 +295,11 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Added `AgentDirectorTraceModal.tsx` and interactive `[ ⚡ Production Room (Canon Score: 98%) ]` pill in `ZenComicReader.tsx`.
     - Enhanced Tab 3 (`activeTab === 'agent'`) with multi-agent architecture cards and deliberation trace preview.
   - Production build clean across all 11 routes (`npm run build` passed with 0 errors).
+- Permanent CDN Storage via Vercel Blob (2026-10-30):
+  - Installed `@vercel/blob` and created [`src/lib/blob-storage.ts`](src/lib/blob-storage.ts) with `persistToPermanentBlob`.
+  - Architected automatic archival of all generated comic page artwork (Meta Muse Image, Fireworks FLUX, or preview) to our own high-speed Vercel Blob CDN.
+  - Decoupled image persistence from ephemeral third-party servers: images now load from permanent edge URLs (`blob.vercel-storage.com`) without cache eviction or regeneration drift.
+  - Preserved MongoDB Atlas database health: Mongo continues to store only lightweight text URLs (<1KB), ensuring zero bloat and 100% free operation on Atlas M0.
+  - Updated `/api/generate-image` and `/api/generate` with automatic permanent archival and non-blocking fallback if Blob token is unlinked.
+  - Documented `BLOB_READ_WRITE_TOKEN` in `.env.example`.
+  - Clean build verified with `npm run build` (Turbopack, Next.js 16.4.3).
