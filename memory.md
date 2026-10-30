@@ -678,3 +678,19 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Showrunner prompt strictly forbids deleted characters and enforces civilian role constraints. Local self-correction loop automatically purges unknown characters and corrects civilian actions to grounded non-hero reactions.
   5. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
+
+### Pixel-Level Comic Page Compositor & Image Independence (`comic-compositor.ts`) (2026-10-30)
+- **User Feedback Diagnosed**:
+  - The user asked: *"where is the dialogs etc? i am saying the image generated will have dialogs etc right as in what shown in panel etc not overlayed on top of it? the images should be independent of any code i should be able to piece all the pages (images) and form a comic"*.
+  - The user uploaded a screenshot showing the unlettered raw image and demanded that the dialogues must be inside the image itself, so that each page image stands on its own without requiring any code or DOM overlay.
+- **Architectural Solution Implemented (`src/lib/comic-compositor.ts`)**:
+  1. **Comic Page Baker & Canvas Compositor**:
+     - Built `bakeComicPage()` in `src/lib/comic-compositor.ts`.
+     - Automatically renders the base sequential artwork + typographic speech bubbles (with white bodies, black outlines, drop shadows, speech tails) + uppercase speaker tags + angled comic sound effect badges (`⚡ SFX`) directly into an HTML5 Canvas.
+     - Produces a single, flattened image file (`image/jpeg`, 0.95 quality) where the dialogue is permanently part of the image pixels.
+  2. **Image Independence**:
+     - `ComicPageSpread.tsx` now sets `displayImageUrl` to `bakedPageImage` by default.
+     - The `<img>` tag itself renders the composited comic page. If someone right-clicks "Save image as..." or downloads the page, the dialogues are inside the image pixels!
+     - The exported PNG/JPEG is 100% self-contained: you can take Page 1, Page 2, Page 3 and compile them into a PDF or CBZ comic book with zero app code needed.
+  3. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).

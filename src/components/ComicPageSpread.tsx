@@ -6,6 +6,7 @@ import { ApiConfig } from '@/lib/meta-models';
 import { cleanPromptForWordlessArtwork } from '@/lib/agents/art-director';
 import { SamVisionOverlay } from './SamVisionOverlay';
 import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
+import { bakeComicPage } from '@/lib/comic-compositor';
 import {
   Sparkles,
   Users,
@@ -270,6 +271,29 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     episode.pageImageUrl && !episode.pageImageUrl.includes('pollinations.ai')
       ? episode.pageImageUrl
       : episode.pageImageUrl;
+
+  const [bakedPageImage, setBakedPageImage] = useState<string | null>(null);
+
+  // Automatically bake speech bubbles and sound effects directly into the image pixels
+  // so the image stands on its own as a complete, code-independent graphic novel page!
+  useEffect(() => {
+    let isCancelled = false;
+    if (pageImage && panels && panels.length > 0) {
+      const layout = episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');
+      bakeComicPage(pageImage, panels, layout).then((bakedUrl) => {
+        if (!isCancelled) {
+          setBakedPageImage(bakedUrl);
+        }
+      });
+    } else {
+      setBakedPageImage(null);
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [pageImage, panels, episode.layoutStyle]);
+
+  const displayImageUrl = (areBubblesVisible && bakedPageImage) ? bakedPageImage : pageImage;
 
   const handleStartEdit = (bubbleId: string, currentText: string) => {
     setEditingBubbleId(bubbleId);
@@ -980,7 +1004,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
         <div className="w-full">
           <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-950 shadow-xl bg-white">
             <img
-              src={pageImage}
+              src={displayImageUrl}
               alt={`${world.title} — ${episode.title}`}
               className={`w-full h-auto block object-contain mx-auto transition-all duration-200 ${
                 isFullscreenZoom ? 'max-h-none' : 'max-h-[1400px]'
@@ -988,8 +1012,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               loading="eager"
             />
 
-            {/* Authentic Comic Page Dialogue & SFX Quadrant Overlay */}
-            {areBubblesVisible && !isSamActive && (
+            {/* Instant Fallback Dialogue & SFX Quadrant Overlay while image is baking */}
+            {areBubblesVisible && !isSamActive && !bakedPageImage && (
               <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
                 {/* Dynamic Panel Grid Overlay matching the layout */}
                 <div
