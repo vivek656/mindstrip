@@ -1,4 +1,4 @@
-import { ComicStrip, ArtStyle, PerspectiveLens, ComicCharacter } from '@/types/comic';
+import { ComicStrip, ArtStyle, PerspectiveLens, ComicCharacter, ComicWorld } from '@/types/comic';
 import { generateComicStripMock } from './comic-generator';
 import { runProductionRoom, buildComicStripFromProduction } from './agents/orchestrator';
 
@@ -103,7 +103,9 @@ export async function generateMindStrip(
   worldTitle?: string,
   genre?: string,
   storyContext?: string,
-  layoutPreference: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel' = 'auto'
+  layoutPreference: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel' = 'auto',
+  world?: ComicWorld,
+  pastEpisodes?: ComicStrip[]
 ): Promise<ComicStrip> {
   // 1. FREE MODE: Local Autonomous Multi-Agent Production Room ($0.00)
   if (config.mode === 'free' || config.provider === 'simulation') {
@@ -118,6 +120,8 @@ export async function generateMindStrip(
       genre,
       storyContext,
       layoutPreference,
+      world,
+      pastEpisodes: pastEpisodes || world?.episodes,
       provider: 'simulation',
       modelName: 'Meta Muse Spark (Autonomous Production Room)'
     });
@@ -129,6 +133,8 @@ export async function generateMindStrip(
       characters,
       worldTitle,
       genre,
+      world,
+      pastEpisodes: pastEpisodes || world?.episodes,
       modelName: 'Meta AI Production Room (Open Weights • $0.00)'
     });
   }
@@ -149,6 +155,8 @@ export async function generateMindStrip(
         genre,
         storyContext,
         layoutPreference,
+        world,
+        pastEpisodes: pastEpisodes || world?.episodes,
         provider: config.provider,
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,

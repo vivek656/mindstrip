@@ -611,3 +611,18 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   1. **AI Showrunner Autonomy**: The Showrunner dynamically chooses between `1-panel` (climax splash), `2-panel` (dialogue duel / faceoff), `3-panel` (webtoon escalation strip), and `4-panel` (complete narrative arc) based on dramatic weight.
   2. **Image Generator Layout Adaptability**: `/api/generate-image/route.ts` prioritizes the Showrunner's decided panel count (`panels.length` = 1, 2, 3, or 4) when `layoutStyle` is `auto`, formulating the layout directives specifically for that format (widescreen 16:9 splash for 1-panel, side-by-side vertical gutters for 2-panel, vertical strip for 3-panel, and 2x2 grid for 4-panel).
   3. **UI Dynamic Rendering**: `ComicPageSpread.tsx` now dynamically adjusts grid columns and labels (`{panels.length}-Panel Sequential View`, adapting from 1 full splash to 2 cols, 3 cols, or 2x2) based on the actual panels drafted by the AI rather than padding fake panels.
+
+### Universal Universe Context Pipeline (2026-10-30)
+- **Problem Diagnosed**:
+  - While Canon RAG was designed for episode drafting, other AI touchpoints were only passing fragmented metadata:
+    - Character expansion (`/api/expand-character`) was only receiving `worldTitle`, `genre`, and a simple list of character names, omitting `worldLore`, `worldLaws`, `worldLocations`, `worldAttributes`, detailed cast traits, and recent episode developments.
+    - Character image generation (`/api/generate-character-image`) was missing `worldTitle`, `genre`, and `worldLore`.
+    - `generateMindStrip` in `src/lib/meta-models.ts` and `/api/generate` were omitting the `world` and `pastEpisodes` objects from `AgentContext`.
+- **Comprehensive Solution Implemented**:
+  1. **Character Co-Writer & Expansion (`/api/expand-character`)**:
+     - `CharacterDossierModal.tsx` now passes the entire World Bible: `worldTitle`, `worldTagline`, `genre`, `worldLore`, `worldLaws` (title + rule), `worldLocations`, `worldAttributes` (key + value), detailed cast summaries (name, role, personality, backstory, motivation, catchphrase), and recent episode recaps.
+     - `route.ts` injects this full persistent universe context into the Meta AI system prompt, guaranteeing that any character created or updated fits seamlessly into the world's lore, tone, physical/magical laws, and interpersonal cast web.
+  2. **Character Concept Art (`/api/generate-character-image`)**:
+     - Receives `worldTitle`, `genre`, and `worldLore`, blending the world's genre aesthetic into character model sheets, turnarounds, and action poses. Uses `TEXTLESS_ARTWORK_DIRECTIVE`.
+  3. **Episodic Generation & Canon RAG (`generateMindStrip` & `/api/generate`)**:
+     - `generateMindStrip` and `/api/generate` now receive the full `world` and `pastEpisodes` array from `src/app/page.tsx`, directly empowering `queryCanonRag` to index universe lore, canonical laws, staging locations, and unresolved threads across every episode generation.

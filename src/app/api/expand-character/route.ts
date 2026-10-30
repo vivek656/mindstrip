@@ -5,9 +5,15 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       character,
-      worldTitle,
+      worldTitle = 'Untitled Universe',
+      worldTagline = '',
       genre = 'Comic Universe',
+      worldLore = '',
+      worldLaws = [],
+      worldLocations = [],
+      worldAttributes = [],
       existingCharacters = [],
+      recentEpisodes = [],
       apiKey,
       baseUrl,
       provider = 'meta-api',
@@ -29,15 +35,28 @@ export async function POST(req: NextRequest) {
 
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
 
+    // Format full cast list with roles and traits for deep interpersonal cohesion
+    const otherCastSummary = Array.isArray(existingCharacters)
+      ? existingCharacters
+          .map((c: any) => {
+            if (typeof c === 'string') return c;
+            return `• ${c.name} (${c.role}${c.gender ? `, ${c.gender}` : ''}): ${c.personality ? `Personality: ${c.personality}. ` : ''}${c.backstory ? `Backstory: ${c.backstory.slice(0, 100)}...` : ''}`;
+          })
+          .join('\n')
+      : 'None yet';
+
     // AI Call if API Key exists
     if (targetApiKey) {
       try {
         const model = targetBaseUrl.includes('api.meta.ai') ? 'muse-spark-1.3' : 'accounts/fireworks/models/llama-v3p3-70b-instruct';
 
-        const systemPrompt = `You are the MindStrip Lead Character Architect for the comic universe "${worldTitle || 'Untitled Universe'}" (${genre}).
-Your job is to expand the character "${charName}" (${charRole}, ${charGender}) into a deep, three-dimensional figure with distinct visual anchors, psychological depth, and interpersonal ties.
+        const systemPrompt = `You are the MindStrip Lead Character Architect for the comic universe "${worldTitle}" (${genre}).
+${worldTagline ? `Universe Tagline: "${worldTagline}"\n` : ''}${worldLore ? `World Lore & Core Conflict:\n"${worldLore}"\n` : ''}${worldLaws && worldLaws.length > 0 ? `Universal Laws & Ground Rules:\n${worldLaws.map((l: string) => `• ${l}`).join('\n')}\n` : ''}${worldLocations && worldLocations.length > 0 ? `Canonical Locations: ${worldLocations.join(', ')}\n` : ''}${worldAttributes && worldAttributes.length > 0 ? `World Parameters: ${worldAttributes.join(' | ')}\n` : ''}${recentEpisodes && recentEpisodes.length > 0 ? `Recent Story Developments:\n${recentEpisodes.map((e: any) => `• Ep ${e.episodeNumber || ''} "${e.title}": ${e.recap || ''}`).join('\n')}\n` : ''}
+EXISTING CHARACTERS IN THIS UNIVERSE:
+${otherCastSummary || 'Founding cast member'}
 
-Other characters in this universe: ${existingCharacters.filter((n: string) => n.toLowerCase() !== charName.toLowerCase()).join(', ') || 'None yet'}
+Your job is to expand or update the character "${charName}" (${charRole}, ${charGender}) into a multi-dimensional, memorable figure who belongs AUTHENTICALLY in this specific universe.
+Make sure every field resonates with this world's tone, genre, lore, laws, and existing relationships.
 
 Respond ONLY with valid JSON matching this schema:
 {
@@ -54,7 +73,7 @@ Respond ONLY with valid JSON matching this schema:
   "catchphrase": "A punchy, memorable signature catchphrase or recurring line",
   "suggestedRelationships": [
     {
-      "targetCharacterName": "Name from other characters if available, or archetype",
+      "targetCharacterName": "Name of an existing character from the universe cast if available, or archetype",
       "relationType": "ally" | "rival" | "mentor" | "nemesis" | "family" | "frenemy" | "love-interest",
       "dynamicDescription": "One sentence explaining their mutual friction, romance, or loyalty"
     }

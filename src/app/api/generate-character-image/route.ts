@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
+import { TEXTLESS_ARTWORK_DIRECTIVE } from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +13,9 @@ export async function POST(req: NextRequest) {
       wardrobe = '',
       iconicItem = '',
       artStyle = 'webcomic',
+      worldTitle = '',
+      genre = '',
+      worldLore = '',
       viewType = 'model_sheet', // 'portrait' | 'full_body' | 'back_view' | 'model_sheet' | 'action_pose'
       customPrompt = '',
       provider = 'meta-api',
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
         aspect = '3:4';
         break;
       case 'action_pose':
-        viewDescriptor = `dynamic character action illustration, iconic heroic combat pose, wielding signature gear, dramatic atmospheric lighting`;
+        viewDescriptor = `dynamic character action illustration, iconic combat pose, wielding signature gear, dramatic atmospheric lighting`;
         aspect = '3:4';
         break;
       case 'model_sheet':
@@ -55,11 +59,16 @@ export async function POST(req: NextRequest) {
         break;
     }
 
-    const textlessDirective = 'STRICTLY TEXTLESS: pure character design illustration, absolutely NO printed text, NO watermarks, NO letters, clean background, published graphic novel reference.';
+    const universeContext = [
+      genre ? `genre: ${genre}` : null,
+      worldTitle ? `universe: ${worldTitle}` : null,
+    ].filter(Boolean).join(', ');
+
+    const textlessDirective = TEXTLESS_ARTWORK_DIRECTIVE;
     
     const prompt = customPrompt
       ? `${artStyle} character art: ${customPrompt}. ${viewDescriptor}. ${textlessDirective}`
-      : `${artStyle} character concept design of ${characterName} ${charGender} (${role}). ${viewDescriptor}. ${anchorDetails}. ${textlessDirective} Masterpiece comic art, crisp lines, consistent character anatomy.`;
+      : `${artStyle} character concept design of ${characterName} ${charGender} (${role}) for ${universeContext || 'comic universe'}. ${viewDescriptor}. ${anchorDetails}. ${textlessDirective} Masterpiece comic art, crisp lines, consistent character anatomy.`;
 
     // 2. Resolve Target Keys & Provider
     const targetMetaKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';

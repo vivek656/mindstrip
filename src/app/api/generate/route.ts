@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
       genre,
       storyContext,
       layoutPreference = 'auto',
-      imageModel
+      imageModel,
+      world,
+      pastEpisodes
     } = body;
 
     if (!rawDump) {
@@ -73,6 +75,8 @@ export async function POST(req: NextRequest) {
       genre,
       storyContext,
       layoutPreference,
+      world,
+      pastEpisodes: pastEpisodes || world?.episodes,
       provider,
       apiKey: targetApiKey,
       baseUrl: targetBaseUrl,
@@ -86,6 +90,8 @@ export async function POST(req: NextRequest) {
       characters,
       worldTitle,
       genre,
+      world,
+      pastEpisodes: pastEpisodes || world?.episodes,
       modelName: `${providerLabel} (${targetModel})`
     });
 

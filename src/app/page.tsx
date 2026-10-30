@@ -323,7 +323,10 @@ export default function Home() {
         worldToSave.characters,
         worldToSave.title,
         worldToSave.genre,
-        storyContext
+        storyContext,
+        'auto',
+        worldToSave,
+        worldToSave.episodes
       );
 
       const firstEpisode: ComicStrip = {
@@ -370,7 +373,9 @@ export default function Home() {
         activeWorld.title,
         activeWorld.genre,
         storyContext,
-        layoutPreference
+        layoutPreference,
+        activeWorld,
+        activeWorld.episodes
       );
 
       const nextNum = activeWorld.episodes.length + 1;
@@ -444,7 +449,10 @@ export default function Home() {
         activeWorld.characters,
         activeWorld.title,
         activeWorld.genre,
-        regenContext
+        regenContext,
+        activeEpisode.layoutStyle || 'auto',
+        activeWorld,
+        activeWorld.episodes
       );
 
       // Re-draw fresh artwork for the newly regenerated episode
@@ -461,6 +469,7 @@ export default function Home() {
               artStyle: activeWorld.artStyle,
               characters: activeWorld.characters,
               worldTitle: activeWorld.title,
+              genre: activeWorld.genre,
               episodeTitle: generated.title,
               provider: effectiveProvider,
               apiKey: apiConfig?.apiKey,
@@ -531,6 +540,7 @@ export default function Home() {
           artStyle: targetArtStyle,
           characters: activeWorld.characters,
           worldTitle: activeWorld.title,
+          genre: activeWorld.genre,
           episodeTitle: activeEpisode.title,
           provider: effectiveProvider,
           apiKey: apiConfig?.apiKey,
