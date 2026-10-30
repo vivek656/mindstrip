@@ -6,7 +6,6 @@ import { ApiConfig } from '@/lib/meta-models';
 import { cleanPromptForWordlessArtwork } from '@/lib/agents/art-director';
 import { SamVisionOverlay } from './SamVisionOverlay';
 import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
-import { bakeComicPage } from '@/lib/comic-compositor';
 import {
   Sparkles,
   Users,
@@ -271,29 +270,6 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     episode.pageImageUrl && !episode.pageImageUrl.includes('pollinations.ai')
       ? episode.pageImageUrl
       : episode.pageImageUrl;
-
-  const [bakedPageImage, setBakedPageImage] = useState<string | null>(null);
-
-  // Automatically bake speech bubbles and sound effects directly into the image pixels
-  // so the image stands on its own as a complete, code-independent graphic novel page!
-  useEffect(() => {
-    let isCancelled = false;
-    if (pageImage && panels && panels.length > 0) {
-      const layout = episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');
-      bakeComicPage(pageImage, panels, layout).then((bakedUrl) => {
-        if (!isCancelled) {
-          setBakedPageImage(bakedUrl);
-        }
-      });
-    } else {
-      setBakedPageImage(null);
-    }
-    return () => {
-      isCancelled = true;
-    };
-  }, [pageImage, panels, episode.layoutStyle]);
-
-  const displayImageUrl = (areBubblesVisible && bakedPageImage) ? bakedPageImage : pageImage;
 
   const handleStartEdit = (bubbleId: string, currentText: string) => {
     setEditingBubbleId(bubbleId);
@@ -1000,131 +976,17 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           </div>
         </div>
       ) : pageImage ? (
-        /* Real Meta AI Generated Full-Page Comic Spread with Authentic Dialogue Bubbles Overlay */
-        <div className="w-full">
+        /* Real Meta AI Generated Full-Page Comic Spread */
+        <div className="w-full space-y-4">
           <div className="relative group w-full rounded-2xl overflow-hidden border-2 border-zinc-950 shadow-xl bg-white">
             <img
-              src={displayImageUrl}
+              src={pageImage}
               alt={`${world.title} — ${episode.title}`}
               className={`w-full h-auto block object-contain mx-auto transition-all duration-200 ${
                 isFullscreenZoom ? 'max-h-none' : 'max-h-[1400px]'
               }`}
               loading="eager"
             />
-
-            {/* Instant Fallback Dialogue & SFX Quadrant Overlay while image is baking */}
-            {areBubblesVisible && !isSamActive && !bakedPageImage && (
-              <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                {/* Dynamic Panel Grid Overlay matching the layout */}
-                <div
-                  className={`w-full h-full ${
-                    panels.length === 1
-                      ? 'p-4 sm:p-8 flex flex-col justify-between'
-                      : panels.length === 2
-                      ? 'grid grid-cols-2 grid-rows-1'
-                      : panels.length === 3
-                      ? 'grid grid-cols-1 grid-rows-3'
-                      : 'grid grid-cols-2 grid-rows-2'
-                  }`}
-                >
-                  {panels.map((p, pIdx) => {
-                    const bubbles = p.bubbles || [];
-                    const sound = p.soundEffect;
-                    if (bubbles.length === 0 && !sound) return <div key={p.panelNumber || pIdx} />;
-
-                    return (
-                      <div
-                        key={p.panelNumber || pIdx}
-                        className="relative p-2.5 sm:p-4 flex flex-col justify-between pointer-events-none overflow-hidden"
-                      >
-                        {/* Dialogue Bubbles Stack */}
-                        <div className="space-y-1.5 sm:space-y-2 pointer-events-auto max-w-[92%] sm:max-w-[82%]">
-                          {bubbles.map((b) => {
-                            const isEditing = editingBubbleId === b.id;
-                            const charEmoji = getCharacterEmoji(b.speaker);
-
-                            return (
-                              <div
-                                key={b.id}
-                                className="inline-block p-2 sm:p-2.5 rounded-xl bg-white/95 border-1.5 sm:border-2 border-zinc-950 shadow-md backdrop-blur-2xs text-[11px] sm:text-xs text-zinc-950 transition-all hover:scale-[1.01]"
-                              >
-                                <div className="flex items-center justify-between gap-1.5 text-[9px] sm:text-[10px] font-mono font-bold text-zinc-600 mb-0.5">
-                                  <span className="flex items-center gap-1">
-                                    <span>{charEmoji}</span>
-                                    <span className="truncate max-w-[100px]">{b.speaker}</span>
-                                    {b.type === 'thought' && (
-                                      <span className="opacity-70 italic text-[9px]">(thought)</span>
-                                    )}
-                                    {b.type === 'shout' && (
-                                      <span className="text-red-600 font-extrabold text-[9px]">!</span>
-                                    )}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      isEditing
-                                        ? handleSaveEdit(p.panelNumber, b.id)
-                                        : handleStartEdit(b.id, b.text)
-                                    }
-                                    className="text-zinc-400 hover:text-zinc-900 cursor-pointer ml-1"
-                                    title="Edit dialogue"
-                                  >
-                                    {isEditing ? (
-                                      <Check className="w-3 h-3 text-emerald-600" />
-                                    ) : (
-                                      <Edit2 className="w-2.5 h-2.5" />
-                                    )}
-                                  </button>
-                                </div>
-
-                                {isEditing ? (
-                                  <div className="flex items-center gap-1.5 mt-1 pointer-events-auto">
-                                    <input
-                                      type="text"
-                                      value={draftText}
-                                      onChange={(e) => setDraftText(e.target.value)}
-                                      onKeyDown={(e) =>
-                                        e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)
-                                      }
-                                      autoFocus
-                                      className="w-full bg-zinc-50 border-b-2 border-blue-600 text-[11px] sm:text-xs py-0.5 outline-none font-medium"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSaveEdit(p.panelNumber, b.id)}
-                                      className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold"
-                                    >
-                                      Save
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <p
-                                    onClick={() => handleStartEdit(b.id, b.text)}
-                                    className="leading-snug font-sans font-medium text-zinc-950 cursor-pointer hover:text-blue-600"
-                                    title="Click to edit speech bubble"
-                                  >
-                                    &ldquo;{b.text}&rdquo;
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Sound Effect Badge in Corner */}
-                        {sound && (
-                          <div className="self-end pointer-events-auto mt-1">
-                            <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-mono font-black uppercase bg-amber-400 text-zinc-950 border border-zinc-950 shadow-md rotate-[-3deg] inline-block tracking-wider">
-                              ⚡ {sound}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Meta SAM 3.1 Interactive Vision Segmentation Layer */}
             <SamVisionOverlay
@@ -1135,6 +997,58 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               onSelectCharacterForDossier={onSelectCharacterForDossier}
               onUpdateDialogue={onUpdateDialogue}
             />
+          </div>
+
+          {/* Integrated Graphic Novel Dialogue & SFX Deck */}
+          <div className="w-full">
+            <div className={`grid gap-3.5 ${
+              panels.length === 1 ? 'grid-cols-1' :
+              panels.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+              panels.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
+              'grid-cols-1 md:grid-cols-2'
+            }`}>
+              {panels.map((p, idx) => (
+                <div
+                  key={p.panelNumber || idx}
+                  className="p-4 rounded-2xl bg-white border border-zinc-200 shadow-2xs space-y-2.5 transition-all hover:border-zinc-300"
+                >
+                  <div className="flex items-center justify-between text-xs pb-2 border-b border-black/5">
+                    <span className="font-bold text-zinc-950 flex items-center gap-1.5 font-mono">
+                      <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-[10px] font-black">
+                        {p.panelNumber}
+                      </span>
+                      <span className="truncate max-w-[200px]">{p.title || `Panel ${p.panelNumber}`}</span>
+                    </span>
+                    {p.soundEffect && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-amber-100 text-amber-900 border border-amber-200">
+                        ⚡ {p.soundEffect}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {p.bubbles && p.bubbles.length > 0 ? (
+                      p.bubbles.map((b) => (
+                        <div
+                          key={b.id}
+                          className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-200/80 text-xs text-zinc-900 flex items-start gap-2 leading-relaxed"
+                        >
+                          <span className="font-bold font-mono text-[11px] text-zinc-600 shrink-0 flex items-center gap-1">
+                            <span>{getCharacterEmoji(b.speaker)}</span>
+                            <span>{b.speaker}:</span>
+                          </span>
+                          <span className="font-medium text-zinc-900">&ldquo;{b.text}&rdquo;</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-xs text-zinc-400 italic">
+                        (Visual action scene)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : (

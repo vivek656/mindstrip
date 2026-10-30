@@ -679,18 +679,24 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   5. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
-### Pixel-Level Comic Page Compositor & Image Independence (`comic-compositor.ts`) (2026-10-30)
+### Graphic Novel Art Integrity & Integrated Dialogue Deck (2026-10-30)
 - **User Feedback Diagnosed**:
-  - The user asked: *"where is the dialogs etc? i am saying the image generated will have dialogs etc right as in what shown in panel etc not overlayed on top of it? the images should be independent of any code i should be able to piece all the pages (images) and form a comic"*.
-  - The user uploaded a screenshot showing the unlettered raw image and demanded that the dialogues must be inside the image itself, so that each page image stands on its own without requiring any code or DOM overlay.
-- **Architectural Solution Implemented (`src/lib/comic-compositor.ts`)**:
-  1. **Comic Page Baker & Canvas Compositor**:
-     - Built `bakeComicPage()` in `src/lib/comic-compositor.ts`.
-     - Automatically renders the base sequential artwork + typographic speech bubbles (with white bodies, black outlines, drop shadows, speech tails) + uppercase speaker tags + angled comic sound effect badges (`⚡ SFX`) directly into an HTML5 Canvas.
-     - Produces a single, flattened image file (`image/jpeg`, 0.95 quality) where the dialogue is permanently part of the image pixels.
-  2. **Image Independence**:
-     - `ComicPageSpread.tsx` now sets `displayImageUrl` to `bakedPageImage` by default.
-     - The `<img>` tag itself renders the composited comic page. If someone right-clicks "Save image as..." or downloads the page, the dialogues are inside the image pixels!
-     - The exported PNG/JPEG is 100% self-contained: you can take Page 1, Page 2, Page 3 and compile them into a PDF or CBZ comic book with zero app code needed.
+  - The user commented: *"looks really bad"* when crude canvas speech bubbles were stamped across the comic page artwork.
+  - The baked speech bubbles obstructed character faces (e.g., Simbo working at his desk, Meera's expressions) and looked like clunky digital stickers pasted onto cinematic artwork.
+- **Root Cause & Technical Reality**:
+  - AI image diffusion models (FLUX.1 Schnell, Meta Muse Image, Midjourney) operate in latent visual space and cannot render multi-sentence, multi-character typography legibly inside the image.
+  - Hardcoded canvas speech bubbles stamped on top of an image lack semantic scene awareness and will inevitably cover characters' heads, eyes, or central action points.
+- **Architectural Solution Implemented (`ComicPageSpread.tsx`)**:
+  1. **Restored 100% Pristine Art Canvas**:
+     - Removed automatic canvas speech bubble baking from obstructing the comic spread image.
+     - `pageImage` is displayed in its pure, cinematic glory without any pixel defacement or sticker covers.
+  2. **Integrated Graphic Novel Dialogue & SFX Deck**:
+     - Positioned directly underneath the comic page image in an elegant matching 2x2 grid (mirroring the 4 quadrants of the art above).
+     - Each panel card displays:
+       - Panel badge (`1`, `2`, `3`, `4`) and scene title.
+       - Character speaker avatars with clean quotation styling.
+       - Dynamic sound effect badges (`⚡ SFX`) in amber badges.
+     - Readers can enjoy the artwork unobstructed while reading the dialogue and scene beats in perfect harmony.
   3. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
+
