@@ -124,15 +124,59 @@ export function queryCanonRag(
       });
     }
 
-    // Index locked visual reference image (Character Visual RAG)
+    // Index locked visual reference images (Character Visual RAG - Multi-Angle)
     if (char.imageUrl) {
       results.push({
         id: `rag-char-vis-${char.id}`,
         type: 'character_visual_ref',
-        title: `Visual Model Sheet: @${char.name}`,
-        content: `Locked canonical reference image. Features: ${char.appearance || 'Standard'}. Wardrobe: ${char.wardrobe || 'Standard'}. Props: ${char.iconicItem || 'None'}. Visual URL: ${char.imageUrl}`,
+        title: `Visual Reference: @${char.name} (Canonical Master)`,
+        content: `Master canonical reference image. Features: ${char.appearance || 'Standard'}. Wardrobe: ${char.wardrobe || 'Standard'}. Props: ${char.iconicItem || 'None'}. Visual URL: ${char.imageUrl}`,
         imageUrl: char.imageUrl,
-        relevanceScore: 0.98
+        relevanceScore: 0.99
+      });
+    }
+
+    if (char.portraitRefUrl && char.portraitRefUrl !== char.imageUrl) {
+      results.push({
+        id: `rag-char-face-${char.id}`,
+        type: 'character_visual_ref',
+        title: `Face & Expression Reference: @${char.name}`,
+        content: `Close-up bust reference for facial anatomy, eye color, and facial expression consistency. Features: ${char.appearance || 'Standard'}. Face URL: ${char.portraitRefUrl}`,
+        imageUrl: char.portraitRefUrl,
+        relevanceScore: 0.97
+      });
+    }
+
+    if (char.fullBodyRefUrl && char.fullBodyRefUrl !== char.imageUrl) {
+      results.push({
+        id: `rag-char-body-${char.id}`,
+        type: 'character_visual_ref',
+        title: `Full-Body Outfit & Legs Reference: @${char.name}`,
+        content: `Head-to-toe full body reference for costume silhouette, torso, legs, and boots consistency. Wardrobe: ${char.wardrobe || 'Standard'}. Full Body URL: ${char.fullBodyRefUrl}`,
+        imageUrl: char.fullBodyRefUrl,
+        relevanceScore: 0.96
+      });
+    }
+
+    if (char.backViewRefUrl && char.backViewRefUrl !== char.imageUrl) {
+      results.push({
+        id: `rag-char-back-${char.id}`,
+        type: 'character_visual_ref',
+        title: `Back Turnaround Reference: @${char.name}`,
+        content: `Rear angle turnaround reference for hair from behind, coat back, and rear silhouette. Back URL: ${char.backViewRefUrl}`,
+        imageUrl: char.backViewRefUrl,
+        relevanceScore: 0.95
+      });
+    }
+
+    if (char.actionPoseRefUrl && char.actionPoseRefUrl !== char.imageUrl) {
+      results.push({
+        id: `rag-char-act-${char.id}`,
+        type: 'character_visual_ref',
+        title: `Action Stance Reference: @${char.name}`,
+        content: `Dynamic combat stance reference for action and movement consistency. Action URL: ${char.actionPoseRefUrl}`,
+        imageUrl: char.actionPoseRefUrl,
+        relevanceScore: 0.95
       });
     }
   });

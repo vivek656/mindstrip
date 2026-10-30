@@ -54,6 +54,11 @@ export interface ComicCharacter {
   imageUrl?: string; // Primary locked canonical reference image
   characterSheetUrl?: string; // Multi-angle model sheet
   referenceImages?: CharacterReferenceImage[]; // Angle/view gallery (face, full-body, back, etc.)
+  portraitRefUrl?: string; // Dedicated Face & portrait reference (for close-up shots)
+  fullBodyRefUrl?: string; // Dedicated Full-Body & legs/costume reference (for wide/standing shots)
+  backViewRefUrl?: string; // Dedicated Back turnaround reference (for rear shots)
+  actionPoseRefUrl?: string; // Dedicated Action stance reference (for combat/action shots)
+  modelSheetRefUrl?: string; // Dedicated Turnaround model sheet reference
 }
 
 export interface SpeechBubble {

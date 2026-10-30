@@ -33,6 +33,10 @@ export function directVisualArtwork(
     if (c.wardrobe) anchors.push(`wearing ${c.wardrobe}`);
     if (c.iconicItem) anchors.push(`signature ${c.iconicItem}`);
     if (c.imageUrl) anchors.push(`canonical model sheet match: ${c.imageUrl}`);
+    if (c.portraitRefUrl) anchors.push(`face & eyes anchor: ${c.portraitRefUrl}`);
+    if (c.fullBodyRefUrl) anchors.push(`legs & costume silhouette anchor: ${c.fullBodyRefUrl}`);
+    if (c.backViewRefUrl) anchors.push(`rear turnaround anchor: ${c.backViewRefUrl}`);
+    if (c.actionPoseRefUrl) anchors.push(`action stance anchor: ${c.actionPoseRefUrl}`);
     const anchorStr = anchors.length > 0 ? anchors.join(', ') : 'distinct expressive comic design';
     visualAnchors.push(`${c.name}${c.imageUrl ? ' (Model Sheet Locked)' : ''}: ${anchorStr}`);
     return `${c.name} (${anchorStr})`;

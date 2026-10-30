@@ -559,9 +559,21 @@ export function ZenComicReader({
                   className="flex items-center gap-2 truncate cursor-pointer flex-1"
                   title={`Click to tag @${char.name} in prompt`}
                 >
-                  <span className="text-lg">{char.avatarEmoji}</span>
+                  {char.imageUrl || char.portraitRefUrl ? (
+                    <div className="relative w-7 h-7 rounded-lg overflow-hidden shrink-0 border border-black/10">
+                      <img src={char.portraitRefUrl || char.imageUrl} alt={char.name} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-1 ring-white" />
+                    </div>
+                  ) : (
+                    <span className="text-lg">{char.avatarEmoji}</span>
+                  )}
                   <div className="truncate">
-                    <span className="font-bold text-xs text-zinc-900 block truncate">@{char.name}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-xs text-zinc-900 block truncate">@{char.name}</span>
+                      {(char.imageUrl || char.portraitRefUrl) && (
+                        <span className="text-[9px] font-mono px-1 rounded bg-emerald-100 text-emerald-800 font-bold">RAG</span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-zinc-500 capitalize">{char.role}</span>
                   </div>
                 </div>
@@ -573,10 +585,11 @@ export function ZenComicReader({
                       e.stopPropagation();
                       handleOpenDossier(char);
                     }}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 cursor-pointer"
-                    title="Open full character dossier studio"
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-2xs flex items-center gap-1 cursor-pointer"
+                    title="Open Visual Character Generator & Model Sheet Studio"
                   >
-                    Dossier
+                    <Palette className="w-3 h-3" />
+                    <span>Visuals</span>
                   </button>
                   <button
                     type="button"
@@ -822,20 +835,37 @@ export function ZenComicReader({
 
               <div className="flex items-center gap-1.5 flex-wrap">
                 {world.characters.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => handleInsertBeat(`@${c.name}`)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
-                      readerTheme === 'cinema' && activeTab === 'comic'
-                        ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-white/10'
-                        : 'bg-white hover:bg-zinc-50 text-zinc-800 border-black/10'
-                    }`}
-                    title={`Click to insert @${c.name} into prompt`}
-                  >
-                    <span>{c.avatarEmoji}</span>
-                    <span className="font-bold">@{c.name}</span>
-                  </button>
+                  <div key={c.id} className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => handleInsertBeat(`@${c.name}`)}
+                      className={`px-2.5 py-1 rounded-l-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
+                        readerTheme === 'cinema' && activeTab === 'comic'
+                          ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-white/10'
+                          : 'bg-white hover:bg-zinc-50 text-zinc-800 border-black/10'
+                      }`}
+                      title={`Click to insert @${c.name} into prompt`}
+                    >
+                      {c.portraitRefUrl || c.imageUrl ? (
+                        <img src={c.portraitRefUrl || c.imageUrl} alt={c.name} className="w-3.5 h-3.5 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <span>{c.avatarEmoji}</span>
+                      )}
+                      <span className="font-bold">@{c.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDossier(c)}
+                      className={`px-1.5 py-1 rounded-r-xl text-xs font-semibold border border-l-0 transition-all cursor-pointer ${
+                        readerTheme === 'cinema' && activeTab === 'comic'
+                          ? 'bg-zinc-900 hover:bg-zinc-800 text-purple-400 border-white/10'
+                          : 'bg-white hover:bg-purple-50 text-purple-600 border-black/10'
+                      }`}
+                      title={`Open Visual Character Generator & RAG Studio for @${c.name}`}
+                    >
+                      <Palette className="w-3 h-3" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

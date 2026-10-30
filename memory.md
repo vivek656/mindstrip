@@ -467,3 +467,27 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - On mobile/tablet screens (`< lg`), desktop right panel collapses gracefully.
     - Added compact mobile bottom dock and upgraded mobile drawer with tabbed navigation (`World Bible & Ep` vs `Co-Director Deck`).
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.1s across all 12 routes.
+
+- Visual Character Image Generator Studio & Multi-Angle RAG Pipeline (2026-10-30):
+  - Solved user problem: Character Dossier previously functioned primarily as a text metadata form with no prominent artwork preview on load, and no way to individually generate, preview, and lock individual character body angles (Face, Legs/Full-Body, Back Turnaround, Action Pose, Master Model Sheet) for the downstream character RAG pipeline.
+  - Upgraded `ComicCharacter` schema in `src/types/comic.ts`:
+    - Added dedicated angle reference fields: `portraitRefUrl`, `fullBodyRefUrl`, `backViewRefUrl`, `actionPoseRefUrl`, `modelSheetRefUrl`.
+  - Upgraded Character Visual Studio in `src/components/CharacterDossierModal.tsx`:
+    - **Hero Visual Stage**: Large visual preview canvas always visible front-and-center with zoom inspector, active canonical RAG badges, and re-draw controls.
+    - If no image is generated yet, displays an unmissable blueprint banner with prominent action buttons: `✨ Generate Face / Portrait Concept Artwork Now` and `⚡ Generate All 5 Angles at Once`.
+    - **Interactive 5-Angle Selector & Lineup Cards**:
+      - 👤 `Face / Portrait` (1:1 aspect ratio - facial structure, eye color, hair detail)
+      - 🧍 `Full-Body & Legs` (3:4 aspect ratio - full height silhouette, boots, pants, posture)
+      - 🔄 `Back Turnaround` (3:4 aspect ratio - rear coat silhouette, cape, hair from behind)
+      - ⚔️ `Action Stance` (3:4 aspect ratio - combat posture with signature accessories)
+      - 📋 `Model Sheet` (16:9 aspect ratio - multi-angle turnaround reference)
+      - Each card features its live thumbnail preview, aspect ratio tag, `[ Generate ]` button, and `[ Lock for RAG ]` pipeline checkbox.
+    - **1-Click Batch Generator (`handleGenerateAllAngles`)**: Sequentially synthesizes all 5 views with real-time progress steps (`Drawing Full-Body Concept (2/5)...`).
+    - **Multi-Angle Pipeline Status Bar**: Visual indicators for `Face ✓`, `Full-Body / Legs ✓`, `Back ✓`, and `Master Sheet ✓`.
+    - **Instant Auto-Save**: Both single-angle generation and batch generation call `onSaveCharacter` immediately upon completion, guaranteeing that generated art is permanently saved to MongoDB/localStorage even if the modal is closed.
+  - Multi-Angle RAG Pipeline Upgrades:
+    - `src/lib/agents/canon-rag.ts`: Indexes all 5 dedicated reference angles into episodic semantic memory citations (`relevanceScore: 0.95 - 0.99`).
+    - `src/lib/agents/art-director.ts`: Injects face/eyes anchors, legs/costume anchors, rear turnaround anchors, and action stance anchors directly into image prompts.
+  - Reader & Cast List Integration:
+    - In `src/components/ZenComicReader.tsx`: Character cards in the left sidebar and right Studio Deck feature direct `📸 Visuals` / `🎨` studio buttons with live visual avatar previews.
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.06s across all 12 routes.

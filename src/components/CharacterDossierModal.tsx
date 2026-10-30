@@ -71,46 +71,46 @@ const TRAIT_SUGGESTIONS = [
 ];
 
 export const VIEW_TYPE_OPTIONS: {
-  id: 'model_sheet' | 'portrait' | 'full_body' | 'back_view' | 'action_pose';
+  id: 'portrait' | 'full_body' | 'back_view' | 'action_pose' | 'model_sheet';
   label: string;
   icon: string;
   desc: string;
   aspect: string;
 }[] = [
   {
-    id: 'model_sheet',
-    label: 'Model Sheet',
-    icon: '📋',
-    desc: 'Multi-angle lineup (Front, 3/4 & side profile turnaround)',
-    aspect: '16:9',
-  },
-  {
     id: 'portrait',
     label: 'Face / Portrait',
     icon: '👤',
-    desc: 'Close-up bust: facial features, eye color, expression & hair',
+    desc: 'Close-up bust: facial features, eyes & expression',
     aspect: '1:1',
   },
   {
     id: 'full_body',
-    label: 'Full-Body Concept',
+    label: 'Full-Body & Legs',
     icon: '🧍',
-    desc: 'Head-to-toe standing: torso, legs, boots & outfit silhouette',
+    desc: 'Head-to-toe: torso, legs, boots & outfit silhouette',
     aspect: '3:4',
   },
   {
     id: 'back_view',
     label: 'Back Turnaround',
     icon: '🔄',
-    desc: 'Turnaround rear: silhouette from behind, back of hair & coat',
+    desc: 'Rear turnaround: coat, hair & silhouette from behind',
     aspect: '3:4',
   },
   {
     id: 'action_pose',
     label: 'Action Stance',
     icon: '⚔️',
-    desc: 'Dynamic heroic combat posture with signature gear/weapon',
+    desc: 'Dynamic heroic combat posture with signature gear',
     aspect: '3:4',
+  },
+  {
+    id: 'model_sheet',
+    label: 'Model Sheet',
+    icon: '📋',
+    desc: 'Multi-angle turnaround lineup (Front, 3/4 & side profile)',
+    aspect: '16:9',
   },
 ];
 
@@ -177,12 +177,19 @@ export function CharacterDossierModal({
   const [referenceImages, setReferenceImages] = useState<CharacterReferenceImage[]>(
     character?.referenceImages || []
   );
+  const [portraitRefUrl, setPortraitRefUrl] = useState<string>(character?.portraitRefUrl || '');
+  const [fullBodyRefUrl, setFullBodyRefUrl] = useState<string>(character?.fullBodyRefUrl || '');
+  const [backViewRefUrl, setBackViewRefUrl] = useState<string>(character?.backViewRefUrl || '');
+  const [actionPoseRefUrl, setActionPoseRefUrl] = useState<string>(character?.actionPoseRefUrl || '');
+
   const [selectedViewType, setSelectedViewType] = useState<
     'model_sheet' | 'portrait' | 'full_body' | 'back_view' | 'action_pose'
-  >('model_sheet');
+  >('portrait');
   const [customViewPrompt, setCustomViewPrompt] = useState('');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatingViewType, setGeneratingViewType] = useState<string | null>(null);
+  const [isBatchGenerating, setIsBatchGenerating] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; label: string } | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
   const [manualUrlInput, setManualUrlInput] = useState('');
@@ -214,6 +221,10 @@ export function CharacterDossierModal({
 
       const initialUrl = character.imageUrl || character.characterSheetUrl || '';
       setLockedImageUrl(initialUrl);
+      setPortraitRefUrl(character.portraitRefUrl || '');
+      setFullBodyRefUrl(character.fullBodyRefUrl || '');
+      setBackViewRefUrl(character.backViewRefUrl || '');
+      setActionPoseRefUrl(character.actionPoseRefUrl || '');
 
       if (character.referenceImages && character.referenceImages.length > 0) {
         setReferenceImages(character.referenceImages);
@@ -254,6 +265,10 @@ export function CharacterDossierModal({
       setGear('');
       setRelationships([]);
       setLockedImageUrl('');
+      setPortraitRefUrl('');
+      setFullBodyRefUrl('');
+      setBackViewRefUrl('');
+      setActionPoseRefUrl('');
       setReferenceImages([]);
       setCustomViewPrompt('');
       setGenerationError(null);
@@ -453,14 +468,62 @@ export function CharacterDossierModal({
         imageUrl: data.imageUrl,
         prompt: data.prompt || `${name} (${viewType})`,
         createdAt: new Date().toISOString(),
-        isLockedCanon: !lockedImageUrl, // auto-lock first generated if none locked
+        isLockedCanon: true,
       };
 
-      setReferenceImages((prev) => [newRef, ...prev]);
+      const updatedRefList = [newRef, ...referenceImages.filter((r) => r.viewType !== viewType)];
+      setReferenceImages(updatedRefList);
 
-      if (!lockedImageUrl) {
-        setLockedImageUrl(data.imageUrl);
-      }
+      let newPortrait = portraitRefUrl;
+      let newFullBody = fullBodyRefUrl;
+      let newBack = backViewRefUrl;
+      let newAction = actionPoseRefUrl;
+      let newMaster = lockedImageUrl;
+
+      if (viewType === 'portrait') newPortrait = data.imageUrl;
+      if (viewType === 'full_body') newFullBody = data.imageUrl;
+      if (viewType === 'back_view') newBack = data.imageUrl;
+      if (viewType === 'action_pose') newAction = data.imageUrl;
+      if (viewType === 'model_sheet' || !newMaster) newMaster = data.imageUrl;
+
+      setPortraitRefUrl(newPortrait);
+      setFullBodyRefUrl(newFullBody);
+      setBackViewRefUrl(newBack);
+      setActionPoseRefUrl(newAction);
+      setLockedImageUrl(newMaster);
+
+      // Instant auto-save to world database & RAG pipeline
+      const updatedChar: ComicCharacter = {
+        id: character?.id || `char-${Date.now()}`,
+        name: name.trim(),
+        role: role as any,
+        gender: gender as any,
+        appearance: appearance.trim(),
+        personality: personality.trim(),
+        catchphrase: catchphrase.trim() || undefined,
+        avatarEmoji: avatarEmoji || '⚡',
+        traits,
+        wardrobe: wardrobe.trim() || undefined,
+        iconicItem: iconicItem.trim() || undefined,
+        backstory: backstory.trim() || undefined,
+        motivation: motivation.trim() || undefined,
+        flaws: flaws.trim() || undefined,
+        secret: secret.trim() || undefined,
+        abilities: abilities.trim() || undefined,
+        gear: gear.trim() || undefined,
+        voiceTone: voiceTone.trim() || undefined,
+        relationships,
+        description: backstory.trim() || `${role} in ${world.title}`,
+        imageUrl: newMaster,
+        characterSheetUrl: newMaster,
+        referenceImages: updatedRefList,
+        portraitRefUrl: newPortrait,
+        fullBodyRefUrl: newFullBody,
+        backViewRefUrl: newBack,
+        actionPoseRefUrl: newAction,
+        modelSheetRefUrl: newMaster,
+      };
+      onSaveCharacter(updatedChar);
     } catch (err: any) {
       console.error('Character concept art generation error:', err);
       setGenerationError(err.message || 'Failed to generate character concept art');
@@ -468,6 +531,182 @@ export function CharacterDossierModal({
       setIsGeneratingImage(false);
       setGeneratingViewType(null);
     }
+  };
+
+  const handleToggleAngleLock = (
+    viewType: 'model_sheet' | 'portrait' | 'full_body' | 'back_view' | 'action_pose',
+    imgUrl: string
+  ) => {
+    let newPortrait = portraitRefUrl;
+    let newFullBody = fullBodyRefUrl;
+    let newBack = backViewRefUrl;
+    let newAction = actionPoseRefUrl;
+    let newMaster = lockedImageUrl;
+
+    if (viewType === 'portrait') newPortrait = newPortrait === imgUrl ? '' : imgUrl;
+    if (viewType === 'full_body') newFullBody = newFullBody === imgUrl ? '' : imgUrl;
+    if (viewType === 'back_view') newBack = newBack === imgUrl ? '' : imgUrl;
+    if (viewType === 'action_pose') newAction = newAction === imgUrl ? '' : imgUrl;
+    if (viewType === 'model_sheet') newMaster = newMaster === imgUrl ? '' : imgUrl;
+
+    if (!newMaster) newMaster = newPortrait || newFullBody || newBack || newAction || imgUrl;
+
+    setPortraitRefUrl(newPortrait);
+    setFullBodyRefUrl(newFullBody);
+    setBackViewRefUrl(newBack);
+    setActionPoseRefUrl(newAction);
+    setLockedImageUrl(newMaster);
+
+    const updatedChar: ComicCharacter = {
+      id: character?.id || `char-${Date.now()}`,
+      name: name.trim(),
+      role: role as any,
+      gender: gender as any,
+      appearance: appearance.trim(),
+      personality: personality.trim(),
+      catchphrase: catchphrase.trim() || undefined,
+      avatarEmoji: avatarEmoji || '⚡',
+      traits,
+      wardrobe: wardrobe.trim() || undefined,
+      iconicItem: iconicItem.trim() || undefined,
+      backstory: backstory.trim() || undefined,
+      motivation: motivation.trim() || undefined,
+      flaws: flaws.trim() || undefined,
+      secret: secret.trim() || undefined,
+      abilities: abilities.trim() || undefined,
+      gear: gear.trim() || undefined,
+      voiceTone: voiceTone.trim() || undefined,
+      relationships,
+      description: backstory.trim() || `${role} in ${world.title}`,
+      imageUrl: newMaster,
+      characterSheetUrl: newMaster,
+      referenceImages,
+      portraitRefUrl: newPortrait,
+      fullBodyRefUrl: newFullBody,
+      backViewRefUrl: newBack,
+      actionPoseRefUrl: newAction,
+      modelSheetRefUrl: newMaster,
+    };
+    onSaveCharacter(updatedChar);
+  };
+
+  const handleGenerateAllAngles = async () => {
+    if (!name.trim()) {
+      alert('Please enter a character name before generating concept art.');
+      return;
+    }
+    setIsBatchGenerating(true);
+    setGenerationError(null);
+
+    const views: { id: 'portrait' | 'full_body' | 'back_view' | 'action_pose' | 'model_sheet'; label: string }[] = [
+      { id: 'portrait', label: 'Face / Portrait' },
+      { id: 'full_body', label: 'Full-Body & Legs' },
+      { id: 'back_view', label: 'Back Turnaround' },
+      { id: 'action_pose', label: 'Action Stance' },
+      { id: 'model_sheet', label: 'Master Model Sheet' },
+    ];
+
+    let currentImages = [...referenceImages];
+    let newPortrait = portraitRefUrl;
+    let newFullBody = fullBodyRefUrl;
+    let newBack = backViewRefUrl;
+    let newAction = actionPoseRefUrl;
+    let newMaster = lockedImageUrl;
+
+    for (let i = 0; i < views.length; i++) {
+      const v = views[i];
+      setBatchProgress({ current: i + 1, total: views.length, label: v.label });
+      setGeneratingViewType(v.id);
+
+      try {
+        const res = await fetch('/api/generate-character-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            characterName: name.trim(),
+            role,
+            gender,
+            appearance,
+            wardrobe,
+            iconicItem,
+            viewType: v.id,
+            customPrompt: customViewPrompt.trim() || undefined,
+            artStyle: world.artStyle || 'webcomic',
+            apiKey: apiConfig?.apiKey,
+            baseUrl: apiConfig?.baseUrl,
+            provider: apiConfig?.provider,
+            imageModel: world.imageModel || (apiConfig?.provider === 'fireworks' ? 'flux-1-schnell' : 'muse-image-1.0'),
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.imageUrl) {
+            const newRef: CharacterReferenceImage = {
+              id: `ref-${Date.now()}-${v.id}`,
+              viewType: v.id,
+              label: v.label,
+              imageUrl: data.imageUrl,
+              prompt: data.prompt || `${name} (${v.id})`,
+              createdAt: new Date().toISOString(),
+              isLockedCanon: true,
+            };
+
+            currentImages = [newRef, ...currentImages.filter((r) => r.viewType !== v.id)];
+            if (v.id === 'portrait') newPortrait = data.imageUrl;
+            if (v.id === 'full_body') newFullBody = data.imageUrl;
+            if (v.id === 'back_view') newBack = data.imageUrl;
+            if (v.id === 'action_pose') newAction = data.imageUrl;
+            if (v.id === 'model_sheet' || !newMaster) newMaster = data.imageUrl;
+
+            setReferenceImages(currentImages);
+            setPortraitRefUrl(newPortrait);
+            setFullBodyRefUrl(newFullBody);
+            setBackViewRefUrl(newBack);
+            setActionPoseRefUrl(newAction);
+            setLockedImageUrl(newMaster);
+          }
+        }
+      } catch (e) {
+        console.warn(`Batch angle generation error (${v.label}):`, e);
+      }
+    }
+
+    setIsBatchGenerating(false);
+    setGeneratingViewType(null);
+    setBatchProgress(null);
+
+    const updatedChar: ComicCharacter = {
+      id: character?.id || `char-${Date.now()}`,
+      name: name.trim(),
+      role: role as any,
+      gender: gender as any,
+      appearance: appearance.trim(),
+      personality: personality.trim(),
+      catchphrase: catchphrase.trim() || undefined,
+      avatarEmoji: avatarEmoji || '⚡',
+      traits,
+      wardrobe: wardrobe.trim() || undefined,
+      iconicItem: iconicItem.trim() || undefined,
+      backstory: backstory.trim() || undefined,
+      motivation: motivation.trim() || undefined,
+      flaws: flaws.trim() || undefined,
+      secret: secret.trim() || undefined,
+      abilities: abilities.trim() || undefined,
+      gear: gear.trim() || undefined,
+      voiceTone: voiceTone.trim() || undefined,
+      relationships,
+      description: backstory.trim() || `${role} in ${world.title}`,
+      imageUrl: newMaster,
+      characterSheetUrl: newMaster,
+      referenceImages: currentImages,
+      portraitRefUrl: newPortrait,
+      fullBodyRefUrl: newFullBody,
+      backViewRefUrl: newBack,
+      actionPoseRefUrl: newAction,
+      modelSheetRefUrl: newMaster,
+    };
+    onSaveCharacter(updatedChar);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -497,10 +736,12 @@ export function CharacterDossierModal({
       relationships,
       imageUrl: lockedImageUrl || undefined,
       characterSheetUrl: lockedImageUrl || undefined,
-      referenceImages: referenceImages.map((ref) => ({
-        ...ref,
-        isLockedCanon: ref.imageUrl === lockedImageUrl,
-      })),
+      referenceImages,
+      portraitRefUrl: portraitRefUrl || undefined,
+      fullBodyRefUrl: fullBodyRefUrl || undefined,
+      backViewRefUrl: backViewRefUrl || undefined,
+      actionPoseRefUrl: actionPoseRefUrl || undefined,
+      modelSheetRefUrl: lockedImageUrl || undefined,
     };
 
     onSaveCharacter(updatedChar);
@@ -730,7 +971,7 @@ export function CharacterDossierModal({
           {[
             {
               id: 'visuals',
-              label: `🎨 Visuals & Model Sheet (${referenceImages.length})`,
+              label: `🎨 Character Image Studio & RAG (${referenceImages.length})`,
               icon: Palette,
             },
             { id: 'lore', label: '🧠 Psychology & Lore', icon: Brain },
@@ -770,324 +1011,372 @@ export function CharacterDossierModal({
               {/* =========================================================================
                   AI CHARACTER VISUAL RAG & MODEL SHEET STUDIO
               ========================================================================= */}
-              <div className="bg-gradient-to-br from-indigo-950 via-zinc-900 to-black text-white p-5 rounded-3xl border border-indigo-500/30 shadow-xl space-y-5">
-                {/* Studio Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-xl shadow-inner shrink-0">
-                      📸
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-sm text-white">Character Visual RAG & Model Sheet Studio</h3>
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-                          Visual Consistency Engine
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400">
-                        Generate individual views (Face, Full-Body, Back, Model Sheet) and lock canonical artwork for zero-drift pipeline consistency.
-                      </p>
-                    </div>
-                  </div>
+              {(() => {
+                const matchingRefForSelected = referenceImages.find((r) => r.viewType === selectedViewType);
+                const currentDisplayImage = matchingRefForSelected?.imageUrl || lockedImageUrl || referenceImages[0]?.imageUrl;
+                const currentDisplayOpt = VIEW_TYPE_OPTIONS.find((v) => v.id === selectedViewType) || VIEW_TYPE_OPTIONS[0];
+                const isCurrentCanon = Boolean(
+                  (selectedViewType === 'portrait' && portraitRefUrl === currentDisplayImage) ||
+                  (selectedViewType === 'full_body' && fullBodyRefUrl === currentDisplayImage) ||
+                  (selectedViewType === 'back_view' && backViewRefUrl === currentDisplayImage) ||
+                  (selectedViewType === 'action_pose' && actionPoseRefUrl === currentDisplayImage) ||
+                  (selectedViewType === 'model_sheet' && (lockedImageUrl === currentDisplayImage || character?.modelSheetRefUrl === currentDisplayImage)) ||
+                  (lockedImageUrl === currentDisplayImage)
+                );
 
-                  {/* Status Pill */}
-                  {lockedImageUrl ? (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 self-start sm:self-auto shrink-0 shadow-xs">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>Canonical Reference Locked</span>
-                    </div>
-                  ) : (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 self-start sm:self-auto shrink-0">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>No Reference Locked Yet</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Active Canonical Reference Showcase (If Locked) */}
-                {lockedImageUrl && (
-                  <div className="bg-black/50 border border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-                    <div className="relative group rounded-xl overflow-hidden border border-white/15 shadow-lg bg-zinc-950 shrink-0 w-32 h-32 flex items-center justify-center">
-                      <img
-                        src={lockedImageUrl}
-                        alt={`Canonical model sheet for ${name}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => setPreviewImageModal(lockedImageUrl)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPreviewImageModal(lockedImageUrl)}
-                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
-                        title="Inspect full resolution"
-                      >
-                        <Maximize2 className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    <div className="flex-1 space-y-2 text-center sm:text-left">
-                      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-emerald-600 text-white flex items-center gap-1">
-                          <Lock className="w-3 h-3" />
-                          ACTIVE CANONICAL SHEET
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-mono">
-                          Character Visual RAG Active
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed">
-                        Every episode featuring <strong className="text-white">@{name || 'this character'}</strong> will condition on this exact visual reference, preserving facial bone structure, wardrobe, and silhouette.
-                      </p>
-                      <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewImageModal(lockedImageUrl)}
-                          className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Inspect Full-Res</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setLockedImageUrl('')}
-                          className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Unlock className="w-3.5 h-3.5" />
-                          <span>Unlock Canon</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* View Selection Buttons */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
-                      <span>1. Select Reference Angle / View Type:</span>
-                    </label>
-                    <span className="text-[10px] text-indigo-400">
-                      Click view to generate individual angle
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    {VIEW_TYPE_OPTIONS.map((opt) => {
-                      const isSelected = selectedViewType === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setSelectedViewType(opt.id)}
-                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                            isSelected
-                              ? 'bg-indigo-600/30 border-indigo-400 text-white shadow-sm ring-1 ring-indigo-400'
-                              : 'bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:border-white/20'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full mb-1">
-                            <span className="text-lg">{opt.icon}</span>
-                            <span className="text-[9px] font-mono text-zinc-400 uppercase">{opt.aspect}</span>
+                return (
+                  <div className="bg-gradient-to-br from-indigo-950 via-zinc-900 to-black text-white p-5 sm:p-6 rounded-3xl border-2 border-indigo-500/40 shadow-2xl space-y-6">
+                    {/* Studio Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-2xl shadow-inner shrink-0">
+                          📸
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-black text-base text-white tracking-tight">Character Visual Generator & Multi-Angle Studio</h3>
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                              Zero-Drift Pipeline RAG
+                            </span>
                           </div>
-                          <div className="font-bold text-xs leading-snug">{opt.label}</div>
-                          <div className="text-[10px] text-zinc-400 line-clamp-2 mt-1 leading-tight">{opt.desc}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Optional Custom View Directive Prompt */}
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase">
-                        Optional Prompt Refinements:
-                      </label>
-                      <span className="text-[10px] text-zinc-500">
-                        Auto-augmented with Appearance + Wardrobe
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={customViewPrompt}
-                      onChange={(e) => setCustomViewPrompt(e.target.value)}
-                      placeholder="e.g. Amber glowing eyes, intense focused gaze, high-collared trench coat..."
-                      className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-indigo-400"
-                    />
-                  </div>
-
-                  {/* Error Notification */}
-                  {generationError && (
-                    <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-xs text-red-300 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                        <span>{generationError}</span>
+                          <p className="text-xs text-zinc-300 mt-0.5">
+                            Generate individual reference angles (Face, Legs/Full-Body, Back, Action, Model Sheet) to anchor @{name || 'this character'} across all comic episodes.
+                          </p>
+                        </div>
                       </div>
+
+                      {/* Batch Generator CTA */}
                       <button
                         type="button"
-                        onClick={() => setGenerationError(null)}
-                        className="text-red-400 hover:text-white text-xs underline cursor-pointer"
+                        onClick={handleGenerateAllAngles}
+                        disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 shrink-0 self-start sm:self-auto"
+                        title="Generate all 5 reference views (Face, Full-Body, Back, Action, Model Sheet) in one click"
                       >
-                        Dismiss
+                        <Sparkles className={`w-3.5 h-3.5 ${isBatchGenerating ? 'animate-spin' : ''}`} />
+                        <span>{isBatchGenerating ? (batchProgress ? `Drawing ${batchProgress.label} (${batchProgress.current}/${batchProgress.total})...` : 'Generating Pack...') : '⚡ Generate All 5 Angles at Once'}</span>
                       </button>
                     </div>
-                  )}
 
-                  {/* Generation Actions Strip */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Instant Preview Engine (Hosted permanently on Vercel Blob CDN)</span>
-                    </div>
+                    {/* =========================================================================
+                        HERO PREVIEW CANVAS STAGE (ALWAYS PROMINENT!)
+                    ========================================================================= */}
+                    {currentDisplayImage ? (
+                      <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-500/50 bg-black shadow-2xl flex flex-col items-center justify-center min-h-[360px] max-h-[460px] group">
+                        <img
+                          src={currentDisplayImage}
+                          alt={`Reference art for ${name}`}
+                          className="max-h-[440px] w-auto object-contain mx-auto transition-transform duration-300"
+                        />
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowUrlInput(!showUrlInput)}
-                        className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-300 transition-colors cursor-pointer"
-                      >
-                        {showUrlInput ? 'Hide URL Input' : 'Paste Direct URL...'}
-                      </button>
+                        {/* Floating Header Badges on Image */}
+                        <div className="absolute top-3 left-3 flex items-center gap-2">
+                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-black/80 backdrop-blur-md text-white border border-white/20 uppercase shadow-md flex items-center gap-1.5">
+                            <span>{currentDisplayOpt?.icon || '📸'}</span>
+                            <span>{currentDisplayOpt?.label || selectedViewType}</span>
+                          </span>
+                          {isCurrentCanon && (
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white flex items-center gap-1 shadow-md">
+                              <Lock className="w-3 h-3" />
+                              <span>ACTIVE CANONICAL RAG</span>
+                            </span>
+                          )}
+                        </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateCharacterArt(selectedViewType)}
-                        disabled={!name.trim() || isGeneratingImage}
-                        className="px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40"
-                      >
-                        <Sparkles className={`w-4 h-4 ${isGeneratingImage ? 'animate-spin' : ''}`} />
-                        <span>
-                          {isGeneratingImage
-                            ? `Generating ${selectedViewType.replace('_', ' ')}...`
-                            : `✨ Generate ${VIEW_TYPE_OPTIONS.find((v) => v.id === selectedViewType)?.label || 'View'}`}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
+                        {/* Floating Action Toolbar on Image */}
+                        <div className="absolute bottom-3 inset-x-3 flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/15">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewImageModal(currentDisplayImage)}
+                              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5" />
+                              <span>Inspect Full-Res</span>
+                            </button>
+                            
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAngleLock(selectedViewType, currentDisplayImage)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                                isCurrentCanon
+                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                  : 'bg-white/10 hover:bg-emerald-600 text-white'
+                              }`}
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>{isCurrentCanon ? 'Locked for RAG' : 'Lock as Canon Reference'}</span>
+                            </button>
+                          </div>
 
-                  {/* Direct Image URL input */}
-                  {showUrlInput && (
-                    <div className="p-3 bg-black/50 border border-white/10 rounded-xl flex items-center gap-2 animate-in fade-in duration-150">
-                      <input
-                        type="text"
-                        value={manualUrlInput}
-                        onChange={(e) => setManualUrlInput(e.target.value)}
-                        placeholder="https://... (direct image URL to character artwork)"
-                        className="flex-1 px-3 py-1.5 bg-black/60 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-indigo-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddManualImage}
-                        disabled={!manualUrlInput.trim()}
-                        className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-40 cursor-pointer"
-                      >
-                        Add to Gallery
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Concept Gallery & Angle Lineup */}
-                <div className="space-y-3 pt-3 border-t border-white/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-indigo-400" />
-                      <h4 className="font-bold text-xs text-white">
-                        Concept Gallery & Multi-Angle Lineup ({referenceImages.length})
-                      </h4>
-                    </div>
-                    <span className="text-[10px] text-zinc-400">
-                      Click 'Lock Canon' on any view to set as active pipeline reference
-                    </span>
-                  </div>
-
-                  {referenceImages.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-zinc-500 bg-white/5 rounded-2xl border border-dashed border-white/10">
-                      No character reference angles generated yet. Click "Generate Artwork" above to create face, full-body, back, or model sheet views!
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {referenceImages.map((ref) => {
-                        const isCanon = lockedImageUrl === ref.imageUrl;
-                        return (
-                          <div
-                            key={ref.id}
-                            className={`group relative rounded-2xl overflow-hidden border transition-all flex flex-col justify-between bg-zinc-950 ${
-                              isCanon
-                                ? 'border-emerald-500 ring-2 ring-emerald-500/50 shadow-md'
-                                : 'border-white/10 hover:border-white/30'
-                            }`}
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateCharacterArt(selectedViewType)}
+                            disabled={isGeneratingImage || isBatchGenerating}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
                           >
-                            {/* Image Preview */}
-                            <div className="relative aspect-square w-full overflow-hidden bg-black flex items-center justify-center">
-                              <img
-                                src={ref.imageUrl}
-                                alt={ref.label || ref.viewType}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
+                            <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingImage ? 'animate-spin' : ''}`} />
+                            <span>{isGeneratingImage ? 'Re-drawing...' : 'Re-draw this View'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Blank Concept Studio Canvas with Big Generator CTA */
+                      <div className="relative rounded-2xl border-2 border-dashed border-indigo-400/40 bg-gradient-to-b from-indigo-950/40 to-black p-8 sm:p-12 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 rounded-3xl bg-indigo-600/20 border border-indigo-400/40 flex items-center justify-center text-3xl shadow-lg animate-pulse">
+                          🎨
+                        </div>
+                        <div className="max-w-md space-y-1">
+                          <h4 className="font-bold text-base sm:text-lg text-white">
+                            Visual Concept Canvas Ready for @{name || 'Character'}
+                          </h4>
+                          <p className="text-xs text-zinc-400 leading-relaxed">
+                            No reference images generated yet. Click below to synthesize authentic concept artwork. You can generate individual angles (Face, Full-Body, Back) or the complete 5-angle model pack!
+                          </p>
+                        </div>
 
-                              {/* View Type Badge */}
-                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-black/75 backdrop-blur-xs text-white uppercase border border-white/10">
-                                {ref.viewType?.replace('_', ' ') || 'view'}
+                        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateCharacterArt(selectedViewType)}
+                            disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
+                            className="px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xl flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+                          >
+                            <Sparkles className={`w-4 h-4 text-amber-300 ${isGeneratingImage ? 'animate-spin' : ''}`} />
+                            <span>
+                              {isGeneratingImage
+                                ? `Drawing ${selectedViewType.replace('_', ' ')}...`
+                                : `✨ Generate ${VIEW_TYPE_OPTIONS.find((v) => v.id === selectedViewType)?.label || 'Character Artwork'}`}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleGenerateAllAngles}
+                            disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
+                            className="px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-400/40 shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            <span>⚡ Generate All 5 Angles at Once</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* =========================================================================
+                        2. MULTI-ANGLE CARDS SELECTOR (FACE, FULL-BODY / LEGS, BACK, ACTION, MODEL SHEET)
+                    ========================================================================= */}
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                          <span>Multi-Angle Reference Lineup & Pipeline RAG Selectors:</span>
+                        </label>
+                        <span className="text-[10px] text-indigo-400 font-mono">
+                          Click any view to preview on canvas or generate
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                        {VIEW_TYPE_OPTIONS.map((opt) => {
+                          const matchingRef = referenceImages.find((r) => r.viewType === opt.id);
+                          const isSelected = selectedViewType === opt.id;
+                          const isLockedAngle = (
+                            (opt.id === 'portrait' && portraitRefUrl === matchingRef?.imageUrl) ||
+                            (opt.id === 'full_body' && fullBodyRefUrl === matchingRef?.imageUrl) ||
+                            (opt.id === 'back_view' && backViewRefUrl === matchingRef?.imageUrl) ||
+                            (opt.id === 'action_pose' && actionPoseRefUrl === matchingRef?.imageUrl) ||
+                            (opt.id === 'model_sheet' && (lockedImageUrl === matchingRef?.imageUrl || character?.modelSheetRefUrl === matchingRef?.imageUrl))
+                          );
+
+                          return (
+                            <div
+                              key={opt.id}
+                              onClick={() => setSelectedViewType(opt.id)}
+                              className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-indigo-600/25 border-indigo-400 shadow-md ring-1 ring-indigo-400'
+                                  : 'bg-zinc-900/60 border-white/10 hover:bg-zinc-800 hover:border-white/20'
+                              }`}
+                            >
+                              {/* Thumbnail Preview if exists */}
+                              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-black/60 mb-2 border border-white/10 flex items-center justify-center">
+                                {matchingRef ? (
+                                  <>
+                                    <img
+                                      src={matchingRef.imageUrl}
+                                      alt={opt.label}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {isLockedAngle && (
+                                      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500 text-white flex items-center gap-0.5 shadow-sm">
+                                        <Lock className="w-2.5 h-2.5" />
+                                        <span>RAG</span>
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center text-zinc-500 space-y-1">
+                                    <span className="text-2xl opacity-60">{opt.icon}</span>
+                                    <span className="text-[9px] font-mono uppercase text-zinc-500">Not drawn</span>
+                                  </div>
+                                )}
                               </div>
 
-                              {/* Canon Badge */}
-                              {isCanon && (
-                                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500 text-white flex items-center gap-1 shadow-xs">
-                                  <Check className="w-3 h-3" />
-                                  CANON
+                              {/* Label & Details */}
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-xs text-white truncate">{opt.label}</span>
+                                  <span className="text-[9px] font-mono text-zinc-400 uppercase">{opt.aspect}</span>
                                 </div>
-                              )}
+                                <p className="text-[10px] text-zinc-400 line-clamp-1 leading-tight">{opt.desc}</p>
+                              </div>
 
-                              {/* Hover overlay actions */}
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewImageModal(ref.imageUrl)}
-                                  className="p-2 rounded-xl bg-white/20 hover:bg-white text-zinc-900 transition-colors cursor-pointer"
-                                  title="Zoom full image"
-                                >
-                                  <Maximize2 className="w-4 h-4 text-white hover:text-zinc-950" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteReference(ref.id)}
-                                  className="p-2 rounded-xl bg-red-600/30 hover:bg-red-600 text-white transition-colors cursor-pointer"
-                                  title="Remove from gallery"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                              {/* Action button inside card */}
+                              <div className="pt-2">
+                                {matchingRef ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleToggleAngleLock(opt.id, matchingRef.imageUrl);
+                                    }}
+                                    className={`w-full py-1 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                                      isLockedAngle
+                                        ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50'
+                                        : 'bg-white/10 text-zinc-300 hover:bg-white/20'
+                                    }`}
+                                  >
+                                    <Lock className="w-2.5 h-2.5" />
+                                    <span>{isLockedAngle ? 'RAG Active' : 'Lock for RAG'}</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedViewType(opt.id);
+                                      handleGenerateCharacterArt(opt.id);
+                                    }}
+                                    disabled={isGeneratingImage || isBatchGenerating}
+                                    className="w-full py-1 rounded-lg text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-40"
+                                  >
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    <span>Generate</span>
+                                  </button>
+                                )}
                               </div>
                             </div>
-
-                            {/* Card Footer: Lock as Canon Button */}
-                            <div className="p-2 bg-zinc-900/90 border-t border-white/10 flex items-center justify-between gap-1">
-                              <span className="text-[10px] text-zinc-400 truncate max-w-[90px]">
-                                {ref.label || ref.viewType}
-                              </span>
-
-                              {isCanon ? (
-                                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
-                                  <Lock className="w-3 h-3" />
-                                  Locked
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleLockAsCanon(ref.imageUrl)}
-                                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-white/10 hover:bg-emerald-600 hover:text-white text-zinc-300 transition-colors flex items-center gap-1 cursor-pointer"
-                                  title="Lock as canonical reference for Character Visual RAG"
-                                >
-                                  <Lock className="w-3 h-3" />
-                                  Lock Canon
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+
+                    {/* =========================================================================
+                        3. RAG PIPELINE STATUS BAR
+                    ========================================================================= */}
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] font-bold uppercase text-indigo-400">
+                          RAG Continuity Memory:
+                        </span>
+                        <span className="text-zinc-300">
+                          {referenceImages.length} views generated • {
+                            [portraitRefUrl, fullBodyRefUrl, backViewRefUrl, actionPoseRefUrl, lockedImageUrl].filter(Boolean).length
+                          } active pipeline anchors
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${portraitRefUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                          Face {portraitRefUrl ? '✓' : '—'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${fullBodyRefUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                          Full-Body / Legs {fullBodyRefUrl ? '✓' : '—'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${backViewRefUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                          Back {backViewRefUrl ? '✓' : '—'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${lockedImageUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 text-zinc-500'}`}>
+                          Master Sheet {lockedImageUrl ? '✓' : '—'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* =========================================================================
+                        4. PROMPT REFINEMENTS & DIRECT URL INPUT
+                    ========================================================================= */}
+                    <div className="pt-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-mono text-zinc-400 uppercase">
+                          Optional Prompt Refinements for View:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowUrlInput(!showUrlInput)}
+                          className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer"
+                        >
+                          {showUrlInput ? 'Hide Custom URL' : 'Or Paste Custom URL'}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={customViewPrompt}
+                          onChange={(e) => setCustomViewPrompt(e.target.value)}
+                          placeholder="e.g. Amber glowing eyes, intense focused gaze, high-collared trench coat..."
+                          className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 outline-none focus:border-indigo-400"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateCharacterArt(selectedViewType)}
+                          disabled={!name.trim() || isGeneratingImage || isBatchGenerating}
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Generate View</span>
+                        </button>
+                      </div>
+
+                      {showUrlInput && (
+                        <div className="p-3 bg-black/50 border border-white/10 rounded-xl flex items-center gap-2 animate-in fade-in duration-150">
+                          <input
+                            type="text"
+                            value={manualUrlInput}
+                            onChange={(e) => setManualUrlInput(e.target.value)}
+                            placeholder="https://... (direct image URL to character artwork)"
+                            className="flex-1 px-3 py-1.5 bg-black/60 border border-white/10 rounded-lg text-xs text-white outline-none focus:border-indigo-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddManualImage}
+                            disabled={!manualUrlInput.trim()}
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors disabled:opacity-40 cursor-pointer"
+                          >
+                            Add to Gallery
+                          </button>
+                        </div>
+                      )}
+
+                      {generationError && (
+                        <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-xs text-red-300 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                            <span>{generationError}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setGenerationError(null)}
+                            className="text-red-400 hover:text-white text-xs underline cursor-pointer"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Physical Appearance, Wardrobe & Iconic Item Details */}
               <div className="space-y-4 pt-2">
