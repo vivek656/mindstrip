@@ -1,5 +1,6 @@
 import { ComicStrip, ArtStyle, PerspectiveLens, ComicCharacter } from '@/types/comic';
 import { generateComicStripMock } from './comic-generator';
+import { runProductionRoom, buildComicStripFromProduction } from './agents/orchestrator';
 
 export type ExecutionMode = 'free' | 'meta';
 
@@ -104,39 +105,32 @@ export async function generateMindStrip(
   storyContext?: string,
   layoutPreference: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel' = 'auto'
 ): Promise<ComicStrip> {
-  // 1. FREE MODE: Instant local narrative synthesis & studio preview ($0.00)
+  // 1. FREE MODE: Local Autonomous Multi-Agent Production Room ($0.00)
   if (config.mode === 'free' || config.provider === 'simulation') {
-    // Natural subtle delay for realistic AI feel
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    const mock = generateComicStripMock(
+    // Natural subtle delay for realistic AI agent deliberation
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const prodResult = await runProductionRoom({
       rawDump,
       artStyle,
       lens,
-      'Free Mode (Open Inference • $0.00)',
       characters,
       worldTitle,
-      genre
-    );
-    // Intelligent auto layout resolution based on scene cues
-    let chosenLayout = layoutPreference;
-    if (chosenLayout === 'auto') {
-      const lower = rawDump.toLowerCase();
-      if (/splash|epic|reveal|poster|monumental|panoramic|climax/.test(lower)) {
-        chosenLayout = '1-panel';
-      } else if (/vs|versus|faceoff|duel|confrontation|debate|argument|dialogue/.test(lower)) {
-        chosenLayout = '2-panel';
-      } else if (/chase|escape|trio|journey|escalat/.test(lower)) {
-        chosenLayout = '3-panel';
-      } else {
-        chosenLayout = '4-panel';
-      }
-    }
-    const maxP = chosenLayout === '1-panel' ? 1 : chosenLayout === '2-panel' ? 2 : chosenLayout === '3-panel' ? 3 : 4;
-    return {
-      ...mock,
-      layoutStyle: chosenLayout,
-      panels: mock.panels.slice(0, maxP)
-    };
+      genre,
+      storyContext,
+      layoutPreference,
+      provider: 'simulation',
+      modelName: 'Meta Muse Spark (Autonomous Production Room)'
+    });
+
+    return buildComicStripFromProduction(prodResult, {
+      rawDump,
+      artStyle,
+      lens,
+      characters,
+      worldTitle,
+      genre,
+      modelName: 'Meta AI Production Room (Open Weights • $0.00)'
+    });
   }
 
   // 2. META AI MODE: Call Meta Model API / Hackathon Partner Endpoints

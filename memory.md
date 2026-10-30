@@ -208,6 +208,17 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - If `MONGODB_URI` is absent, the app operates seamlessly in local offline browser mode (`localStorage`) with zero crashes.
   - Updated [`.env.example`](.env.example) with instructions and connection string template for MongoDB Atlas M0 (512MB free forever).
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.2s.
+- Autonomous Multi-Agent Production Room & Canon RAG (2026-10-30):
+  - Architected multi-agent production pipeline with critique and self-correction loops in `src/lib/agents/`:
+    - `canon-rag.ts`: Episodic vector memory and token relevance engine querying accumulated episode recaps, unresolved hooks, universal laws, and character dossiers.
+    - `showrunner.ts`: Powered by Meta `muse-spark-1.3` / Llama 3.3 for dynamic episodic scripting, sound effects, dialogues, and 1-4 panel layout selection.
+    - `canon-auditor.ts`: Automated continuity & character integrity auditor enforcing strict Antagonist opposition (prevents friendly antagonist regression), universal laws compliance, and textless visual prompts. Calculates Canon Score (0-100).
+    - `art-director.ts`: Visual Art Director extracting character visual anchors (hair, wardrobe, iconic items) and enforcing strict textless negative prompts eliminating "Panel 1, 2, 3, 4" labels.
+    - `orchestrator.ts`: Multi-agent loop that executes Showrunner -> Canon Auditor -> (Auto-Correction Loop on failure) -> Art Director, stamping complete `agentTrace` into each episode.
+  - UI Experience:
+    - Added `AgentDirectorTraceModal.tsx` and interactive `[ ⚡ Production Room (Canon Score: 98%) ]` pill in `ZenComicReader.tsx`.
+    - Enhanced Tab 3 (`activeTab === 'agent'`) with multi-agent architecture cards and deliberation trace preview.
+  - Production build clean across all 11 routes (`npm run build` passed with 0 errors).
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -265,3 +276,14 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - If `MONGODB_URI` is absent, the app operates seamlessly in local offline browser mode (`localStorage`) with zero crashes.
   - Updated [`.env.example`](.env.example) with instructions and connection string template for MongoDB Atlas M0 (512MB free forever).
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.2s.
+- Autonomous Multi-Agent Production Room & Canon RAG (2026-10-30):
+  - Architected multi-agent production pipeline with critique and self-correction loops in `src/lib/agents/`:
+    - `canon-rag.ts`: Episodic vector memory and token relevance engine querying accumulated episode recaps, unresolved hooks, universal laws, and character dossiers.
+    - `showrunner.ts`: Powered by Meta `muse-spark-1.3` / Llama 3.3 for dynamic episodic scripting, sound effects, dialogues, and 1-4 panel layout selection.
+    - `canon-auditor.ts`: Automated continuity & character integrity auditor enforcing strict Antagonist opposition (prevents friendly antagonist regression), universal laws compliance, and textless visual prompts. Calculates Canon Score (0-100).
+    - `art-director.ts`: Visual Art Director extracting character visual anchors (hair, wardrobe, iconic items) and enforcing strict textless negative prompts eliminating "Panel 1, 2, 3, 4" labels.
+    - `orchestrator.ts`: Multi-agent loop that executes Showrunner -> Canon Auditor -> (Auto-Correction Loop on failure) -> Art Director, stamping complete `agentTrace` into each episode.
+  - UI Experience:
+    - Added `AgentDirectorTraceModal.tsx` and interactive `[ ⚡ Production Room (Canon Score: 98%) ]` pill in `ZenComicReader.tsx`.
+    - Enhanced Tab 3 (`activeTab === 'agent'`) with multi-agent architecture cards and deliberation trace preview.
+  - Production build clean across all 11 routes (`npm run build` passed with 0 errors).

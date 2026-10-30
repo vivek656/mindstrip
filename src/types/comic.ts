@@ -89,6 +89,27 @@ export interface CognitiveAnalysis {
   }[];
 }
 
+export interface AgentTraceStep {
+  id: string;
+  agent: 'showrunner' | 'auditor' | 'art_director' | 'rag';
+  agentName: string;
+  action: string;
+  status: 'passed' | 'warning' | 'critique' | 'revised' | 'approved';
+  timestamp: string;
+  score?: number;
+  summary: string;
+  thoughts?: string;
+  violations?: string[];
+  critique?: string;
+  diff?: {
+    field: string;
+    before: string;
+    after: string;
+    reason: string;
+  };
+  anchors?: string[];
+}
+
 export interface ComicStrip {
   id: string;
   episodeNumber?: number;
@@ -119,6 +140,9 @@ export interface ComicStrip {
       beat: string;
     }[];
   };
+  agentTrace?: AgentTraceStep[]; // Multi-Agent production deliberation log
+  canonScore?: number; // Quality/continuity score (0-100) from Canon Auditor Agent
+  correctionsCount?: number; // Number of self-corrections performed by agent loop
 }
 
 export interface CreatorProfile {

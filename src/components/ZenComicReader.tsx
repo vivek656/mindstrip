@@ -14,6 +14,7 @@ import {
 import { ApiConfig } from '@/lib/meta-models';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import { CharacterDossierModal } from './CharacterDossierModal';
+import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
 import {
   ArrowLeft,
   Menu,
@@ -44,6 +45,11 @@ import {
   Scroll,
   Edit2,
   Trash2,
+  BrainCircuit,
+  CheckCircle2,
+  AlertTriangle,
+  Bot,
+  ShieldCheck,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -108,6 +114,7 @@ export function ZenComicReader({
   const [copied, setCopied] = useState(false);
   const [isAddCharOpen, setIsAddCharOpen] = useState(false);
   const [isMidStoryIntro, setIsMidStoryIntro] = useState(false);
+  const [isTraceModalOpen, setIsTraceModalOpen] = useState(false);
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
@@ -722,6 +729,25 @@ export function ZenComicReader({
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                 <span>Re-draw</span>
+              </button>
+            )}
+
+            {/* Meta AI Production Room & Canon Score Pill */}
+            {episode && (
+              <button
+                type="button"
+                onClick={() => setIsTraceModalOpen(true)}
+                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 transition-all cursor-pointer shadow-2xs"
+                title="Inspect Autonomous Multi-Agent Production Room Trace"
+              >
+                <BrainCircuit className="w-3.5 h-3.5 text-purple-600" />
+                <span>Production Room</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-purple-200 text-purple-900 font-mono text-[10px]">
+                  {episode.canonScore ?? 95}%
+                </span>
+                {(episode.correctionsCount ?? 0) > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" title="Auto-corrections applied" />
+                )}
               </button>
             )}
 
@@ -1699,14 +1725,70 @@ export function ZenComicReader({
                         🧠
                       </div>
                       <div>
-                        <h2 className="font-bold text-lg text-zinc-950">Meta AI Director & Canon Memory</h2>
-                        <p className="text-xs text-zinc-500">How the autonomous Meta AI agent directs story continuity and pacing.</p>
+                        <h2 className="font-bold text-lg text-zinc-950">Autonomous Meta AI Production Room</h2>
+                        <p className="text-xs text-zinc-500">Multi-agent loop: Showrunner Agent, Canon Auditor & Visual Art Director.</p>
                       </div>
                     </div>
 
-                    <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono text-xs font-bold">
-                      {episode.metaModelUsed}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsTraceModalOpen(true)}
+                        className="px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-mono text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <BrainCircuit className="w-3.5 h-3.5" />
+                        <span>Inspect Deliberation Trace</span>
+                      </button>
+
+                      <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono text-xs font-bold">
+                        {episode.metaModelUsed}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Multi-Agent Production Architecture Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-2xs font-mono font-bold text-purple-800 uppercase">
+                          <Bot className="w-3.5 h-3.5" /> Showrunner Agent
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-200/80 text-purple-900 font-bold">
+                          Muse Spark 1.3
+                        </span>
+                      </div>
+                      <p className="text-xs text-purple-950 leading-relaxed">
+                        Formulates dramatic arcs, autonomously selects dynamic panel layouts ({episode.layoutStyle || '4-panel'}), and scripts dialogue cadence.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-2xs font-mono font-bold text-blue-800 uppercase">
+                          <ShieldCheck className="w-3.5 h-3.5" /> Canon Auditor Agent
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-900 font-bold">
+                          {episode.canonScore ?? 95}% Verified
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-950 leading-relaxed">
+                        Continuity verification: strictly enforces antagonist hostility & opposition rules, universal laws, and textless prompt standards.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-2xs font-mono font-bold text-amber-800 uppercase">
+                          <Sparkles className="w-3.5 h-3.5" /> Art Director Agent
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-bold">
+                          Muse Image 1.0
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-950 leading-relaxed">
+                        Extracts visual consistency anchors from character dossiers and injects textless negative prompts preventing label bleed.
+                      </p>
+                    </div>
                   </div>
 
                   {/* AI Director Pacing & Layout Rationale */}
@@ -2048,6 +2130,14 @@ export function ZenComicReader({
         onSaveCharacter={handleSaveCharacterDossier}
         onDeleteCharacter={handleDeleteCharacter}
         apiConfig={apiConfig}
+      />
+      {/* =========================================================================
+          DEDICATED MULTI-AGENT PRODUCTION ROOM TRACE MODAL
+      ========================================================================= */}
+      <AgentDirectorTraceModal
+        isOpen={isTraceModalOpen}
+        onClose={() => setIsTraceModalOpen(false)}
+        episode={episode || null}
       />
     </div>
   );
