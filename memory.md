@@ -227,6 +227,17 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Updated `/api/generate-image` and `/api/generate` with automatic permanent archival and non-blocking fallback if Blob token is unlinked.
   - Documented `BLOB_READ_WRITE_TOKEN` in `.env.example`.
   - Clean build verified with `npm run build` (Turbopack, Next.js 16.4.3).
+- Meta SAM 3.1 Multi-Modal Visual Inspector Layer (2026-10-30):
+  - Built interactive vision inspection suite powered by Meta SAM 3.1 (Segment Anything Model 3.1).
+  - Backend: Upgraded [`/api/sam/route.ts`](src/app/api/sam/route.ts) with full-spread layout zero-shot segmentation extraction (characters, dialogue balloons, props) and point-prompt coordinate segmentation.
+  - Frontend: Created [`src/components/SamVisionOverlay.tsx`](src/components/SamVisionOverlay.tsx) and embedded directly into [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx).
+  - Features:
+    - Glowing bounding contours with category color-coding (purple for characters, emerald for speech balloons, blue for props).
+    - Confidence badges (e.g. `99.2% SAM 3.1 match`).
+    - Filter chips (`All Elements`, `Characters`, `Speech Balloons`, `Props & Items`).
+    - Subject isolation mode (dims background to focus exclusively on the selected subject).
+    - 1-click jump from a segmented character mask directly into their 5-tab Character Dossier Studio.
+    - Verified clean production build with `npm run build` in ~2.5s across all 11 routes.
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -303,3 +314,14 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Updated `/api/generate-image` and `/api/generate` with automatic permanent archival and non-blocking fallback if Blob token is unlinked.
   - Documented `BLOB_READ_WRITE_TOKEN` in `.env.example`.
   - Clean build verified with `npm run build` (Turbopack, Next.js 16.4.3).
+- Meta SAM 3.1 Multi-Modal Visual Inspector Layer (2026-10-30):
+  - Built interactive vision inspection suite powered by Meta SAM 3.1 (Segment Anything Model 3.1).
+  - Backend: Upgraded [`/api/sam/route.ts`](src/app/api/sam/route.ts) with full-spread layout zero-shot segmentation extraction (characters, dialogue balloons, props) and point-prompt coordinate segmentation.
+  - Frontend: Created [`src/components/SamVisionOverlay.tsx`](src/components/SamVisionOverlay.tsx) and embedded directly into [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx).
+  - Features:
+    - Glowing bounding contours with category color-coding (purple for characters, emerald for speech balloons, blue for props).
+    - Confidence badges (e.g. `99.2% SAM 3.1 match`).
+    - Filter chips (`All Elements`, `Characters`, `Speech Balloons`, `Props & Items`).
+    - Subject isolation mode (dims background to focus exclusively on the selected subject).
+    - 1-click jump from a segmented character mask directly into their 5-tab Character Dossier Studio.
+    - Verified clean production build with `npm run build` in ~2.5s across all 11 routes.

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, forwardRef } from 'react';
-import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle } from '@/types/comic';
+import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, ComicCharacter } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
+import { SamVisionOverlay } from './SamVisionOverlay';
 import {
   Sparkles,
   Users,
@@ -24,7 +25,8 @@ import {
   Volume2,
   Layers,
   Cpu,
-  Ratio
+  Ratio,
+  Scan
 } from 'lucide-react';
 
 export interface GranularArtworkOptions {
@@ -49,6 +51,7 @@ interface ComicPageSpreadProps {
   artworkError?: string | null;
   apiConfig?: ApiConfig;
   className?: string;
+  onSelectCharacterForDossier?: (character: ComicCharacter) => void;
 }
 
 const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
@@ -99,11 +102,14 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     artworkError = null,
     apiConfig,
     className = '',
+    onSelectCharacterForDossier,
   },
   ref
 ) {
   // Granular panel toggle
   const [isGranularOpen, setIsGranularOpen] = useState(false);
+  // Meta SAM 3.1 Vision Inspector Toggle
+  const [isSamActive, setIsSamActive] = useState(false);
 
   // Granular state controls
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyle>(world.artStyle || 'webcomic');
@@ -326,6 +332,22 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           >
             <Sliders className="w-3.5 h-3.5" />
             <span>Granular Controls</span>
+          </button>
+
+          {/* Meta SAM 3.1 Vision Inspector Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSamActive(!isSamActive)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
+              isSamActive
+                ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-400/50 shadow-blue-500/20'
+                : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-blue-400'
+            }`}
+            title="Toggle Meta SAM 3.1 Multi-Modal Visual Segmentation"
+          >
+            <Scan className={`w-3.5 h-3.5 ${isSamActive ? 'text-white animate-pulse' : 'text-blue-600'}`} />
+            <span>SAM 3.1 Inspector</span>
+            {isSamActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-ping" />}
           </button>
         </div>
       </div>
@@ -605,8 +627,32 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               loading="eager"
             />
 
+            {/* Meta SAM 3.1 Interactive Vision Segmentation Layer */}
+            <SamVisionOverlay
+              world={world}
+              episode={episode}
+              isActive={isSamActive}
+              onClose={() => setIsSamActive(false)}
+              onSelectCharacterForDossier={onSelectCharacterForDossier}
+              onUpdateDialogue={onUpdateDialogue}
+            />
+
             {/* Quick Action Overlay on Hover */}
-            <div className="absolute top-4 right-4 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-4 right-4 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity z-20">
+              <button
+                type="button"
+                onClick={() => setIsSamActive(!isSamActive)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border border-white/20 flex items-center gap-1.5 shadow-md cursor-pointer transition-all ${
+                  isSamActive
+                    ? 'bg-blue-600 text-white border-blue-400 font-bold'
+                    : 'bg-black/80 hover:bg-black text-white'
+                }`}
+                title="Toggle Meta SAM 3.1 Vision Segmentation"
+              >
+                <Scan className="w-3.5 h-3.5 text-cyan-300" />
+                <span>{isSamActive ? 'Exit SAM 3.1' : 'SAM 3.1 Vision'}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsFullscreenZoom(!isFullscreenZoom)}
