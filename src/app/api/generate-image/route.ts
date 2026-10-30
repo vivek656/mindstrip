@@ -21,18 +21,25 @@ export async function POST(req: NextRequest) {
       panels = []
     } = body;
 
-    // Intelligent AI Layout Decision if 'auto' is selected
+    // Intelligent AI Layout Decision: Prioritize AI Showrunner's decision or analyze narrative pacing
     let effectiveLayout: '1-panel' | '2-panel' | '3-panel' | '4-panel' = '4-panel';
     if (layoutStyle === 'auto' || !layoutStyle) {
-      const pText = (customPrompt || prompt || episodeTitle || '').toLowerCase();
-      if (pText.includes('splash') || pText.includes('panorama') || pText.includes('climax') || pText.includes('revelation') || pText.includes('explosion') || pText.includes('epic')) {
-        effectiveLayout = '1-panel';
-      } else if (pText.includes('vs') || pText.includes('confrontation') || pText.includes('faceoff') || pText.includes('dialogue') || pText.includes('argument') || pText.includes('duel')) {
-        effectiveLayout = '2-panel';
-      } else if (pText.includes('chase') || pText.includes('escalate') || pText.includes('step by step') || pText.includes('webtoon') || pText.includes('strip')) {
-        effectiveLayout = '3-panel';
+      if (Array.isArray(panels) && panels.length > 0) {
+        if (panels.length === 1) effectiveLayout = '1-panel';
+        else if (panels.length === 2) effectiveLayout = '2-panel';
+        else if (panels.length === 3) effectiveLayout = '3-panel';
+        else effectiveLayout = '4-panel';
       } else {
-        effectiveLayout = '4-panel';
+        const pText = (customPrompt || prompt || episodeTitle || '').toLowerCase();
+        if (pText.includes('splash') || pText.includes('panorama') || pText.includes('climax') || pText.includes('revelation') || pText.includes('explosion') || pText.includes('epic')) {
+          effectiveLayout = '1-panel';
+        } else if (pText.includes('vs') || pText.includes('confrontation') || pText.includes('faceoff') || pText.includes('dialogue') || pText.includes('argument') || pText.includes('duel')) {
+          effectiveLayout = '2-panel';
+        } else if (pText.includes('chase') || pText.includes('escalate') || pText.includes('step by step') || pText.includes('webtoon') || pText.includes('strip')) {
+          effectiveLayout = '3-panel';
+        } else {
+          effectiveLayout = '4-panel';
+        }
       }
     } else {
       effectiveLayout = layoutStyle;
@@ -42,21 +49,24 @@ export async function POST(req: NextRequest) {
     let sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
 
     // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt
-    if (!customPrompt && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
+    if (!customPrompt && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
-      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
-      const p4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
-      sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+      sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
     } else if (!customPrompt && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
-      sanitizedPrompt = `Two sequential narrative frames side by side: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+      sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
     } else if (!customPrompt && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
       const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
       const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
-      sanitizedPrompt = `Three sequential narrative vertical frames: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+      sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+    } else if (!customPrompt && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
+      const p1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const p2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      const p3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
+      const p4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
+      sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
     }
 
     let targetBaseUrl = 'https://api.meta.ai/v1';

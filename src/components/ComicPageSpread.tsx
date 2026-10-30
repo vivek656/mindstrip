@@ -182,21 +182,38 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     imagePrompt: 'Cinematic wide angle aftermath and resolution.',
   };
 
-  const panels = [p1, p2, p3, p4];
+  const panels = episode.panels && episode.panels.length > 0 ? episode.panels : [p1];
 
-  // View mode switcher: 'page' (full-page AI spread) vs 'panels' (4-panel sequential comic strip)
+  // View mode switcher: 'page' (full-page AI spread) vs 'panels' (sequential comic strip)
   const [spreadViewMode, setSpreadViewMode] = useState<'page' | 'panels'>('page');
 
   // Default seed prompt for granular editing (purged of all panel labels, numbers & timestamps)
   const charsSummary = world.characters.map((c) => `${c.name} (${c.appearance || c.role})`).join(' and ');
 
   const buildSequentialPrompt = () => {
-    if (selectedLayout === '4-panel' && panels.length >= 4) {
+    const layout = selectedLayout || episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');
+
+    if ((layout === '1-panel' || panels.length === 1) && panels[0]) {
+      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      return `${selectedArtStyle} full-page cinematic graphic novel splash illustration depicting ${charsSummary}. Climax scene: ${s1}. Panoramic dramatic composition, cinematic lighting, wordless visual storytelling.`;
+    }
+    if ((layout === '2-panel' || panels.length === 2) && panels.length >= 2) {
+      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      return `${selectedArtStyle} two-panel comic page spread separated by a clean vertical white comic gutter, depicting ${charsSummary}. Left frame: ${s1}. Right frame: ${s2}. Wordless visual sequential storytelling.`;
+    }
+    if ((layout === '3-panel' || panels.length === 3) && panels.length >= 3) {
+      const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
+      const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
+      const s3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
+      return `${selectedArtStyle} three-frame vertical comic strip separated by clean white gutters, depicting ${charsSummary}. Top frame: ${s1}. Middle frame: ${s2}. Bottom frame: ${s3}. Wordless visual sequential storytelling.`;
+    }
+    if (panels.length >= 4) {
       const s1 = cleanPromptForWordlessArtwork(panels[0]?.imagePrompt || panels[0]?.sceneDescription || '');
       const s2 = cleanPromptForWordlessArtwork(panels[1]?.imagePrompt || panels[1]?.sceneDescription || '');
       const s3 = cleanPromptForWordlessArtwork(panels[2]?.imagePrompt || panels[2]?.sceneDescription || '');
       const s4 = cleanPromptForWordlessArtwork(panels[3]?.imagePrompt || panels[3]?.sceneDescription || '');
-      return `${selectedArtStyle} comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}. Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Wordless visual sequential storytelling, clean graphic novel publication.`;
+      return `${selectedArtStyle} four-panel comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}. Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Wordless visual sequential storytelling, clean graphic novel publication.`;
     }
     const cleanNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
     return `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, wordless visual sequential art, mute comic storytelling, pristine published graphic novel illustration.`;
@@ -704,7 +721,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
         </div>
       )}
 
-      {/* View Mode Pill Deck: Full Page Spread vs 4-Scene Sequential Strip */}
+      {/* View Mode Pill Deck: Full Page Spread vs Dynamic Sequential Strip */}
       <div className="flex items-center justify-between gap-3 pb-1 flex-wrap">
         <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200 shadow-2xs">
           <button
@@ -728,17 +745,17 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
                 : 'text-zinc-500 hover:text-zinc-900'
             }`}
-            title="View the 4 distinct sequential scenes as individual comic panels"
+            title="View the distinct sequential scenes as individual comic panels"
           >
             <span>📑</span>
-            <span>4 Sequential Panels</span>
+            <span>{panels.length}-Panel Sequential View</span>
           </button>
         </div>
 
         <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-2">
-          <span>Format: <strong className="text-zinc-900 uppercase">{episode.layoutStyle || '4-panel'}</strong></span>
+          <span>Format: <strong className="text-zinc-900 uppercase">{episode.layoutStyle || `${panels.length}-panel`}</strong></span>
           <span>•</span>
-          <span>{panels.length} Story Scenes</span>
+          <span>{panels.length} Story {panels.length === 1 ? 'Scene' : 'Scenes'}</span>
         </div>
       </div>
 
@@ -746,15 +763,21 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           PAGE CONTENT: REAL META AI IMAGE OR CLEAN COMIC DRAFTING STAGE
       ========================================================================= */}
       {spreadViewMode === 'panels' ? (
-        /* 4-Panel Sequential Strip / Grid View */
+        /* Sequential Strip / Grid View dynamically adapted to panel count */
         <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className={`grid gap-5 ${
+            panels.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto' :
+            panels.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+            panels.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
+            'grid-cols-1 md:grid-cols-2'
+          }`}>
             {panels.map((p, idx) => {
-              const sceneTitle =
-                idx === 0 ? 'Scene 1: The Setup' :
+              const sceneTitle = p.title || (
+                idx === 0 ? 'Scene 1: The Inciting Dilemma' :
                 idx === 1 ? 'Scene 2: Rising Tension' :
                 idx === 2 ? 'Scene 3: The Breakthrough' :
-                'Scene 4: The Outcome';
+                `Scene ${idx + 1}: Climax & Resolution`
+              );
 
               return (
                 <div
@@ -948,7 +971,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed font-sans">
                   {isGeneratingArtwork
                     ? 'Synthesizing sequential comic frames into a high-res graphic novel page with Meta Muse Image...'
-                    : `The dialogue and 4-scene narrative have been scripted. Draw using 1-click or customize with Granular Controls.`}
+                    : `The dialogue and ${panels.length}-scene narrative have been scripted with ${episode.layoutStyle || 'dynamic'} pacing. Draw using 1-click or customize with Granular Controls.`}
                 </p>
               </div>
 

@@ -605,3 +605,9 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   2. **Dual View Mode Switcher in Comic Page Spread**:
      - Added a segmented pill toggle: `🖼️ Full Comic Page` vs `📑 4 Sequential Panels`.
      - In `4 Sequential Panels` view, creators see all 4 scenes rendered as distinct comic panels with speech bubbles overlaid, sound effect badges (`⚡ BAM!`), character avatars, and inline dialogue editing.
+
+### Dynamic AI Pacing vs. Hardcoding Verification (2026-10-30)
+- Verified and reinforced dynamic AI pacing across all subsystems:
+  1. **AI Showrunner Autonomy**: The Showrunner dynamically chooses between `1-panel` (climax splash), `2-panel` (dialogue duel / faceoff), `3-panel` (webtoon escalation strip), and `4-panel` (complete narrative arc) based on dramatic weight.
+  2. **Image Generator Layout Adaptability**: `/api/generate-image/route.ts` prioritizes the Showrunner's decided panel count (`panels.length` = 1, 2, 3, or 4) when `layoutStyle` is `auto`, formulating the layout directives specifically for that format (widescreen 16:9 splash for 1-panel, side-by-side vertical gutters for 2-panel, vertical strip for 3-panel, and 2x2 grid for 4-panel).
+  3. **UI Dynamic Rendering**: `ComicPageSpread.tsx` now dynamically adjusts grid columns and labels (`{panels.length}-Panel Sequential View`, adapting from 1 full splash to 2 cols, 3 cols, or 2x2) based on the actual panels drafted by the AI rather than padding fake panels.
