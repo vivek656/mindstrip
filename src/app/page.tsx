@@ -472,7 +472,7 @@ export default function Home() {
         activeWorld.title,
         activeWorld.genre,
         regenContext,
-        activeEpisode.layoutStyle || 'auto',
+        'auto', // Autonomous AI Showrunner decides optimal layout (1-panel splash, 2-panel split, 3-panel strip, or 4-panel spread)
         activeWorld,
         priorEpisodes
       );
@@ -496,7 +496,7 @@ export default function Home() {
               provider: effectiveProvider,
               apiKey: apiConfig?.apiKey,
               baseUrl: apiConfig?.baseUrl,
-              layoutStyle: generated.layoutStyle || '4-panel',
+              layoutStyle: generated.layoutStyle || (generated.panels?.length === 1 ? '1-panel' : generated.panels?.length === 2 ? '2-panel' : generated.panels?.length === 3 ? '3-panel' : '4-panel'),
               panels: generated.panels,
             })
           });
@@ -548,7 +548,8 @@ export default function Home() {
     setIsGeneratingArtwork(true);
     setArtworkError(null);
     try {
-      const targetLayoutStyle = options?.layoutStyle || activeEpisode.layoutStyle || '4-panel';
+      const dynamicPanelLayout = activeEpisode.panels?.length === 1 ? '1-panel' : activeEpisode.panels?.length === 2 ? '2-panel' : activeEpisode.panels?.length === 3 ? '3-panel' : '4-panel';
+      const targetLayoutStyle = options?.layoutStyle || activeEpisode.layoutStyle || dynamicPanelLayout;
       const targetArtStyle = options?.artStyle || activeWorld.artStyle || 'webcomic';
       const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel;
       
@@ -581,8 +582,9 @@ export default function Home() {
       }
 
       if (data.pageImageUrl) {
+        const fallbackLayout = activeEpisode.panels?.length === 1 ? '1-panel' : activeEpisode.panels?.length === 2 ? '2-panel' : activeEpisode.panels?.length === 3 ? '3-panel' : '4-panel';
         const resolvedLayout: ComicStrip['layoutStyle'] =
-          data.layoutStyle || (targetLayoutStyle === 'auto' ? '4-panel' : targetLayoutStyle);
+          data.layoutStyle || (targetLayoutStyle === 'auto' ? fallbackLayout : targetLayoutStyle);
         const updatedEpisode: ComicStrip = {
           ...activeEpisode,
           pageImageUrl: data.pageImageUrl,
