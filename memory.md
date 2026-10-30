@@ -282,6 +282,33 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Removed duplicate `Studio Views` buttons from the sidebar.
     - Synced bottom Co-Director dock width with the selected canvas reading width.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.39s across all 12 routes.
+- Dual-Pane Creative Studio & Independent Right-Side Co-Director Deck (2026-10-30):
+  - Solved user problem: The comic artwork and all generation controls were previously in one long scroll view, forcing users to scroll past the entire ~1200px comic image to reach the prompt dock, while leaving dead space on widescreen monitors.
+  - Decoupled Reading Canvas and Control Deck into independent parallel viewports:
+    - **Center Stage (Pure Comic Canvas)**: Dedicated solely to rendering the high-res graphic novel spread with its own clean vertical scroll. Removed bottom sticky prompt forms from obstructing or extending vertical scroll.
+    - **Right Side Panel (Co-Director Studio & Page Controls)**: Viewport-height (`h-[calc(100vh-4rem)]`), sticky side panel with independent internal scroll. Provides zero-scroll access to continue the story while looking directly at the comic artwork on the left.
+  - Two Segmented Tabs in Right Studio Deck:
+    - **`[ ✨ Next Ep ]` (Story Progression)**:
+      - Story premise / scene beat textarea with ⌘/Ctrl+Enter shortcut and character counter.
+      - Interactive Meta AI Director Question branch cards with 1-click `↳ Option` injection.
+      - Cast quick-mention tags (`@Hero`, `@Ally`, `@Villain`) and mid-story character introduction button.
+      - Next episode layout selector (`Auto`, `1-panel`, `2-panel`, `3-panel`, `4-panel`).
+      - Narrative lens/tone selector (`Candid`, `Empathetic`, `Satirical`, `Stoic`, `Engineer`).
+      - Story beat inspiration chips with `🎲 Roll Ideas` contextual generator.
+      - High-contrast primary CTA: `✨ Draw Episode #(N+1) →`.
+    - **`[ 🎛️ Current Ep ]` (Page Studio & Dialogue Script)**:
+      - Quick actions: Re-draw Page Art, Re-script Story, Branch Multiverse Timeline, Multi-Agent Trace, and Export PNG.
+      - Art style visual selector (Webcomic, Manga, Noir, Cyberpunk, Vintage, Minimalist) with immediate re-draw.
+      - Inline Script & Dialogue Editor: lists all panels and speech bubbles with direct live text editing and bubble deletion without covering the comic image.
+      - Director pacing notes and canon continuity memory (new facts established, open threads).
+  - Screen Space Optimization:
+    - Eliminates dead space on 1440px and 1920px widescreen displays by balancing Left Sidebar (~320px) + Center Canvas (~750-900px) + Right Studio (~380-420px).
+    - Top header includes dedicated `[ Studio Deck ]` toggle button.
+    - Floating restore pill on the right edge allows 1-click re-opening if collapsed.
+  - Responsive Mobile Fallback:
+    - On mobile/tablet screens (`< lg`), desktop right panel collapses gracefully.
+    - Added compact mobile bottom dock and upgraded mobile drawer with tabbed navigation (`World Bible & Ep` vs `Co-Director Deck`).
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.1s across all 12 routes.
 - Single-Image Page: all panel views removed (2026-10-28):
   - [`src/components/ComicPageSpread.tsx`](src/components/ComicPageSpread.tsx) now renders exactly one `pageImageUrl` per episode (fallback: first panel image, then legacy 4-panel grid). Page image is static; click-through navigation removed.
   - [`src/components/ZenComicReader.tsx`](src/components/ZenComicReader.tsx): deleted panel-focus flip view, layout-mode switcher (page/strip/grid/webtoon), per-panel inspect modal, speech-bubble overlays, Hide Text toggle, keyboard panel nav, and all associated state/handlers. Reader keeps: episode header, static full-page badge, cast bar, episodes/cast sidebar, export/share, next-episode dock, cost modal.
@@ -413,3 +440,30 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Removed duplicate `Studio Views` buttons from the sidebar.
     - Synced bottom Co-Director dock width with the selected canvas reading width.
   - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.39s across all 12 routes.
+- Dual-Pane Creative Studio & Independent Right-Side Co-Director Deck (2026-10-30):
+  - Solved user problem: The comic artwork and all generation controls were previously in one long scroll view, forcing users to scroll past the entire ~1200px comic image to reach the prompt dock, while leaving dead space on widescreen monitors.
+  - Decoupled Reading Canvas and Control Deck into independent parallel viewports:
+    - **Center Stage (Pure Comic Canvas)**: Dedicated solely to rendering the high-res graphic novel spread with its own clean vertical scroll. Removed bottom sticky prompt forms from obstructing or extending vertical scroll.
+    - **Right Side Panel (Co-Director Studio & Page Controls)**: Viewport-height (`h-[calc(100vh-4rem)]`), sticky side panel with independent internal scroll. Provides zero-scroll access to continue the story while looking directly at the comic artwork on the left.
+  - Two Segmented Tabs in Right Studio Deck:
+    - **`[ ✨ Next Ep ]` (Story Progression)**:
+      - Story premise / scene beat textarea with ⌘/Ctrl+Enter shortcut and character counter.
+      - Interactive Meta AI Director Question branch cards with 1-click `↳ Option` injection.
+      - Cast quick-mention tags (`@Hero`, `@Ally`, `@Villain`) and mid-story character introduction button.
+      - Next episode layout selector (`Auto`, `1-panel`, `2-panel`, `3-panel`, `4-panel`).
+      - Narrative lens/tone selector (`Candid`, `Empathetic`, `Satirical`, `Stoic`, `Engineer`).
+      - Story beat inspiration chips with `🎲 Roll Ideas` contextual generator.
+      - High-contrast primary CTA: `✨ Draw Episode #(N+1) →`.
+    - **`[ 🎛️ Current Ep ]` (Page Studio & Dialogue Script)**:
+      - Quick actions: Re-draw Page Art, Re-script Story, Branch Multiverse Timeline, Multi-Agent Trace, and Export PNG.
+      - Art style visual selector (Webcomic, Manga, Noir, Cyberpunk, Vintage, Minimalist) with immediate re-draw.
+      - Inline Script & Dialogue Editor: lists all panels and speech bubbles with direct live text editing and bubble deletion without covering the comic image.
+      - Director pacing notes and canon continuity memory (new facts established, open threads).
+  - Screen Space Optimization:
+    - Eliminates dead space on 1440px and 1920px widescreen displays by balancing Left Sidebar (~320px) + Center Canvas (~750-900px) + Right Studio (~380-420px).
+    - Top header includes dedicated `[ Studio Deck ]` toggle button.
+    - Floating restore pill on the right edge allows 1-click re-opening if collapsed.
+  - Responsive Mobile Fallback:
+    - On mobile/tablet screens (`< lg`), desktop right panel collapses gracefully.
+    - Added compact mobile bottom dock and upgraded mobile drawer with tabbed navigation (`World Bible & Ep` vs `Co-Director Deck`).
+  - Verified clean Next.js 16 Turbopack production build with `npm run build` in ~1.1s across all 12 routes.

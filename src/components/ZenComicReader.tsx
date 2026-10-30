@@ -9,7 +9,9 @@ import {
   CreatorProfile,
   WorldLaw,
   WorldLocation,
-  CustomWorldAttribute
+  CustomWorldAttribute,
+  ArtStyle,
+  SpeechBubble,
 } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
@@ -54,9 +56,16 @@ import {
   GitBranch,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   Moon,
   Sun,
   Maximize2,
+  Sliders,
+  MessageSquare,
+  Eye,
+  HelpCircle,
+  Wand2,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -90,6 +99,15 @@ interface ZenComicReaderProps {
   onForkBranch?: (episodeNumber: number, branchTitle?: string, divergencePrompt?: string) => void;
   onRollback?: (episodeNumber: number) => void;
 }
+
+const STUDIO_ART_STYLES: { id: ArtStyle; name: string; icon: string; desc: string }[] = [
+  { id: 'webcomic', name: 'Webcomic', icon: '🎨', desc: 'Vibrant flat digital' },
+  { id: 'manga', name: 'Manga', icon: '⚡', desc: 'B&W dynamic screentone' },
+  { id: 'noir', name: 'Noir', icon: '🕵️', desc: 'Moody deep shadows' },
+  { id: 'cyberpunk', name: 'Cyberpunk', icon: '🤖', desc: 'Neon rain reflections' },
+  { id: 'newspaper', name: 'Vintage', icon: '📰', desc: 'Warm paper & nostalgic ink' },
+  { id: 'minimalist', name: 'Minimalist', icon: '✒️', desc: 'Crisp editorial linework' },
+];
 
 export function ZenComicReader({
   world,
@@ -133,6 +151,11 @@ export function ZenComicReader({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [readerTheme, setReaderTheme] = useState<'cinema' | 'studio'>('cinema');
   const [readerWidth, setReaderWidth] = useState<'standard' | 'wide' | 'cinema'>('wide');
+
+  // Dedicated Desktop Right Studio Panel States
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [rightPanelTab, setRightPanelTab] = useState<'next' | 'current'>('next');
+  const [mobileDrawerTab, setMobileDrawerTab] = useState<'sidebar' | 'studio'>('sidebar');
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
@@ -587,6 +610,590 @@ export function ZenComicReader({
     </div>
   );
 
+  // Dedicated Desktop Right Studio Panel (Co-Director & Page Controls)
+  const renderRightStudioPanel = () => (
+    <div className="flex flex-col h-full overflow-hidden select-none">
+      {/* 1. STUDIO HEADER */}
+      <div className={`p-4 border-b flex items-center justify-between shrink-0 ${
+        readerTheme === 'cinema' && activeTab === 'comic'
+          ? 'border-white/10 bg-zinc-900/60'
+          : 'border-black/[0.08] bg-zinc-50/70'
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-xs uppercase tracking-wider font-mono">
+                Co-Director Studio
+              </span>
+              <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full border ${
+                readerTheme === 'cinema' && activeTab === 'comic'
+                  ? 'bg-zinc-800 text-zinc-300 border-white/15'
+                  : 'bg-white text-zinc-700 border-black/10'
+              }`}>
+                {episode ? `Ep #${episode.episodeNumber || 1}` : 'Ep #1'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Switcher: Next Episode vs Current Page */}
+        <div className="flex items-center gap-1">
+          <div className={`flex items-center p-0.5 rounded-lg border text-xs font-bold ${
+            readerTheme === 'cinema' && activeTab === 'comic'
+              ? 'bg-zinc-900 border-white/10'
+              : 'bg-zinc-200/80 border-black/5'
+          }`}>
+            <button
+              type="button"
+              onClick={() => setRightPanelTab('next')}
+              className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                rightPanelTab === 'next'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : readerTheme === 'cinema' && activeTab === 'comic'
+                  ? 'text-zinc-400 hover:text-white'
+                  : 'text-zinc-600 hover:text-zinc-950'
+              }`}
+              title="Direct Next Episode & Story Continuation"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Next Ep</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setRightPanelTab('current')}
+              className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                rightPanelTab === 'current'
+                  ? 'bg-purple-600 text-white shadow-2xs'
+                  : readerTheme === 'cinema' && activeTab === 'comic'
+                  ? 'text-zinc-400 hover:text-white'
+                  : 'text-zinc-600 hover:text-zinc-950'
+              }`}
+              title="Current Episode Artwork, Script & Style"
+            >
+              <Sliders className="w-3 h-3" />
+              <span>Current Ep</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsRightPanelOpen(false)}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer ml-1"
+            title="Collapse Co-Director Panel"
+          >
+            <PanelRightClose className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. SCROLLABLE STUDIO BODY */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+        {rightPanelTab === 'next' ? (
+          /* =========================================================
+             TAB 1: NEXT EPISODE CO-DIRECTOR
+          ========================================================= */
+          <div className="space-y-5 select-text">
+            {/* Episode Target Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/10">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-500">
+                  Story Progression
+                </span>
+                <h3 className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                  {episode ? `Direct Episode #${(episode.episodeNumber || 1) + 1}` : 'Direct Episode #1: Origin'}
+                </h3>
+              </div>
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                {selectedLayout.toUpperCase()} • {selectedLens.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Prompt Textarea */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <Edit2 className="w-3 h-3 text-blue-500" />
+                  <span>Story Premise / Scene Beat</span>
+                </label>
+                {prompt.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setPrompt('')}
+                    className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-mono cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={3}
+                placeholder={
+                  episode
+                    ? `Describe what happens next for @${world.characters[0]?.name || 'the cast'}...`
+                    : `How does the story begin for @${world.characters[0]?.name || 'our hero'}?...`
+                }
+                className={`w-full p-3 rounded-2xl text-xs sm:text-sm font-medium border resize-none transition-all outline-none focus:ring-2 focus:ring-blue-500 ${
+                  readerTheme === 'cinema' && activeTab === 'comic'
+                    ? 'bg-zinc-900 border-white/15 text-white placeholder:text-zinc-500'
+                    : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
+                }`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    if (prompt.trim() && !isLoading) {
+                      onGenerateNextEpisode(prompt.trim(), selectedLayout, selectedLens);
+                      setPrompt('');
+                    }
+                  }
+                }}
+              />
+              <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                <span>Tip: Press ⌘/Ctrl + Enter to draw</span>
+                <span>{prompt.length} chars</span>
+              </div>
+            </div>
+
+            {/* Interactive Meta AI Director Question / Choice Forks */}
+            {episode?.directorQuestion && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-indigo-500/10 to-purple-500/15 border border-purple-500/30 space-y-2.5">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-purple-400">
+                    <Brain className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                    <span>AI Co-Director Choice</span>
+                  </div>
+                  <span className="text-[10px] text-purple-400/80 font-mono">Click to branch</span>
+                </div>
+
+                <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+                  {episode.directorQuestion.question}
+                </p>
+
+                <div className="space-y-1.5">
+                  {episode.directorQuestion.options.map((opt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPrompt(opt.beat)}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-start gap-2 shadow-2xs group ${
+                        prompt === opt.beat
+                          ? 'bg-purple-600 text-white border-purple-500 ring-2 ring-purple-400/50'
+                          : readerTheme === 'cinema' && activeTab === 'comic'
+                          ? 'bg-zinc-900/90 hover:bg-purple-950/60 text-zinc-200 border-white/10'
+                          : 'bg-white hover:bg-purple-50 text-zinc-800 border-purple-200/80'
+                      }`}
+                    >
+                      <span className="text-purple-400 group-hover:text-purple-300 font-bold shrink-0">↳</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-xs">{opt.label}</div>
+                        <div className={`text-[11px] line-clamp-2 mt-0.5 ${
+                          prompt === opt.beat ? 'text-purple-100' : 'text-zinc-500 dark:text-zinc-400'
+                        }`}>{opt.beat}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Cast Tags */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
+                  <span>Insert Cast (@mention)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMidStoryIntro(true);
+                    setIsAddCharOpen(true);
+                  }}
+                  className="text-[10px] text-indigo-500 hover:text-indigo-600 font-bold cursor-pointer flex items-center gap-0.5"
+                  title="Introduce new character mid-story"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New Character</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {world.characters.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleInsertBeat(`@${c.name}`)}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
+                      readerTheme === 'cinema' && activeTab === 'comic'
+                        ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-white/10'
+                        : 'bg-white hover:bg-zinc-50 text-zinc-800 border-black/10'
+                    }`}
+                    title={`Click to insert @${c.name} into prompt`}
+                  >
+                    <span>{c.avatarEmoji}</span>
+                    <span className="font-bold">@{c.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Layout Format Preference */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
+                Next Episode Layout:
+              </span>
+              <div className="grid grid-cols-5 gap-1">
+                {(
+                  [
+                    { id: 'auto', label: 'Auto' },
+                    { id: '1-panel', label: '1-Pan' },
+                    { id: '2-panel', label: '2-Pan' },
+                    { id: '3-panel', label: '3-Pan' },
+                    { id: '4-panel', label: '4-Pan' },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSelectedLayout(opt.id)}
+                    className={`py-1.5 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer border ${
+                      selectedLayout === opt.id
+                        ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-transparent shadow-xs'
+                        : readerTheme === 'cinema' && activeTab === 'comic'
+                        ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-white/10'
+                        : 'bg-white hover:bg-zinc-100 text-zinc-700 border-black/10'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Narrative Tone / Lens Selector */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
+                Narrative Tone / Lens:
+              </span>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(
+                  [
+                    { id: 'candid', label: '🎯 Candid' },
+                    { id: 'empathetic', label: '🤝 Empathetic' },
+                    { id: 'satirical', label: '🎭 Satirical' },
+                    { id: 'stoic', label: '🏛️ Stoic' },
+                    { id: 'engineer', label: '⚙️ Engineer' },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSelectedLens(opt.id)}
+                    className={`py-1.5 px-2 rounded-lg text-[11px] font-bold truncate text-center transition-all cursor-pointer border ${
+                      selectedLens === opt.id
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
+                        : readerTheme === 'cinema' && activeTab === 'comic'
+                        ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-white/10'
+                        : 'bg-white hover:bg-zinc-100 text-zinc-700 border-black/10'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Next Beat Suggestions */}
+            {((episode?.nextSuggestions && episode.nextSuggestions.length > 0) || (dynamicSuggestions && dynamicSuggestions.length > 0)) && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <Compass className="w-3 h-3 text-indigo-400" />
+                    <span>Story Beat Ideas:</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRollNewBeatIdeas}
+                    className="text-[10px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 font-mono font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    <span>Roll</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  {(dynamicSuggestions || episode?.nextSuggestions || []).slice(0, 3).map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPrompt(sug)}
+                      className={`w-full text-left p-2 rounded-xl text-[11px] border transition-all cursor-pointer line-clamp-2 ${
+                        readerTheme === 'cinema' && activeTab === 'comic'
+                          ? 'bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 border-white/10'
+                          : 'bg-zinc-50 hover:bg-indigo-50/60 text-zinc-700 border-black/5 hover:border-indigo-200'
+                      }`}
+                      title={sug}
+                    >
+                      <span className="text-indigo-400 font-bold mr-1">&ldquo;</span>
+                      <span>{sug}</span>
+                      <span className="text-indigo-400 font-bold ml-1">&rdquo;</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Primary Action Button */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens)}
+                disabled={isLoading}
+                className={`w-full py-3.5 px-5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg ${
+                  isLoading
+                    ? 'bg-zinc-800 text-zinc-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-500/25 active:scale-[0.99]'
+                }`}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Directing with Meta AI...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>
+                      {episode
+                        ? `Draw Episode #${(episode.episodeNumber || 1) + 1} →`
+                        : 'Draw Episode #1: Origin →'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* =========================================================
+             TAB 2: CURRENT EPISODE STUDIO & SCRIPT
+          ========================================================= */
+          <div className="select-text">
+            {episode ? (
+              <div className="space-y-5">
+                {/* Current Episode Header */}
+                <div className="pb-3 border-b border-black/[0.06] dark:border-white/10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase">
+                      Issue #{episode.episodeNumber || 1}
+                    </span>
+                    <span className="text-xs text-zinc-400 font-mono capitalize">
+                      {world.artStyle} style
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                    {episode.title}
+                  </h3>
+                </div>
+
+                {/* Primary Episode Action Buttons */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
+                    Page Art & Story Actions
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Re-draw Page Artwork */}
+                    {onGenerateArtwork && (
+                      <button
+                        type="button"
+                        onClick={() => onGenerateArtwork()}
+                        disabled={isGeneratingArtwork}
+                        className="p-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
+                        <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-draw Art'}</span>
+                      </button>
+                    )}
+
+                    {/* Quick Regenerate Story & Art */}
+                    {onRegenerateEpisode && (
+                      <button
+                        type="button"
+                        onClick={onRegenerateEpisode}
+                        disabled={isLoading}
+                        className="p-2.5 rounded-xl text-xs font-bold border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                        <span>Re-script Story</span>
+                      </button>
+                    )}
+
+                    {/* Multiverse Branch */}
+                    {onForkBranch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBranchTargetEpisode(episode);
+                          setIsBranchModalOpen(true);
+                        }}
+                        className="p-2.5 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <GitBranch className="w-3.5 h-3.5" />
+                        <span>Branch Story</span>
+                      </button>
+                    )}
+
+                    {/* Multi-Agent Trace Modal */}
+                    <button
+                      type="button"
+                      onClick={() => setIsTraceModalOpen(true)}
+                      className="p-2.5 rounded-xl text-xs font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <BrainCircuit className="w-3.5 h-3.5" />
+                      <span>Agent Trace</span>
+                    </button>
+                  </div>
+
+                  {/* Export PNG button */}
+                  <button
+                    type="button"
+                    onClick={handleExportPng}
+                    disabled={isExporting}
+                    className="w-full p-2.5 rounded-xl text-xs font-bold border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isExporting ? 'Exporting...' : 'Export High-Res PNG'}</span>
+                  </button>
+                </div>
+
+                {/* Art Style Quick Switcher */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                      <Palette className="w-3 h-3 text-purple-400" />
+                      <span>Art Style:</span>
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-mono capitalize">
+                      {world.artStyle}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {STUDIO_ART_STYLES.map((style) => (
+                      <button
+                        key={style.id}
+                        type="button"
+                        onClick={() => {
+                          if (onUpdateWorld) {
+                            onUpdateWorld({ ...world, artStyle: style.id });
+                          }
+                          if (onGenerateArtwork) {
+                            onGenerateArtwork({ artStyle: style.id });
+                          }
+                        }}
+                        className={`p-2 rounded-xl text-left border transition-all cursor-pointer flex items-center gap-2 ${
+                          world.artStyle === style.id
+                            ? 'bg-purple-600 text-white border-purple-500 ring-2 ring-purple-400/50 shadow-xs'
+                            : readerTheme === 'cinema' && activeTab === 'comic'
+                            ? 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border-white/10'
+                            : 'bg-white hover:bg-zinc-50 text-zinc-800 border-black/10'
+                        }`}
+                      >
+                        <span className="text-base">{style.icon}</span>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs leading-none">{style.name}</div>
+                          <div className={`text-[9px] truncate mt-0.5 ${
+                            world.artStyle === style.id ? 'text-purple-100' : 'text-zinc-500'
+                          }`}>{style.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dialogue & Bubbles Quick Editor */}
+                <div className="space-y-2 pt-1">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3 text-blue-400" />
+                    <span>Script & Dialogue Editor ({episode.panels.reduce((sum, p) => sum + (p.bubbles?.length || 0), 0)} bubbles)</span>
+                  </span>
+
+                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                    {episode.panels.map((p) => (
+                      <div
+                        key={p.panelNumber}
+                        className={`p-3 rounded-xl border space-y-2 ${
+                          readerTheme === 'cinema' && activeTab === 'comic'
+                            ? 'bg-zinc-900/70 border-white/10'
+                            : 'bg-zinc-50 border-black/[0.06]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-mono font-bold text-zinc-500">
+                          <span>Panel #{p.panelNumber}</span>
+                          <span className="italic truncate max-w-[170px] text-[10px]">{p.sceneDescription}</span>
+                        </div>
+
+                        {(p.bubbles || []).map((bubble: SpeechBubble) => (
+                          <div key={bubble.id} className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                              <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                                @{bubble.speaker} <span className="text-zinc-400">({bubble.type})</span>
+                              </span>
+                              {onDeleteDialogue && (
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteDialogue(p.panelNumber, bubble.id)}
+                                  className="text-red-400 hover:text-red-500 cursor-pointer"
+                                  title="Delete bubble"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              value={bubble.text}
+                              onChange={(e) => onUpdateDialogue(p.panelNumber, bubble.id, e.target.value)}
+                              className={`w-full text-xs p-2 rounded-lg border outline-none focus:ring-1 focus:ring-blue-500 ${
+                                readerTheme === 'cinema' && activeTab === 'comic'
+                                  ? 'bg-zinc-950 border-white/15 text-white'
+                                  : 'bg-white border-black/10 text-zinc-900'
+                              }`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Director Pacing Rationale */}
+                {episode.directorReasoning && (
+                  <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs space-y-1">
+                    <span className="font-mono text-[10px] font-bold uppercase text-purple-400">
+                      Director Pacing Rationale:
+                    </span>
+                    <p className="italic text-zinc-300">
+                      &ldquo;{episode.directorReasoning}&rdquo;
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-zinc-500 space-y-2">
+                <span className="text-2xl">📖</span>
+                <p className="text-xs">No active episode. Draw Episode 1 to view page controls!</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className={`min-h-screen flex flex-col selection:bg-zinc-200 w-full transition-colors duration-300 ${
       readerTheme === 'cinema' && activeTab === 'comic'
@@ -914,6 +1521,25 @@ export function ZenComicReader({
               </button>
             )}
 
+            {/* Desktop Right Co-Director Studio Toggle */}
+            {activeTab === 'comic' && (
+              <button
+                type="button"
+                onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                  isRightPanelOpen
+                    ? readerTheme === 'cinema'
+                      ? 'bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border-purple-500/30'
+                      : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200'
+                    : 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                }`}
+                title={isRightPanelOpen ? 'Hide Right Co-Director Studio' : 'Show Right Co-Director Studio'}
+              >
+                {isRightPanelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5 text-white" />}
+                <span>{isRightPanelOpen ? 'Studio Deck' : 'Open Studio'}</span>
+              </button>
+            )}
+
             {/* Mobile Sidebar Hamburger Toggle */}
             <button
               onClick={() => setIsMobileDrawerOpen(true)}
@@ -936,7 +1562,7 @@ export function ZenComicReader({
             ? 'border-white/10 bg-zinc-950/90 text-zinc-100'
             : 'border-black/[0.08] bg-white/70 text-zinc-900'
         } ${
-          isSidebarOpen ? 'w-80 xl:w-88 p-6' : 'w-0 p-0 overflow-hidden border-r-0'
+          isSidebarOpen ? 'w-72 xl:w-80 p-5' : 'w-0 p-0 overflow-hidden border-r-0'
         }`}>
           {renderSidebarContent()}
         </aside>
@@ -950,13 +1576,13 @@ export function ZenComicReader({
             title="Open Studio Sidebar"
           >
             <PanelLeftOpen className="w-4 h-4 text-purple-400" />
-            <span>Studio</span>
+            <span>Cast & Ep</span>
           </button>
         )}
 
         {/* MAIN STUDIO STAGE (CHANGES ACCORDING TO ACTIVE TAB) */}
-        <main className={`flex-1 flex flex-col justify-between overflow-y-auto min-h-[calc(100vh-4rem)] transition-all ${
-          readerWidth === 'cinema' ? 'px-2 sm:px-4 py-4' : 'px-4 sm:px-6 lg:px-8 py-5'
+        <main className={`flex-1 min-w-0 flex flex-col justify-start overflow-y-auto h-[calc(100vh-4rem)] transition-all ${
+          readerWidth === 'cinema' ? 'px-2 sm:px-4 py-4' : 'px-3 sm:px-6 py-5'
         }`}>
           {/* TAB 1: COMIC SPREAD VIEW */}
           {activeTab === 'comic' && (
@@ -2059,171 +2685,15 @@ export function ZenComicReader({
             </div>
           )}
 
-          {/* =====================================================================
-              BOTTOM CO-DIRECTOR COMMAND DOCK (WITH DYNAMIC LAYOUT SELECTOR)
-          ===================================================================== */}
-          <div className={`sticky bottom-4 w-full mx-auto pt-4 z-20 transition-all ${
-            readerWidth === 'standard'
-              ? 'max-w-4xl'
-              : readerWidth === 'wide'
-              ? 'max-w-5xl xl:max-w-6xl'
-              : 'max-w-6xl 2xl:max-w-7xl'
-          }`}>
-            {/* Quick Character & Plot Beat Suggestions + Layout Selector */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5 py-1">
-              {/* Dynamic Layout Selector Pills */}
-              <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/15 rounded-full p-1 shadow-2xs">
-                <span className="text-[10px] font-mono font-bold uppercase text-zinc-500 px-2">Layout:</span>
-                {(
-                  [
-                    { id: 'auto', label: '🤖 Auto' },
-                    { id: '1-panel', label: '1-Panel' },
-                    { id: '2-panel', label: '2-Panel' },
-                    { id: '3-panel', label: '3-Panel' },
-                    { id: '4-panel', label: '4-Panel' },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setSelectedLayout(opt.id)}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                      selectedLayout === opt.id
-                        ? 'bg-zinc-950 text-white shadow-xs'
-                        : 'text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Dynamic Tone / Narrative Lens Selector Pills */}
-              <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/15 rounded-full p-1 shadow-2xs">
-                <span className="text-[10px] font-mono font-bold uppercase text-zinc-500 px-2">Tone:</span>
-                {(
-                  [
-                    { id: 'candid', label: '🎯 Candid' },
-                    { id: 'empathetic', label: '🤝 Empathetic' },
-                    { id: 'satirical', label: '🎭 Satirical' },
-                    { id: 'stoic', label: '🏛️ Stoic' },
-                    { id: 'engineer', label: '⚙️ Engineer' },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setSelectedLens(opt.id)}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                      selectedLens === opt.id
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Character Quick-Tags & Mid-Story Intro Button */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {world.characters.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => handleInsertBeat(`@${c.name}`)}
-                    className="px-2.5 py-1 rounded-full text-xs bg-white border border-black/10 hover:border-black/30 text-zinc-900 transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>{c.avatarEmoji}</span>
-                    <span className="font-bold">@{c.name}</span>
-                  </button>
-                ))}
-
-                {/* Introduce Character Mid-Story Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMidStoryIntro(true);
-                    setIsAddCharOpen(true);
-                  }}
-                  className="px-3 py-1 rounded-full text-xs bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 hover:border-indigo-400 text-indigo-700 hover:text-indigo-950 transition-all shadow-2xs flex items-center gap-1.5 font-bold cursor-pointer"
-                  title="Introduce a new character or faction mid-story directly into the scene"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Introduce Character</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Interactive Creative Fork / Meta AI Co-Director Question */}
-            {episode?.directorQuestion && (
-              <div className="mb-2 p-3 sm:p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50/70 to-purple-50 border border-purple-200/90 rounded-2xl shadow-2xs animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase text-purple-700">
-                    <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-600"></span>
-                    </span>
-                    <Brain className="w-3.5 h-3.5 text-purple-600" />
-                    <span>AI Co-Director Fork</span>
-                  </div>
-                  <span className="text-[10px] text-purple-600/70 font-mono">Select a path or type custom beat</span>
-                </div>
-                <p className="text-xs sm:text-sm font-bold text-zinc-900 mb-2">
-                  {episode.directorQuestion.question}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {episode.directorQuestion.options.map((opt, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setPrompt(opt.beat)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-purple-600 hover:text-white text-zinc-800 border border-purple-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer text-left group"
-                    >
-                      <span className="text-purple-600 group-hover:text-white font-bold">↳</span>
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* AI Next Beat Suggestions & Roll Ideas */}
-            {((episode?.nextSuggestions && episode.nextSuggestions.length > 0) || (dynamicSuggestions && dynamicSuggestions.length > 0)) && (
-              <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase text-zinc-400 shrink-0">
-                  <Compass className="w-3 h-3 text-indigo-500" />
-                  <span>Next Beats:</span>
-                </div>
-                {(dynamicSuggestions || episode?.nextSuggestions || []).map((sug, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setPrompt(sug)}
-                    className="px-2.5 py-1 rounded-full text-xs bg-indigo-50/80 hover:bg-indigo-100 hover:border-indigo-300 border border-indigo-200/60 text-indigo-950 transition-all shadow-2xs flex items-center gap-1 cursor-pointer truncate max-w-[280px] sm:max-w-md"
-                    title={sug}
-                  >
-                    <span className="text-indigo-400 font-serif">“</span>
-                    <span className="truncate">{sug}</span>
-                    <span className="text-indigo-400 font-serif">”</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleRollNewBeatIdeas}
-                  className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-white hover:bg-zinc-100 border border-zinc-200 text-zinc-700 transition-all shadow-2xs flex items-center gap-1 cursor-pointer shrink-0"
-                  title="Roll new context-aware narrative beats"
-                >
-                  <RefreshCw className="w-3 h-3 text-zinc-500" />
-                  <span>Roll Ideas</span>
-                </button>
-              </div>
-            )}
-
-            {/* Prompt Input Form */}
+          {/* MOBILE ONLY CO-DIRECTOR DOCK (Hidden on desktop because desktop has the dedicated Right Panel) */}
+          <div className="lg:hidden sticky bottom-3 w-full px-2 z-20 mt-auto pt-4">
             <form
               onSubmit={handleSubmit}
-              className="flex items-center bg-white border-2 border-zinc-950 rounded-full p-2 shadow-2xl focus-within:ring-2 focus-within:ring-blue-600 transition-all"
+              className={`flex items-center border-2 rounded-full p-1.5 shadow-2xl transition-all ${
+                readerTheme === 'cinema' && activeTab === 'comic'
+                  ? 'bg-zinc-900 border-white/20'
+                  : 'bg-white border-zinc-950'
+              }`}
             >
               <input
                 type="text"
@@ -2231,58 +2701,97 @@ export function ZenComicReader({
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={
                   episode
-                    ? `Direct Episode #${(episode.episodeNumber || 1) + 1} (e.g. @${world.characters[0]?.name || 'Hero'} faces an unexpected twist)...`
-                    : `Direct Episode #1: Origin (e.g. How does the story begin for @${world.characters[0]?.name || 'Hero'}?)...`
+                    ? `Direct Ep #${(episode.episodeNumber || 1) + 1}...`
+                    : `Direct Ep #1: Origin...`
                 }
-                className="flex-1 bg-transparent px-5 text-sm sm:text-base text-zinc-900 placeholder:text-zinc-400 outline-none font-medium"
+                className={`flex-1 bg-transparent px-3 text-xs outline-none font-medium ${
+                  readerTheme === 'cinema' && activeTab === 'comic'
+                    ? 'text-white placeholder:text-zinc-500'
+                    : 'text-zinc-900 placeholder:text-zinc-400'
+                }`}
               />
-
               <button
                 type="submit"
                 disabled={!prompt.trim() || isLoading}
-                className={`px-6 py-3 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                  !prompt.trim() || isLoading
-                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                    : 'bg-zinc-950 text-white hover:bg-blue-600 shadow-md'
-                }`}
+                className="px-4 py-2 rounded-full text-xs font-bold bg-blue-600 text-white disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
               >
                 {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Directing with Meta AI...</span>
-                  </>
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <>
-                    <span>
-                      {episode
-                        ? `Generate Episode #${(episode.episodeNumber || 1) + 1}`
-                        : 'Draw Episode #1: Origin'}
-                    </span>
-                    <Send className="w-4 h-4" />
-                  </>
+                  <Send className="w-3.5 h-3.5" />
                 )}
               </button>
             </form>
           </div>
         </main>
+
+        {/* DESKTOP RIGHT CO-DIRECTOR STUDIO PANEL (Visible when activeTab === 'comic') */}
+        {activeTab === 'comic' && (
+          <aside className={`hidden lg:flex flex-col transition-all duration-300 border-l shrink-0 h-[calc(100vh-4rem)] overflow-hidden ${
+            readerTheme === 'cinema'
+              ? 'border-white/10 bg-zinc-950/95 text-zinc-100'
+              : 'border-black/[0.08] bg-white/90 text-zinc-900'
+          } ${
+            isRightPanelOpen ? 'w-88 xl:w-96 2xl:w-[420px]' : 'w-0 overflow-hidden border-l-0 p-0'
+          }`}>
+            {renderRightStudioPanel()}
+          </aside>
+        )}
+
+        {/* Floating Quick Re-open Right Studio Button when Collapsed */}
+        {!isRightPanelOpen && activeTab === 'comic' && (
+          <button
+            type="button"
+            onClick={() => setIsRightPanelOpen(true)}
+            className="hidden lg:flex fixed right-0 top-24 z-30 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-l-xl border-y border-l border-white/20 shadow-xl text-xs font-bold items-center gap-1.5 transition-all cursor-pointer backdrop-blur-md"
+            title="Open Co-Director Studio"
+          >
+            <Sparkles className="w-4 h-4 text-purple-200" />
+            <span>Studio Deck</span>
+          </button>
+        )}
       </div>
 
       {/* =========================================================================
-          MOBILE SLIDE-OUT DRAWER
+          MOBILE SLIDE-OUT DRAWER (UNIVERSE & CO-DIRECTOR STUDIO)
       ========================================================================= */}
       {isMobileDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col justify-between overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] mb-4">
-              <h3 className="font-bold text-base text-zinc-950">Universe Studio</h3>
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-950 h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] dark:border-white/10 mb-4">
+              <div className="flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-black/5 dark:border-white/10 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerTab('sidebar')}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    mobileDrawerTab === 'sidebar'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-2xs'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  World Bible & Ep
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileDrawerTab('studio')}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    mobileDrawerTab === 'studio'
+                      ? 'bg-white dark:bg-zinc-800 text-purple-600 dark:text-purple-400 shadow-2xs'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                  }`}
+                >
+                  Co-Director Deck
+                </button>
+              </div>
+
               <button
                 onClick={() => setIsMobileDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            {renderSidebarContent()}
+            {mobileDrawerTab === 'sidebar' ? renderSidebarContent() : renderRightStudioPanel()}
           </div>
         </div>
       )}
