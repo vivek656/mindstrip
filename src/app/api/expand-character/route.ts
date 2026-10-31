@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       apiKey,
       baseUrl,
       provider = 'meta-api',
+      modelName,
       userDirective = '',
       targetField = '',
     } = body;
@@ -27,10 +28,28 @@ export async function POST(req: NextRequest) {
 
     let targetBaseUrl = baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
+    let targetModel = modelName || 'muse-spark-1.3';
 
     if (provider === 'fireworks') {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
       targetApiKey = apiKey || process.env.FIREWORKS_API_KEY || '';
+      targetModel = modelName || 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+    } else if (provider === 'groq') {
+      targetBaseUrl = baseUrl || 'https://api.groq.com/openai/v1';
+      targetApiKey = apiKey || process.env.GROQ_API_KEY || '';
+      targetModel = modelName || 'llama-3.3-70b-versatile';
+    } else if (provider === 'baseten') {
+      targetBaseUrl = baseUrl || process.env.BASETEN_BASE_URL || 'https://bridge.baseten.co/v1';
+      targetApiKey = apiKey || process.env.BASETEN_API_KEY || '';
+      targetModel = modelName || 'llama-3.3-70b';
+    } else if (provider === 'ollama') {
+      targetBaseUrl = baseUrl || 'http://localhost:11434/v1';
+      targetApiKey = 'ollama';
+      targetModel = modelName || 'llama3.3';
+    } else {
+      if (!modelName || modelName === 'llama-3.3-70b-instruct') {
+        targetModel = 'muse-spark-1.3';
+      }
     }
 
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
@@ -48,7 +67,7 @@ export async function POST(req: NextRequest) {
     // AI Call if API Key exists
     if (targetApiKey) {
       try {
-        const model = targetBaseUrl.includes('api.meta.ai') ? 'muse-spark-1.3' : 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+        const model = targetModel;
 
         const systemPrompt = `You are the MindStrip Lead Character Architect for the comic universe "${worldTitle}" (${genre}).
 ${worldTagline ? `Universe Tagline: "${worldTagline}"\n` : ''}${worldLore ? `World Lore & Core Conflict:\n"${worldLore}"\n` : ''}${worldLaws && worldLaws.length > 0 ? `Universal Laws & Ground Rules:\n${worldLaws.map((l: string) => `• ${l}`).join('\n')}\n` : ''}${worldLocations && worldLocations.length > 0 ? `Canonical Locations: ${worldLocations.join(', ')}\n` : ''}${worldAttributes && worldAttributes.length > 0 ? `World Parameters: ${worldAttributes.join(' | ')}\n` : ''}${recentEpisodes && recentEpisodes.length > 0 ? `Recent Story Developments:\n${recentEpisodes.map((e: any) => `• Ep ${e.episodeNumber || ''} "${e.title}": ${e.recap || ''}`).join('\n')}\n` : ''}

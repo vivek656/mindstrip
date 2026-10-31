@@ -662,6 +662,7 @@ What would you like to discuss or refine first?`,
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
           provider: apiConfig?.provider,
+          modelName: apiConfig?.modelName,
         }),
       });
 
@@ -739,6 +740,7 @@ What would you like to discuss or refine first?`,
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
           provider: apiConfig?.provider,
+          modelName: apiConfig?.modelName,
         }),
       });
 

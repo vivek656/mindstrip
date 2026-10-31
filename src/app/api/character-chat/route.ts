@@ -213,6 +213,7 @@ export async function POST(req: NextRequest) {
       apiKey,
       baseUrl,
       provider = 'meta-api',
+      modelName,
     } = body;
 
     const charName = character?.name || 'Character';
@@ -221,10 +222,28 @@ export async function POST(req: NextRequest) {
 
     let targetBaseUrl = baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
+    let targetModel = modelName || 'muse-spark-1.3';
 
     if (provider === 'fireworks') {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
       targetApiKey = apiKey || process.env.FIREWORKS_API_KEY || '';
+      targetModel = modelName || 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+    } else if (provider === 'groq') {
+      targetBaseUrl = baseUrl || 'https://api.groq.com/openai/v1';
+      targetApiKey = apiKey || process.env.GROQ_API_KEY || '';
+      targetModel = modelName || 'llama-3.3-70b-versatile';
+    } else if (provider === 'baseten') {
+      targetBaseUrl = baseUrl || process.env.BASETEN_BASE_URL || 'https://bridge.baseten.co/v1';
+      targetApiKey = apiKey || process.env.BASETEN_API_KEY || '';
+      targetModel = modelName || 'llama-3.3-70b';
+    } else if (provider === 'ollama') {
+      targetBaseUrl = baseUrl || 'http://localhost:11434/v1';
+      targetApiKey = 'ollama';
+      targetModel = modelName || 'llama3.3';
+    } else {
+      if (!modelName || modelName === 'llama-3.3-70b-instruct') {
+        targetModel = 'muse-spark-1.3';
+      }
     }
 
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
@@ -232,7 +251,7 @@ export async function POST(req: NextRequest) {
     // If an API key is available, call Meta Muse Spark / Llama 3.3 70B
     if (targetApiKey) {
       try {
-        const model = targetBaseUrl.includes('api.meta.ai') ? 'muse-spark-1.3' : 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+        const model = targetModel;
 
         const systemPrompt = `You are the MindStrip AI Character Co-Director & Lead Narrative Architect for the comic universe "${worldTitle}" (${genre}).
 ${worldTagline ? `Universe Tagline: "${worldTagline}"\n` : ''}${worldLore ? `World Lore:\n"${worldLore}"\n` : ''}${worldLaws && worldLaws.length > 0 ? `World Ground Rules:\n${worldLaws.map((l: string) => `• ${l}`).join('\n')}\n` : ''}
