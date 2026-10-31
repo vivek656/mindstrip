@@ -80,22 +80,13 @@ export function applyCanonicalCharacterAttire(
     if (!charRegex.test(updated)) continue;
 
     if (c.wardrobe && c.wardrobe.trim()) {
-      const wardrobeLower = c.wardrobe.toLowerCase();
-      const isWestern = /western|suit|blazer|trousers|skirt|shirt|pants|jacket|coat|business/.test(wardrobeLower);
-      const isTraditional = /saree|sari|lehenga|kimono|hanbok|traditional/.test(wardrobeLower);
-
-      if (isWestern) {
-        // Scrub contradictory traditional clothing terms
-        updated = updated.replace(
-          /(?:wearing|in|clad in|draped in)\s+(?:an?\s+)?(?:intricate\s+|elegant\s+|silk\s+|designer\s+)?(?:saree|sari|lehenga|traditional\s+attire|robe|superhero\s+suit|tactical\s+armor|battle\s+gear)[^,.;]*/gi,
-          `wearing ${c.wardrobe}`
-        );
-      } else if (isTraditional) {
-        // Scrub contradictory western/armor terms
-        updated = updated.replace(
-          /(?:wearing|in|clad in)\s+(?:an?\s+)?(?:western\s+suit|blazer|trousers|tactical\s+armor|battle\s+suit)[^,.;]*/gi,
-          `wearing ${c.wardrobe}`
-        );
+      // Enforce the character's exact canonical wardrobe without rigid category assumptions
+      updated = updated.replace(
+        /(?:wearing|in|clad in|draped in)\s+[^,.;]*/gi,
+        `wearing ${c.wardrobe}`
+      );
+      if (!updated.toLowerCase().includes(c.wardrobe.toLowerCase())) {
+        updated += `, ${c.name} is wearing ${c.wardrobe}`;
       }
     }
   }
@@ -211,13 +202,7 @@ export function directVisualArtwork(
     (fn) => !characters.some((c) => c.name.toLowerCase().includes(fn) || fn.includes(c.name.toLowerCase()))
   );
   guestNames.forEach((g) => {
-    if (/client/.test(g)) {
-      charDescriptions.push(`${g} (wealthy high-profile corporate client in a sharp tailored business suit)`);
-    } else if (/boss|ceo|manager/.test(g)) {
-      charDescriptions.push(`${g} (demanding corporate executive in formal business attire)`);
-    } else {
-      charDescriptions.push(`${g} (scene partner in appropriate civilian attire)`);
-    }
+    charDescriptions.push(`${g} (scene partner in ${context.worldTitle || 'this world'})`);
   });
 
   // 2. Resolve Layout Composition Descriptor

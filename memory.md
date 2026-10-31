@@ -1091,3 +1091,18 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: verified clean compilation with zero TypeScript errors.
   - Full Git commit and push to `origin/main`.
+
+### Total Eradication of Hardcoded Keyword Regex Dictionaries (2026-11-01)
+- **User Feedback**:
+  *"/origin|born|wrong|childhood|daughter|billionaire|started|founded|created/ what is this hardocded words?"*
+- **Root Cause & Accountability**:
+  - In previous heuristic fallbacks, hardcoded regex dictionaries (`/daughter|billionaire|started|founded/`, `/western|suit|blazer/`, `/saree|sari/`, `/seduce|charm/`, `/office|contract/`, `/fight|clash/`) had been used to guess and steer user intent instead of letting the AI agent read user directives directly.
+  - In `src/app/api/generate-image/route.ts`, a prompt rule had also included `DO NOT render in saree...`, which paradoxically primed diffusion models to paint sarees due to positive token attention.
+- **Architectural Cleanup**:
+  1. **Purged All Keyword Dictionaries**: Completely removed `/daughter|billionaire|born/`, `/western|saree/`, `/seduce|charm/`, `/office|contract/`, and `/fight|clash/` from `src/app/api/character-chat/route.ts`, `src/app/api/co-director-chat/route.ts`, `src/app/api/expand-character/route.ts`, and `src/lib/agents/art-director.ts`.
+  2. **100% Creator-Driven Logic**:
+     - Whatever the creator types in `userMessage` or `userDirective` is applied verbatim without keyword filtering or conditional guessing.
+     - In `generate-image/route.ts`, removed all negative saree mentions from the positive prompt and neutralized guest styling so diffusion models strictly adhere to the creator's defined wardrobe.
+- **Verification**:
+  - `npm run build`: clean production compilation in ~3s.
+  - Pushed to `origin/main`.

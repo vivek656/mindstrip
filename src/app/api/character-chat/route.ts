@@ -31,127 +31,75 @@ function generateHeuristicCharacterChat(
 ): CharacterChatResponse {
   const name = character?.name || 'Character';
   const role = character?.role || 'protagonist';
-  const rawInput = (userMessage || character?.appearance || character?.backstory || '').toLowerCase();
-
-  // Detect specific themes
-  const isCorporateOrCeo = rawInput.includes('ceo') || rawInput.includes('office') || rawInput.includes('corporate') || rawInput.includes('contract') || rawInput.includes('client');
-  const isRomanceOrCrush = rawInput.includes('crush') || rawInput.includes('romance') || rawInput.includes('love') || rawInput.includes('seduce') || rawInput.includes('flirt');
-  const isStilettoOrHeels = rawInput.includes('stiletto') || rawInput.includes('heel') || rawInput.includes('shoe');
-  const isActionOrHero = rawInput.includes('hero') || rawInput.includes('action') || rawInput.includes('fight') || rawInput.includes('tactical');
 
   if (focusSection === 'visuals') {
     if (userMessage && userMessage.trim()) {
-      // Check if user explicitly mentioned attire style
-      const mentionsWestern = /western|suit|blazer|trousers|skirt|pants|shirt|formal|dress/.test(rawInput);
-      const mentionsSaree = /saree|sari|traditional|ethnic/.test(rawInput);
-
-      let wardrobeDraft = '';
-      if (mentionsSaree) {
-        wardrobeDraft = `Traditional attire with refined textural detailing, structured draping, and elegant tonal accents.`;
-      } else if (mentionsWestern) {
-        wardrobeDraft = `High-end modern executive western attire: tailored structured blazer, crisp button-down shirt or blouse, high-waist tailored trousers or pencil skirt, and polished footwear.`;
-      } else {
-        wardrobeDraft = `Signature styling based on creator vision: ${userMessage.trim()}. Authentic textural details and crisp color contrast.`;
-      }
-
-      // User responded with visual guidance
-      const appearanceDraft = isCorporateOrCeo
-        ? `Polished executive presence with composed posture, observant eyes, and sharp, tailored styling suited for high-stakes corporate environments: ${userMessage.trim()}.`
-        : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}: ${userMessage.trim()}.`;
-
-      const iconicItemDraft = isStilettoOrHeels || isCorporateOrCeo
-        ? `Polished pointed-toe dress shoes or heels that project authority and poise across any executive floor.`
-        : `Signature accessory reflecting their personality: ${userMessage.trim()}.`;
-
+      const cleanInput = userMessage.trim();
       return {
-        reply: `Got it! Updating @${name}'s visual continuity anchors to reflect "${userMessage.trim()}". The attire and styling have been updated to your exact specification so all future comic panels will strictly render her in this look.
-
-Here is her updated visual continuity package:`,
+        reply: `Got it! Updating @${name}'s visual styling directly from your direction: "${cleanInput}".`,
         questions: chatHistoryLength > 2 ? [] : [
-          `Would you like to refine her color accents or keep her signature styling as is?`
+          `Would you like to add any signature props or accessory details?`
         ],
         quickOptions: [
-          `👠 Modern tailored blazer, crisp blouse & fitted trousers`,
-          `💼 Sharp double-breasted charcoal power suit & pointed heels`,
-          `💎 Minimalist luxury watch & executive fountain pen`,
-          `👔 Sleek monochromatic tailoring with clean architectural lines`
+          `🎨 Keep this exact signature look for all panels`,
+          `🔍 Focus on distinctive facial features and expressions`,
+          `✨ Add high-contrast color accents to the palette`
         ],
         suggestedUpdates: {
-          appearance: character?.appearance || appearanceDraft,
-          wardrobe: wardrobeDraft,
-          iconicItem: iconicItemDraft,
+          appearance: cleanInput,
+          wardrobe: cleanInput,
+          iconicItem: character?.iconicItem || `Signature styling accessory defined by creator`
         }
       };
     }
 
     // Initial greeting / prompt for Visuals
     return {
-      reply: `Let's design @${name}'s visual continuity anchors for "${worldTitle}"! Since she is ${role === 'protagonist' ? 'the lead' : `a ${role}`}, her look will be injected into every Meta Muse Image generation prompt so she stays 100% consistent.
-
-To get her look exactly right, tell me:
-1. What power silhouette or signature outfit immediately defines her?
-2. Does she have a trademark accessory or prop (like high-end footwear, a statement jacket, or signature jewelry)?
-3. What hair, complexion, or facial feature gives her that unforgettable gaze?`,
+      reply: `Let's design @${name}'s visual continuity anchors for "${worldTitle}"! How should ${name} look in the comic panels? Tell me about their clothing, facial features, hair, or signature items.`,
       questions: [
-        `What is her go-to daily outfit and color palette?`,
-        `What signature item or footwear anchors her silhouette in wide shots?`
+        `What is their signature everyday outfit?`,
+        `What visual accessory or item defines their silhouette?`
       ],
       quickOptions: [
-        `💼 High-end tailored power suit with sharp clean lines`,
-        `🧥 Minimalist structured blazer & tailored trousers`,
-        `☕ Smart casual tailored trousers with clean shirt`,
-        `✨ Custom designer attire based on creator vision`
-      ],
-      suggestedUpdates: isCorporateOrCeo ? {
-        wardrobe: `High-end modern executive western attire: tailored structured blazer over a crisp shirt or blouse, high-waist tailored trousers, and polished footwear.`,
-        iconicItem: `Polished pointed-toe heels or leather dress shoes with an authoritative, poised presence.`
-      } : undefined
+        `✨ Modern tailored attire with clean lines`,
+        `🧥 Practical everyday clothing suited for ${genre}`,
+        `🎨 Distinct aesthetic styled to your creative vision`
+      ]
     };
   }
 
   if (focusSection === 'lore') {
     if (userMessage && userMessage.trim()) {
-      const isOriginCorrection = /origin|born|wrong|childhood|father|mother|family|billionaire|daughter|son|rich|poor|started|founded|created/.test(userMessage.toLowerCase());
-      const updatedBackstory = isOriginCorrection
-        ? `${name}'s revised origin: ${userMessage.trim()}`
-        : (character?.backstory ? `${character.backstory}\n\nKey development: ${userMessage.trim()}` : `${name}'s journey in ${worldTitle}: ${userMessage.trim()}`);
-
+      const cleanInput = userMessage.trim();
       return {
-        reply: `Got it! Updating @${name}'s lore and formative history based on what you just shared: "${userMessage.trim()}".
-
-I have updated the drafted dossier fields below to incorporate your direction:`,
+        reply: `Got it! Updating @${name}'s lore and backstory to your exact specification: "${cleanInput}".`,
         questions: chatHistoryLength > 1 ? [] : [
-          `What defining principle or ambition drives @${name} forward in "${worldTitle}"?`
+          `What core motivation or goal drives @${name} in "${worldTitle}"?`
         ],
         quickOptions: [
-          `🎯 Independent ambition: built her own empire from scratch`,
-          `👑 High-stakes legacy: proving she is more than family inheritance`,
-          `⚡ Ruthless perfectionism: never allowing anyone to dismiss her again`
+          `🎯 Independent ambition: forging their own path on their own terms`,
+          `🛡️ Protecting what they have built against external threats`,
+          `⚡ Striving for excellence and proving their true capability`
         ],
         suggestedUpdates: {
-          backstory: updatedBackstory,
-          motivation: `To prove their authority and build an unassailable position in ${worldTitle}.`,
-          flaws: `A fierce determination that makes it difficult to show vulnerability or accept compromises.`,
-          secret: `Guards an undisclosed personal strategy to protect what they have built.`
+          backstory: cleanInput,
+          motivation: `To achieve their defining ambition in ${worldTitle} on their own terms.`,
+          flaws: `A fierce independence that makes delegating trust difficult during high-stakes crises.`,
+          secret: `Guards an undisclosed truth or contingency plan from their past.`
         }
       };
     }
 
     return {
-      reply: `Let's explore @${name}'s core psychology and origins for "${worldTitle}". What drives them beneath the surface?
-
-1. What defining experience made them who they are today?
-2. What is their primary ambition or what do they fear losing most?
-3. What fatal flaw or blindspot could create dramatic tension?`,
+      reply: `Let's explore @${name}'s origins and formative history for "${worldTitle}". What shaped them into who they are?`,
       questions: [
-        `What is their ultimate ambition in "${worldTitle}"?`,
-        `What secret truth do they guard from others?`
+        `What formative experience defines their origin?`,
+        `What is their primary driving purpose?`
       ],
       quickOptions: [
-        `🎯 Fierce independence and autonomy in pursuing their goals`,
-        `🔒 Protecting a hidden vulnerability behind a confident facade`,
-        `⚠️ Believing they must carry every burden alone`,
-        `📖 Self-made path: built their standing through relentless preparation`
+        `🎯 Built their own path through sheer determination and vision`,
+        `👑 High-stakes legacy: proving their worth beyond expectations`,
+        `⚡ Driven by a past turning point that changed their trajectory`
       ]
     };
   }

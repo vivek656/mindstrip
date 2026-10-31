@@ -156,70 +156,28 @@ Current draft notes:
       }
     }
 
-    // Heuristic Contextual Generator ($0.00 Fallback)
+    // Contextual Generator Fallback (Driven directly by userDirective, world, and genre)
     const isHero = charRole === 'protagonist';
     const isVillain = charRole === 'antagonist';
     const otherCast = existingCharacters.filter((n: string) => n.toLowerCase() !== charName.toLowerCase());
-    const gLower = (genre || '').toLowerCase();
-    const dLower = (userDirective || '').toLowerCase();
-    const isRomanceOrOffice = charRole === 'love-interest' || charRole === 'colleague' || dLower.includes('love') || dLower.includes('romance') || dLower.includes('office') || dLower.includes('not a hero');
-    const isDaily = isRomanceOrOffice || gLower.includes('slice') || gLower.includes('daily') || gLower.includes('comedy') || gLower.includes('romance') || gLower.includes('office') || gLower.includes('drama');
 
-    const fallbackExpansion = isRomanceOrOffice ? {
-      appearance: character.appearance || `${charName} possesses warm, perceptive eyes, styled hair, and a grounded, confident posture suited for professional and personal environments.`,
-      wardrobe: character.wardrobe || `Clean modern attire: tailored blazer, crisp shirt or blouse, dark trousers, and comfortable leather shoes.`,
-      iconicItem: character.iconicItem || `A personalized everyday accessory and sleek notebook.`,
-      backstory: character.backstory || (userDirective ? `${charName}'s background in ${worldTitle}: ${userDirective.trim()}` : `${charName} has built a solid standing in ${worldTitle} through strategic preparation, sharp wit, and genuine interpersonal loyalty.`),
-      motivation: character.motivation || `To succeed on their own terms in ${worldTitle} while staying true to those they care about.`,
-      flaws: character.flaws || `Struggles to ask for support during overwhelming crises, preferring to bear pressure quietly.`,
-      secret: character.secret || `Keeps a personal contingency plan that few in their circle know about.`,
-      abilities: character.abilities || `Strategic negotiation, crisis management, empathetic interpersonal diplomacy, and sharp observation.`,
-      gear: character.gear || `Professional commuter bag, personal communication device, and notebook.`,
-      voiceTone: character.voiceTone || `Warm, articulate, and grounded; pairs observant humor with calm clarity under pressure.`,
-      catchphrase: character.catchphrase || `Let's focus on what we can control and take it one step at a time.`,
-      suggestedRelationships: otherCast.length > 0 ? [
-        {
-          targetCharacterName: otherCast[0],
-          relationType: 'love-interest',
-          dynamicDescription: `Close mutual bond with shared ambitions and quiet emotional trust.`
-        }
-      ] : []
-    } : isDaily ? {
-      appearance: character.appearance || `${charName} possesses warm, expressive eyes, tousled dark hair, and a casual, animated posture that puts people immediately at ease.`,
-      wardrobe: character.wardrobe || `Oversized cable-knit cardigan over an organic cotton graphic tee, relaxed-fit dark denim, and classic worn canvas sneakers.`,
-      iconicItem: character.iconicItem || `A battered stainless steel coffee tumbler covered in quirky indie band and art cafe stickers.`,
-      backstory: character.backstory || `Moved to the neighborhood to pursue an independent creative dream, constantly juggling a chaotic day job, eccentric roommates, and big ambitions.`,
-      motivation: character.motivation || `To master their craft and build a welcoming community space where oddballs feel at home.`,
-      flaws: character.flaws || `Terrible at setting boundaries; agrees to help everyone else before finishing their own urgent projects.`,
-      secret: character.secret || `Secretly the anonymous creator of the neighborhood's beloved viral slice-of-life comic strip.`,
-      abilities: character.abilities || `Master coffee barista, quick-witted social banter, keen visual observation, and an uncanny ability to defuse tense arguments.`,
-      gear: character.gear || `Vintage 35mm film camera, leather-trimmed canvas messenger bag, dog-eared sketchbook, and noise-canceling headphones.`,
-      voiceTone: character.voiceTone || `Warm, conversational, and energetic; punctuates self-deprecating anecdotes with infectious laughter.`,
-      catchphrase: character.catchphrase || `One step at a time — first, we need more coffee.`,
+    const fallbackExpansion = {
+      appearance: character.appearance || `${charName} possesses sharp, observant eyes and a distinctive silhouette suited for ${worldTitle} (${genre}).`,
+      wardrobe: character.wardrobe || (userDirective ? `Signature styling based on creator vision: ${userDirective.trim()}` : `Signature practical attire suited for ${genre}.`),
+      iconicItem: character.iconicItem || `A signature personal accessory carried through every chapter.`,
+      backstory: character.backstory || (userDirective ? `${userDirective.trim()}` : `${charName} has forged a definitive standing in ${worldTitle} through strategic preparation, sharp wit, and genuine interpersonal conviction.`),
+      motivation: character.motivation || `To achieve their defining ambition in ${worldTitle} on their own terms.`,
+      flaws: character.flaws || `A fierce self-reliance that makes delegating trust difficult during high-stakes crises.`,
+      secret: character.secret || `Guards a personal truth or contingency plan that could shift the stakes if revealed.`,
+      abilities: character.abilities || `Specialized skills, resourceful deduction, and strategic adaptability tailored to ${genre}.`,
+      gear: character.gear || `Essential personal items, communication device, and signature accessories suited for ${genre}.`,
+      voiceTone: character.voiceTone || `Measured, articulate cadence; pairs observant clarity with calm confidence under pressure.`,
+      catchphrase: character.catchphrase || `When the moment arrives, we take it one step at a time.`,
       suggestedRelationships: otherCast.length > 0 ? [
         {
           targetCharacterName: otherCast[0],
           relationType: isHero ? 'ally' : 'rival',
-          dynamicDescription: `Close daily friends who playfully roast each other's habits over morning espresso.`
-        }
-      ] : []
-    } : {
-      appearance: character.appearance || `${charName} possesses sharp, observant eyes, windswept dark hair, and a resilient, athletic posture forged through constant survival.`,
-      wardrobe: character.wardrobe || `Weathered charcoal utility jacket over a slate-grey tunic, reinforced knee-high leather boots, and subtle copper metallic stitching.`,
-      iconicItem: character.iconicItem || `A modified mechanical wrist-chronometer with a cracked display that still counts down to an unknown deadline.`,
-      backstory: character.backstory || `Once an operative within the old regional order, ${charName} walked away after uncovering a conspiracy that erased their sector's archives. Now operating in the fringes, they seek answers before the truth is permanently rewritten.`,
-      motivation: character.motivation || isHero ? `To protect the remaining independent sanctuaries and expose the syndicate's hidden monopoly.` : isVillain ? `To enforce absolute order across the sectors, no matter the human cost.` : `To survive on their own terms without bending to external authority.`,
-      flaws: character.flaws || isHero ? `Struggles to ask for help; tends to shoulder impossible burdens alone until pushed to collapse.` : `Prone to ruthless pragmatism and deeply cynical regarding human loyalty.`,
-      secret: character.secret || `Carries a forged biometric clearance key that belongs to an identity presumed dead five years ago.`,
-      abilities: character.abilities || `Master of rapid tactical deduction, parkour navigation, and short-range defensive redirection.`,
-      gear: character.gear || `Thermal smoke pellets, grapple line, and an encrypted comm-scanner.`,
-      voiceTone: character.voiceTone || `Dry, perceptive, and economical with words; punctuates tense moments with understated sarcasm.`,
-      catchphrase: character.catchphrase || isHero ? `The odds don't matter once the first move is made.` : `Every system eventually bows to pressure.`,
-      suggestedRelationships: otherCast.length > 0 ? [
-        {
-          targetCharacterName: otherCast[0],
-          relationType: isHero ? 'ally' : 'rival',
-          dynamicDescription: `Shares a history of tight escapes, but their differing codes of honor cause constant tactical arguments.`
+          dynamicDescription: `Intricate dynamic built on competing ambitions and mutual respect in ${worldTitle}.`
         }
       ] : []
     };

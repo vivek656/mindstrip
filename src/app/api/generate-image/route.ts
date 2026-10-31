@@ -145,23 +145,19 @@ export async function POST(req: NextRequest) {
       return desc;
     });
 
-    // Check if there are episodic guest characters (e.g. client, boss)
+    // Check if there are episodic guest characters (e.g. client, guest)
     const guestNames = Array.from(featuredNames).filter(
       (fn) => !(characters || []).some((c: { name: string }) => c.name.toLowerCase().includes(fn) || fn.includes(c.name.toLowerCase()))
     );
     guestNames.forEach((g) => {
-      if (/client/.test(g)) {
-        charsListArray.push(`${g} (wealthy corporate client in a sharp tailored business suit)`);
-      } else if (/boss|ceo|manager/.test(g)) {
-        charsListArray.push(`${g} (demanding corporate executive in formal business attire)`);
-      }
+      charsListArray.push(`${g} (scene partner in ${worldTitle || 'this world'})`);
     });
 
     const charsList = charsListArray.join(' and ');
 
     const mandatoryWardrobe = targetCharacters
       .filter((c: any) => c.wardrobe && c.wardrobe.trim())
-      .map((c: any) => `${c.name} MUST be wearing: ${c.wardrobe.trim()} (strictly adhere to this attire; DO NOT render in saree, traditional robes, or combat battle gear)`)
+      .map((c: any) => `${c.name} signature attire: ${c.wardrobe.trim()}`)
       .join('; ');
 
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels

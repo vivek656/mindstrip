@@ -47,95 +47,30 @@ function generateDynamicCoDirectorResponse(
   const guestsStr = guestLabels.length > 0 ? guestLabels.join(' & ') : '';
   const sceneCast = [...spotlightChars, ...guestLabels];
 
-  // Detect themes & moods
-  const isSeductionOrCharm = /seduce|charm|flirt|attract|allure/.test(lower);
-  const isCorporateOffice = /office|contract|business|boardroom|deal|meeting|presentation/.test(lower);
-  const isTensionOrConflict = /fight|clash|tension|argue|threat|betray|trap/.test(lower);
-  const isTwistOrHesitation = /hesitate|wait|twist|suspicious|doubt|turn|reveal/.test(lower);
+  const userTopic = lastUserMsg.trim() || 'the central development';
+  const reply = `I like where you're taking this scene! Focusing specifically on **${leadName}** ${guestsStr ? `and **${guestsStr}**` : ''} keeps the narrative progression sharp and compelling.
 
-  let reply = '';
-  let panel1 = '';
-  let panel2 = '';
-  let panel3 = '';
-  let panel4 = '';
-  let premise = '';
-  let quickStarters: string[] = [];
+Here is how we can structure this sequence across the 4 panels:
 
-  if (isCorporateOffice || Boolean(guestMatch) || isSeductionOrCharm) {
-    const userTopic = lastUserMsg.trim() || 'the upcoming interaction';
-    reply = `I like where you're taking this scene! Focusing specifically on **${leadName}** ${guestsStr ? `and **${guestsStr}**` : ''} keeps the spotlight razor-sharp without unnecessary cast clutter.
+• **Panel 1 — Establishing the Scene:** ${leadName} steps into the scene with clear intent, establishing the stakes around "${userTopic}".
+• **Panel 2 — The Interaction:** ${leadName} engages directly with ${guestsStr || 'their counterpart'}, developing the interpersonal dynamic and dialogue.
+• **Panel 3 — The Pivotal Exchange:** A critical revelation or turning point occurs that shifts the balance of power.
+• **Panel 4 — The Decision / Hook:** A decisive choice is made, setting up an immediate cliffhanger for the next episode.
 
-Here is how we can pace this dramatic beat across the 4 panels:
+How does this pacing feel? We can either push for a decisive resolution or introduce an unexpected complication.`;
 
-• **Panel 1 — Setting the Stage:** ${leadName} steps into the scene with clear intent, preparing for "${userTopic}".
-• **Panel 2 — The Encounter:** ${leadName} engages directly with ${guestsStr || 'their counterpart'}, establishing the interpersonal dynamic and conversational friction.
-• **Panel 3 — The Core Exchange:** A compelling exchange of perspectives or strategic revelation where ${leadName} asserts their conviction.
-• **Panel 4 — The Decision:** A decisive moment or unexpected turn that sets up the immediate cliffhanger for the next episode.
+  const panel1 = `${leadName} enters the scene with focused composure, establishing the moment for "${userTopic}".`;
+  const panel2 = `${leadName} engages ${guestsStr || 'their counterpart'}, exchanging sharp, observant dialogue.`;
+  const panel3 = `A pivotal development occurs as the dialogue and stakes over "${userTopic}" reach a climax.`;
+  const panel4 = `A decisive choice is made, leaving an intriguing narrative opening for the next chapter.`;
 
-How does that pacing feel? We can either push for a decisive breakthrough or introduce an unexpected complication.`;
+  const premise = `Episode #${(currentEpisode?.episodeNumber || 1) + 1}: ${leadName} navigates "${userTopic}" with ${guestsStr || 'key scene partners'}, driving dramatic narrative momentum in ${world.title}.`;
 
-    panel1 = `${leadName} enters the setting with focused composure, establishing the scene for "${userTopic}".`;
-    panel2 = `${leadName} engages ${guestsStr || 'their counterpart'}, exchanging sharp, observant dialogue.`;
-    panel3 = `A critical development occurs as the dialogue and stakes over "${userTopic}" reach a pivotal peak.`;
-    panel4 = `A decisive choice is made, leaving an intriguing narrative opening for the next chapter.`;
-
-    premise = `Episode #${(currentEpisode?.episodeNumber || 1) + 1}: ${leadName} navigates "${userTopic}" with ${guestsStr || 'key scene partners'}, balancing wits with dramatic narrative stakes.`;
-
-    quickStarters = [
-      'Resolve the scene with a decisive breakthrough',
-      'Introduce an unexpected complication or rival twist',
-      'End on a suspenseful cliffhanger for the next issue'
-    ];
-  } else if (isTensionOrConflict) {
-    reply = `That raises the stakes dramatically! Having **${leadName}** face this conflict head-on creates great narrative momentum.
-
-Here is a dynamic 4-panel visual breakdown:
-
-• **Panel 1 (Setup):** Atmospheric establishing shot framing the escalating tension and body language.
-• **Panel 2 (The Escalation):** Sharp dialogue exchange or tactical move where ${leadName} asserts control.
-• **Panel 3 (The Turning Point):** An intense reaction beat or close-up revealing true intentions.
-• **Panel 4 (The Cliffhanger):** A suspenseful freeze-frame leaving the outcome on a knife-edge.
-
-Would you like to resolve this conflict in this issue, or carry the standoff into the next chapter?`;
-
-    panel1 = `${leadName} confronts the situation with resolute focus in high-contrast dramatic lighting.`;
-    panel2 = `The verbal or physical confrontation escalates as stakes are laid out.`;
-    panel3 = `A sudden shift in leverage leaves the room dead silent.`;
-    panel4 = `Dramatic cliffhanger panel setting up the consequences.`;
-
-    premise = `Episode #${(currentEpisode?.episodeNumber || 1) + 1}: ${leadName} faces an escalating conflict that tests their resolve and alters the balance of power.`;
-
-    quickStarters = [
-      'Have them outsmart the opposition cleanly',
-      'Add a shocking betrayal or secret reveal',
-      'Cut to black right at the climax'
-    ];
-  } else {
-    // General conversational creative partner
-    reply = `Great direction. Building this beat around **${leadName}** keeps the storytelling intimate and visually coherent.
-
-Here is a 4-panel flow designed to bring that idea to life:
-
-• **Panel 1:** Establishing wide shot setting the mood and atmosphere of the location.
-• **Panel 2:** Medium shot as ${leadName} takes the initiative and drives the action.
-• **Panel 3:** Expressive close-up capturing micro-expressions and underlying tension.
-• **Panel 4:** Dramatic payoff or transition leading directly into the next development.
-
-Tell me if you want to tweak any specific panel, or hit **Draw Episode** whenever you're ready!`;
-
-    panel1 = `${leadName} in their element, setting the scene with distinct character atmosphere.`;
-    panel2 = `${leadName} makes a decisive move, advancing the core scene objective.`;
-    panel3 = `Intimate reaction framing showcasing character depth and personality.`;
-    panel4 = `Striking final beat that caps the sequence and propels the story forward.`;
-
-    premise = `Episode #${(currentEpisode?.episodeNumber || 1) + 1}: ${lastUserMsg || `${leadName} drives the next chapter of the story.`}`;
-
-    quickStarters = [
-      'Focus more on dialogue and humor',
-      'Make the visual framing more cinematic',
-      'Add an unexpected twist at the end'
-    ];
-  }
+  const quickStarters = [
+    'Resolve the scene with a decisive breakthrough',
+    'Introduce an unexpected complication or rival twist',
+    'End on a suspenseful cliffhanger for the next issue'
+  ];
 
   return {
     reply,
