@@ -173,8 +173,8 @@ export function queryCanonRag(
       results.push({
         id: `rag-char-act-${char.id}`,
         type: 'character_visual_ref',
-        title: `Action Stance Reference: @${char.name}`,
-        content: `Dynamic combat stance reference for action and movement consistency. Action URL: ${char.actionPoseRefUrl}`,
+        title: `Signature Pose Reference: @${char.name}`,
+        content: `Signature posture and attitude reference for character posture consistency. Action/Pose URL: ${char.actionPoseRefUrl}`,
         imageUrl: char.actionPoseRefUrl,
         relevanceScore: 0.95
       });

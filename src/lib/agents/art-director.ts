@@ -138,7 +138,7 @@ export function directVisualArtwork(
     if (c.portraitRefUrl) anchors.push(`face & eyes anchor: ${c.portraitRefUrl}`);
     if (c.fullBodyRefUrl) anchors.push(`legs & costume silhouette anchor: ${c.fullBodyRefUrl}`);
     if (c.backViewRefUrl) anchors.push(`rear turnaround anchor: ${c.backViewRefUrl}`);
-    if (c.actionPoseRefUrl) anchors.push(`action stance anchor: ${c.actionPoseRefUrl}`);
+    if (c.actionPoseRefUrl) anchors.push(`${isCivilian ? 'signature pose and attitude' : 'signature action posture'} anchor: ${c.actionPoseRefUrl}`);
     const anchorStr = anchors.length > 0 ? anchors.join(', ') : 'distinct expressive comic design';
     visualAnchors.push(`${c.name}${c.imageUrl ? ' (Model Sheet Locked)' : ''}: ${anchorStr}`);
     return `${c.name} (${anchorStr})`;

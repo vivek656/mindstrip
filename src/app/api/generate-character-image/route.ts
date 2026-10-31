@@ -48,10 +48,20 @@ export async function POST(req: NextRequest) {
         viewDescriptor = `character concept rear turnaround, back view showing back of costume, hair from behind, coat or cape back, silhouette from behind`;
         aspect = '3:4';
         break;
-      case 'action_pose':
-        viewDescriptor = `dynamic character action illustration, iconic combat pose, wielding signature gear, dramatic atmospheric lighting`;
+      case 'action_pose': {
+        const roleLower = (role || '').toLowerCase();
+        const genreLower = (genre || '').toLowerCase();
+        const isCombat = roleLower.includes('hero') || roleLower.includes('villain') || roleLower.includes('warrior') || roleLower.includes('fighter') || roleLower.includes('vigilante') || roleLower.includes('assassin') || roleLower.includes('ninja');
+        const isAction = genreLower.includes('action') || genreLower.includes('shonen') || genreLower.includes('superhero') || genreLower.includes('battle');
+
+        if (!isCombat && !isAction) {
+          viewDescriptor = `dynamic character concept art, expressive signature posture, commanding body language and poised attitude suited for a ${role || 'character'}, natural dramatic lighting, full character presence, authentic stylish wardrobe`;
+        } else {
+          viewDescriptor = `dynamic character action illustration, iconic heroic posture, expressive attitude, dynamic atmospheric lighting`;
+        }
         aspect = '3:4';
         break;
+      }
       case 'model_sheet':
       default:
         viewDescriptor = `professional character model sheet, multi-angle turnaround lineup showing front view, three-quarter view, and side profile on one clean reference sheet, character design sheet`;

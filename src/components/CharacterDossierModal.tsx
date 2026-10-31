@@ -218,9 +218,9 @@ export const VIEW_TYPE_OPTIONS: {
   },
   {
     id: 'action_pose',
-    label: 'Action Stance',
-    icon: '⚔️',
-    desc: 'Dynamic heroic combat posture with signature gear',
+    label: 'Signature Pose',
+    icon: '✨',
+    desc: 'Expressive body language, poise & signature attitude',
     aspect: '3:4',
   },
   {
@@ -1010,7 +1010,7 @@ What would you like to discuss or refine first?`,
       { id: 'portrait', label: 'Face / Portrait' },
       { id: 'full_body', label: 'Full-Body & Legs' },
       { id: 'back_view', label: 'Back Turnaround' },
-      { id: 'action_pose', label: 'Action Stance' },
+      { id: 'action_pose', label: 'Signature Pose' },
       { id: 'model_sheet', label: 'Master Model Sheet' },
     ];
 

@@ -928,3 +928,20 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Added to: Physical Appearance, Signature Wardrobe, Iconic Accessory, Origin Backstory, Motivation, Fatal Flaw, Secret Truth, Voice Tone, Catchphrase, Personality, Skills, and Gear.
   4. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 14 routes compiled cleanly with 0 TypeScript errors).
+
+### Role-Aware Character Visual Studio & "Signature Pose" Replacement (2026-10-31)
+- **User Feedback**:
+  *"wth is action stance in images ?"*
+  - Identified legacy superhero trope in the Visual Concept Reference Studio / Model Sheet generator where non-combat characters (corporate CEOs, civilians, office workers, romance leads) were prompted with `⚔️ Action Stance` and hardcoded `combat pose, wielding signature gear`.
+- **Implementation**:
+  1. **UI Update (`CharacterDossierModal.tsx`)**:
+     - Replaced `⚔️ Action Stance` with `✨ Signature Pose` (`id: 'action_pose'`).
+     - Updated description to: `"Expressive body language, poise & signature attitude"`.
+  2. **Role-Aware Image Generation (`/api/generate-character-image/route.ts`)**:
+     - Replaced the hardcoded combat descriptor with dynamic role detection.
+     - For civilian/corporate characters (`!isCombat && !isAction`), generates: `"dynamic character concept art, expressive signature posture, commanding body language and poised attitude suited for a ${role}, natural dramatic lighting, full character presence, authentic stylish wardrobe"`.
+     - Preserves action/combat postures only for genuine heroes, martial artists, warriors, or action genres.
+  3. **Visual Anchor Consistency (`art-director.ts`, `canon-rag.ts`)**:
+     - Updated visual reference anchors to label pose references as `"signature pose and attitude anchor"` for civilians rather than `"action stance anchor"`.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 14 routes, zero errors).
