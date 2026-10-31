@@ -863,19 +863,24 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **User Request**:
   *"AI should ask question to add in pipeline, pipeline should be intelligent enough to know what character are in page, and when AI asking question I should provide option to answer, or let AI assume the answer itself, and in the end just assume everything else if there are more and start building."*
 - **Architecture & Implementation**:
-  1. **In-Pipeline Questioning Step**:
-     - When the creator clicks "Direct Episode" (or presses `Cmd/Ctrl + Enter`), the pipeline automatically initiates the AI Co-Director questioning step before drawing.
-     - The pipeline detects who is on the page (e.g. Spotlight: Meera, Guest: The New Client, Off-Scene: Simbo).
+  1. **Dual Action Entry (Align vs Quick Draw)**:
+     - Directly below the premise prompt, the creator has two intuitive options:
+       - **`[ 🎬 Align with Co-Director ]`**: Initiates character scoping and directorial questions.
+       - **`[ ⚡ Quick Draw (Auto) ]`**: Skips questions, auto-assumes character scoping and all dramatic choices, and draws immediately.
   2. **Option to Answer OR "Let AI Assume" on Every Question**:
-     - Each question provides explicit strategic option pills (e.g. Calculated Charm vs Corporate Power Move).
-     - Each question includes a **`[ 🤖 Let AI Assume ]`** pill detailing the AI's default narrative assumption (`q.defaultAssumption`).
-  3. **"Auto-Assume Remaining & Build Page" Dynamic Execution**:
-     - The creator is never forced to answer all questions.
+     - Each question includes detailed dramatic options (e.g. Subtle Charm vs Bold Corporate Counter-Pitch).
+     - Each question includes a dedicated **`[ ✨ Let AI Assume This Choice ]`** button and an inline pill `[ ✨ Let AI Assume ]`.
+     - Selecting it marks the choice with `[ ✓ AI Assumed ]`, letting the AI decide the optimal dramatic fit.
+     - Includes a 1-click **`[ ✨ Auto-Fill All AI ]`** header action.
+  3. **"Auto-Assume Remaining & Build Page Now" Dynamic Action**:
+     - The creator is never blocked or forced to answer all questions.
      - The primary action button dynamically reflects status:
-       - 0 questions answered: `[ ⚡ Auto-Assume All & Build Page ]`
-       - Some answered: `[ ⚡ Assume Rest (X more) & Build Page ]`
-       - All answered: `[ 🚀 Draw Page with Selected Choices ]`
-     - Any unanswered question automatically falls back to `q.defaultAssumption`.
-     - Compiles into `[Co-Director Scene Specifications & Assumptions]` and immediately triggers `onGenerateNextEpisode(...)`.
-  4. **Verification**:
-     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across 13 routes).
+       - All questions answered: `[ 🚀 Build Page with Chosen Direction (X/X) ]`
+       - Some questions answered: `[ ⚡ Auto-Assume Remaining (Y) & Build Page Now ]`
+       - Zero questions answered: `[ ⚡ Auto-Assume All & Build Page Now ]`
+     - When clicked, all unanswered questions are automatically filled using the AI's top creative assumptions, combines with the creator's explicit choices and character scoping directives, and feeds directly into the multi-agent production room.
+  4. **Fixed Local/Simulation Pacing Engine (`comic-generator.ts` & `showrunner.ts`)**:
+     - Completely overhauled `generateComicStripMock`: eliminated hardcoded superhero antagonist ambushes and hero-shoehorning on non-action scenes.
+     - Premise analysis now scopes panels strictly to characters mentioned in `rawDump` (e.g. Meera) and introduces episodic guest characters (e.g. The New Client), returning proper `pageCharacters` and `guestCharacters`.
+  5. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 13 routes).

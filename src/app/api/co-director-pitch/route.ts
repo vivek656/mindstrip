@@ -11,7 +11,6 @@ export interface CoDirectorQuestion {
   id: string;
   question: string;
   options: CoDirectorOption[];
-  defaultAssumption?: string;
 }
 
 export interface CoDirectorGuestCharacter {
@@ -30,9 +29,132 @@ export interface CoDirectorPitchResult {
   directorialQuestions: CoDirectorQuestion[];
 }
 
+export function generateHeuristicPitch(
+  cleanPremise: string,
+  charNames: string[],
+  worldTitle: string = 'Comic World',
+  genre: string = 'Drama'
+): CoDirectorPitchResult {
+  const lower = cleanPremise.toLowerCase();
+  const detectedFocused = charNames.filter((name: string) => lower.includes(name.toLowerCase()));
+  const focused = detectedFocused.length > 0 ? detectedFocused : [charNames[0] || 'Protagonist'];
+  const excluded = charNames.filter((name: string) => !focused.includes(name));
+
+  const hasClient = /client|contract|deal|bid|customer|office|corporate|seduce/.test(lower);
+  const guestList: CoDirectorGuestCharacter[] = [];
+  if (hasClient) {
+    guestList.push({
+      name: 'The New Client (Mr. Sterling)',
+      role: 'client',
+      appearance: 'Distinguished executive in a bespoke tailored charcoal suit, luxury watch, discerning gaze',
+      description: 'High-stakes corporate client holding the multimillion-dollar contract',
+      avatarEmoji: '💼'
+    });
+  }
+
+  const primaryLead = focused[0] || 'the protagonist';
+
+  const mockQuestions: CoDirectorQuestion[] = hasClient
+    ? [
+        {
+          id: 'q-strategy',
+          question: `What is ${primaryLead}'s tactical negotiation approach with the new client?`,
+          options: [
+            {
+              label: 'Subtle Charm & Psychological Flattery',
+              description: 'Reading micro-expressions over dinner, disarming defenses with calculated warmth and wit',
+              beatAddition: `${primaryLead} uses disarming charisma and keen psychological observation to lower his guard`
+            },
+            {
+              label: 'Bold Corporate Counter-Pitch',
+              description: 'Commanding the boardroom with razor-sharp financial acumen and undeniable authority',
+              beatAddition: `${primaryLead} playfully challenges his skeptical valuation with incisive corporate mastery`
+            }
+          ]
+        },
+        {
+          id: 'q-reaction',
+          question: 'How does the client respond to the proposition?',
+          options: [
+            {
+              label: 'Intrigued yet Guarded',
+              description: 'He smiles enigmatically and probes for hidden motives or vulnerabilities',
+              beatAddition: 'The client swirls his glass with an enigmatic smirk, intrigued yet probing for true motives'
+            },
+            {
+              label: 'Completely Captivated & Ready to Sign',
+              description: 'Thoroughly persuaded by the pitch, he slides the contract forward before dessert',
+              beatAddition: 'The client pushes the contract forward, thoroughly captivated by the magnetic persuasion'
+            }
+          ]
+        },
+        {
+          id: 'q-climax',
+          question: 'What is the dramatic resolution / cliffhanger of the meeting?',
+          options: [
+            {
+              label: 'Triumphant Deal Secured',
+              description: 'The deal is inked with mutual admiration and high-stakes promises',
+              beatAddition: 'The fountain pen signs the contract, sealing a monumental new partnership'
+            },
+            {
+              label: 'Lingering Romantic Tension',
+              description: 'The contract is signed, but an intense lingering gaze suggests deeper complications ahead',
+              beatAddition: 'The contract is finalized, but a lingering touch and unspoken glance hint at dangerous chemistry'
+            }
+          ]
+        }
+      ]
+    : [
+        {
+          id: 'q-dynamic',
+          question: `How does ${primaryLead} confront the central dilemma?`,
+          options: [
+            {
+              label: 'Direct Assertive Action',
+              description: 'Taking immediate charge of the situation with bold courage',
+              beatAddition: `${primaryLead} takes decisive charge with confident action`
+            },
+            {
+              label: 'Calculated Strategic Patience',
+              description: 'Analyzing the environment for hidden angles before making the move',
+              beatAddition: `${primaryLead} waits for the opportune moment to strike strategically`
+            }
+          ]
+        },
+        {
+          id: 'q-climax',
+          question: 'How does the scene resolve for the next episode?',
+          options: [
+            {
+              label: 'Decisive Victory',
+              description: 'Clear forward momentum gained with high morale',
+              beatAddition: 'The dilemma resolves decisively with forward momentum'
+            },
+            {
+              label: 'Suspenseful Cliffhanger',
+              description: 'An unexpected discovery leaves questions open for the next chapter',
+              beatAddition: 'A sudden unexpected revelation raises the stakes for the next chapter'
+            }
+          ]
+        }
+      ];
+
+  return {
+    premiseSummary: hasClient
+      ? `High-stakes corporate meeting between ${primaryLead} and The New Client`
+      : `Spotlight episode centered on ${focused.join(', ')}`,
+    focusedCharacters: focused,
+    excludedCharacters: excluded,
+    detectedGuestCharacters: guestList,
+    directorialQuestions: mockQuestions
+  };
+}
+
 export async function POST(req: NextRequest) {
+  let body: any = {};
   try {
-    const body = await req.json();
+    body = await req.json();
     const {
       premise = '',
       characters = [],
@@ -68,67 +190,7 @@ export async function POST(req: NextRequest) {
 
     // Fallback heuristic if no API key is available
     if (!targetApiKey) {
-      const lower = cleanPremise.toLowerCase();
-      const detectedFocused = charNames.filter((name: string) => lower.includes(name.toLowerCase()));
-      const focused = detectedFocused.length > 0 ? detectedFocused : [charNames[0] || 'Protagonist'];
-      const excluded = charNames.filter((name: string) => !focused.includes(name));
-
-      const hasClient = /client|contract|deal|bid|customer/.test(lower);
-      const guestList: CoDirectorGuestCharacter[] = [];
-      if (hasClient) {
-        guestList.push({
-          name: 'The New Client (Mr. Sterling)',
-          role: 'client',
-          appearance: 'distinguished corporate executive in a bespoke tailored suit, expensive watch',
-          description: 'High-stakes client holding the multimillion-dollar contract',
-          avatarEmoji: '💼'
-        });
-      }
-
-      const mockQuestions: CoDirectorQuestion[] = [
-        {
-          id: 'q-dynamic',
-          question: `How should ${focused[0] || 'the protagonist'} approach the new client?`,
-          options: [
-            {
-              label: 'Calculated Charm & Wit',
-              description: 'Subtle double-entendres and intellectual mastery of the numbers',
-              beatAddition: 'Meera uses razor-sharp intellect and subtle charm over dinner'
-            },
-            {
-              label: 'Bold Corporate Power Move',
-              description: 'Commanding the room with magnetic confidence and asserting total authority',
-              beatAddition: 'Meera takes total charge of the conference room with magnetic poise'
-            }
-          ],
-          defaultAssumption: `${focused[0] || 'Meera'} uses calculated psychological charm and disarming wit over dinner to lower his corporate defenses`
-        },
-        {
-          id: 'q-climax',
-          question: 'What is the dramatic turning point / twist of the page?',
-          options: [
-            {
-              label: 'Signed Deal Victory',
-              description: 'The client is completely disarmed and enthusiastically signs the contract',
-              beatAddition: 'The client signs the contract with an impressed grin'
-            },
-            {
-              label: 'Suspenseful Cliffhanger',
-              description: 'Right as the pen touches paper, an unexpected revelation or interruption occurs',
-              beatAddition: 'Just as the pen touches paper, a secret clause creates unexpected tension'
-            }
-          ],
-          defaultAssumption: 'The client is thoroughly disarmed and slides the signed contract across the table with an intrigued smirk'
-        }
-      ];
-
-      return NextResponse.json({
-        premiseSummary: `Spotlight episode centered on ${focused.join(', ')}`,
-        focusedCharacters: focused,
-        excludedCharacters: excluded,
-        detectedGuestCharacters: guestList,
-        directorialQuestions: mockQuestions
-      });
+      return NextResponse.json(generateHeuristicPitch(cleanPremise, charNames, worldTitle, genre));
     }
 
     const systemPrompt = `You are MindStrip's Meta AI Co-Director Brain.
@@ -138,7 +200,6 @@ You must:
 2. Identify characters from the World Bible who should be EXCLUDED from this page (do not force the whole cast!).
 3. Detect any NEW/TEMPORARY guest characters introduced in the premise (e.g. "a client", "the boss", "a date", "a rival bidder").
 4. Formulate 2-3 provocative directorial questions to clarify the dramatic tone, strategy, and ending before scripting.
-5. Provide a "defaultAssumption" for each question describing what you will assume if the creator selects "Let AI Assume" or skips ahead.
 
 Return ONLY valid JSON with this schema:
 {
@@ -169,8 +230,7 @@ Return ONLY valid JSON with this schema:
           "description": "Short explanation of the vibe",
           "beatAddition": "Exact descriptive beat phrase to inject into prompt"
         }
-      ],
-      "defaultAssumption": "Smart narrative assumption AI will use if the creator chooses 'Let AI Assume' or skips"
+      ]
     }
   ]
 }`;
@@ -209,6 +269,8 @@ Proposed Premise: "${cleanPremise}"`;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.warn('Co-Director Pitch fallback:', msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    // Graceful fallback: return intelligent heuristic pitch instead of failing
+    const charNames = (body?.characters || []).map((c: ComicCharacter) => c.name);
+    return NextResponse.json(generateHeuristicPitch(String(body?.premise || ''), charNames, body?.worldTitle, body?.genre));
   }
 }

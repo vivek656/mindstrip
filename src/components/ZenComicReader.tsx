@@ -440,35 +440,58 @@ export function ZenComicReader({
     }
   };
 
-  const handleAutoAssumeAndBuild = (overrideChoices?: { [qId: string]: string }) => {
+  const handleAutoFillAllAiAssumptions = () => {
+    if (!coDirectorPitch?.directorialQuestions) return;
+    const assumptions: { [questionId: string]: string } = {};
+    for (const q of coDirectorPitch.directorialQuestions) {
+      assumptions[q.id] = '__AI_ASSUME__';
+    }
+    setSelectedBeatForks(assumptions);
+  };
+
+  const handleDrawWithCoDirectorDirection = (autoAssumeRemaining: boolean = true) => {
     if (!prompt.trim() && !coDirectorPitch) return;
-    const choices = overrideChoices || selectedBeatForks;
-
-    const compiledBeats: string[] = [];
-
+    
+    // Resolve all question beats
+    const resolvedBeats: string[] = [];
     if (coDirectorPitch?.directorialQuestions) {
       for (const q of coDirectorPitch.directorialQuestions) {
-        if (choices[q.id]) {
-          compiledBeats.push(`• ${q.question}: ${choices[q.id]}`);
-        } else if (q.defaultAssumption) {
-          compiledBeats.push(`• ${q.question}: [AI Assumed] ${q.defaultAssumption}`);
+        const userChoice = selectedBeatForks[q.id];
+        if (userChoice && userChoice !== '__AI_ASSUME__') {
+          // User explicitly chose this beat
+          resolvedBeats.push(userChoice);
+        } else if (userChoice === '__AI_ASSUME__' || autoAssumeRemaining) {
+          // AI assumes the best dramatic fit (option 0 or recommendation)
+          const fallbackBeat = q.options[0]?.beatAddition;
+          if (fallbackBeat) {
+            resolvedBeats.push(fallbackBeat);
+          }
         }
       }
     }
 
+    // Build scoped characters directive for the pipeline
+    let characterScopeDirective = '';
+    if (coDirectorPitch) {
+      const pageChars = coDirectorPitch.focusedCharacters.join(', ');
+      const guestChars = coDirectorPitch.detectedGuestCharacters.map((g) => `${g.name} (${g.role})`).join(', ');
+      const excludedChars = coDirectorPitch.excludedCharacters.join(', ');
+      
+      characterScopeDirective = `\n[Scoped Cast for Page]: ${pageChars}${guestChars ? ` | Guest: ${guestChars}` : ''}${excludedChars ? ` | Off-Scene Excluded: ${excludedChars}` : ''}`;
+    }
+
     let finalPremise = prompt.trim();
-    if (compiledBeats.length > 0) {
-      finalPremise += `\n\n[Co-Director Scene Specifications & Assumptions]:\n${compiledBeats.join('\n')}`;
+    if (resolvedBeats.length > 0) {
+      finalPremise += `\n\n[Director Direction & Beats]:\n${resolvedBeats.map((b) => `• ${b}`).join('\n')}`;
+    }
+    if (characterScopeDirective) {
+      finalPremise += characterScopeDirective;
     }
 
     onGenerateNextEpisode(finalPremise, selectedLayout, selectedLens);
     setPrompt('');
     setCoDirectorPitch(null);
     setSelectedBeatForks({});
-  };
-
-  const handleDrawWithCoDirectorDirection = () => {
-    handleAutoAssumeAndBuild();
   };
 
   const handleSaveNewCharacter = (e: React.FormEvent) => {
@@ -936,11 +959,8 @@ export function ZenComicReader({
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                     e.preventDefault();
                     if (prompt.trim() && !isLoading) {
-                      if (!coDirectorPitch) {
-                        handleFetchCoDirectorPitch();
-                      } else {
-                        handleAutoAssumeAndBuild();
-                      }
+                      onGenerateNextEpisode(prompt.trim(), selectedLayout, selectedLens);
+                      setPrompt('');
                     }
                   }
                 }}
@@ -953,16 +973,32 @@ export function ZenComicReader({
 
             {/* AI Co-Director Brainstorming Action */}
             <div className="space-y-2">
-              <button
-                type="button"
-                onClick={handleFetchCoDirectorPitch}
-                disabled={!prompt.trim() || isAligningPitch}
-                className="w-full py-2 px-3 rounded-xl text-xs font-bold border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                title="Brainstorm cast scoping, guest characters, and tone options with AI Co-Director"
-              >
-                <Brain className={`w-3.5 h-3.5 ${isAligningPitch ? 'animate-spin' : 'text-purple-500'}`} />
-                <span>{isAligningPitch ? 'Analyzing Cast & Scene...' : '🎬 Brainstorm with AI Co-Director'}</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleFetchCoDirectorPitch}
+                  disabled={!prompt.trim() || isAligningPitch}
+                  className="py-2.5 px-3 rounded-xl text-xs font-bold border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+                  title="Ask AI questions to align on character scoping and dramatic choices"
+                >
+                  <Brain className={`w-3.5 h-3.5 ${isAligningPitch ? 'animate-spin' : 'text-purple-600'}`} />
+                  <span>{isAligningPitch ? 'Analyzing Cast...' : '🎬 Align with Co-Director'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
+                    setPrompt('');
+                  }}
+                  disabled={isLoading}
+                  className="py-2.5 px-3 rounded-xl text-xs font-bold bg-zinc-950 hover:bg-zinc-800 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  title="Skip questions and auto-assume all character scoping and choices immediately"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>⚡ Quick Draw (Auto)</span>
+                </button>
+              </div>
 
               {pitchError && (
                 <div className="text-[11px] text-red-500 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
@@ -978,7 +1014,7 @@ export function ZenComicReader({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-purple-700 dark:text-purple-300">
                     <Brain className="w-4 h-4 text-purple-600 animate-pulse" />
-                    <span>AI Co-Director Alignment</span>
+                    <span>AI Co-Director Pipeline Alignment</span>
                   </div>
                   <button
                     type="button"
@@ -1002,7 +1038,7 @@ export function ZenComicReader({
                 {/* Scoped Cast Breakdown */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
-                    Episode Cast Scoping
+                    Intelligent Page Cast Scoping
                   </span>
                   <div className="flex flex-wrap gap-1.5 text-xs">
                     {coDirectorPitch.focusedCharacters.map((name) => (
@@ -1039,131 +1075,154 @@ export function ZenComicReader({
 
                 {/* Directorial Questions */}
                 {coDirectorPitch.directorialQuestions.length > 0 && (
-                  <div className="space-y-2.5 pt-2 border-t border-purple-500/20">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 block">
-                      Directorial Choices (Click to Align Tone & Strategy)
-                    </span>
-                    {coDirectorPitch.directorialQuestions.map((q) => (
-                      <div key={q.id} className="space-y-1">
-                        <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                          {q.question}
-                        </p>
-                        <div className="grid grid-cols-1 gap-1.5">
-                          {q.options.map((opt, oIdx) => {
-                            const isSelected = selectedBeatForks[q.id] === opt.beatAddition;
-                            return (
-                              <button
-                                key={oIdx}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedBeatForks((prev) => ({
-                                    ...prev,
-                                    [q.id]: isSelected ? '' : opt.beatAddition,
-                                  }));
-                                }}
-                                className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border ${
-                                  isSelected
-                                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                                    : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-black/10 dark:border-white/10 hover:border-purple-300'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between font-bold text-[11px]">
-                                  <span>{opt.label}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                                </div>
-                                <div className={`text-[10px] mt-0.5 line-clamp-2 ${isSelected ? 'text-purple-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                                  {opt.description}
-                                </div>
-                              </button>
-                            );
-                          })}
+                  <div className="space-y-3 pt-2 border-t border-purple-500/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                        Directorial Choices (Answer or Let AI Assume)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAutoFillAllAiAssumptions}
+                        className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-0.5"
+                        title="Mark all questions as AI-assumed"
+                      >
+                        <span>✨ Auto-Fill All AI</span>
+                      </button>
+                    </div>
 
-                          {/* Explicit "Let AI Assume" Option */}
-                          {q.defaultAssumption && (
+                    {coDirectorPitch.directorialQuestions.map((q) => {
+                      const isAiAssumed = selectedBeatForks[q.id] === '__AI_ASSUME__';
+                      return (
+                        <div key={q.id} className="space-y-1.5 p-2.5 rounded-xl bg-white/70 dark:bg-zinc-900/60 border border-purple-500/15">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex-1">
+                              {q.question}
+                            </p>
                             <button
                               type="button"
                               onClick={() => {
-                                const isAssumed = selectedBeatForks[q.id] === q.defaultAssumption;
                                 setSelectedBeatForks((prev) => ({
                                   ...prev,
-                                  [q.id]: isAssumed ? '' : q.defaultAssumption!,
+                                  [q.id]: isAiAssumed ? '' : '__AI_ASSUME__',
                                 }));
                               }}
-                              className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border ${
-                                selectedBeatForks[q.id] === q.defaultAssumption
+                              className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer border ${
+                                isAiAssumed
+                                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
+                                  : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/25'
+                              }`}
+                              title="Let AI assume the best dramatic fit for this question"
+                            >
+                              {isAiAssumed ? '✓ AI Assumed' : '✨ Let AI Assume'}
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-1.5 pt-0.5">
+                            {q.options.map((opt, oIdx) => {
+                              const isSelected = selectedBeatForks[q.id] === opt.beatAddition;
+                              return (
+                                <button
+                                  key={oIdx}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedBeatForks((prev) => ({
+                                      ...prev,
+                                      [q.id]: isSelected ? '' : opt.beatAddition,
+                                    }));
+                                  }}
+                                  className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border ${
+                                    isSelected
+                                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                                      : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-black/10 dark:border-white/10 hover:border-purple-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between font-bold text-[11px]">
+                                    <span>{opt.label}</span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                                  </div>
+                                  <div className={`text-[10px] mt-0.5 line-clamp-2 ${isSelected ? 'text-purple-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                                    {opt.description}
+                                  </div>
+                                </button>
+                              );
+                            })}
+
+                            {/* Dedicated "Let AI assume" option button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBeatForks((prev) => ({
+                                  ...prev,
+                                  [q.id]: isAiAssumed ? '' : '__AI_ASSUME__',
+                                }));
+                              }}
+                              className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border flex items-center justify-between ${
+                                isAiAssumed
                                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                  : 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border-indigo-200/60 dark:border-indigo-800/60 hover:bg-indigo-100/70'
+                                  : 'bg-purple-50/60 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border-dashed border-purple-300/70 dark:border-purple-700/70 hover:bg-purple-100/60'
                               }`}
                             >
-                              <div className="flex items-center justify-between font-bold text-[11px]">
-                                <span className="flex items-center gap-1.5">
-                                  <span>🤖</span>
-                                  <span>Let AI Assume Answer</span>
-                                </span>
-                                {selectedBeatForks[q.id] === q.defaultAssumption && <Check className="w-3.5 h-3.5 text-white" />}
+                              <div className="flex items-center gap-1.5 font-bold text-[11px]">
+                                <span>✨ Let AI Assume This Choice</span>
+                                <span className="font-normal opacity-80 text-[10px]">— Auto-decide best dramatic fit</span>
                               </div>
-                              <div className={`text-[10px] mt-0.5 line-clamp-2 ${
-                                selectedBeatForks[q.id] === q.defaultAssumption ? 'text-indigo-100' : 'text-indigo-700/80 dark:text-indigo-300/80 italic'
-                              }`}>
-                                &ldquo;{q.defaultAssumption}&rdquo;
-                              </div>
+                              {isAiAssumed && <Check className="w-3.5 h-3.5 text-white" />}
                             </button>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* Primary Draw / Auto-Assume Action */}
+                {/* Dynamic Draw / Build Button with Auto-Assume */}
                 {(() => {
                   const totalQuestions = coDirectorPitch.directorialQuestions.length;
-                  const answeredCount = Object.values(selectedBeatForks).filter(Boolean).length;
-                  const unansweredCount = totalQuestions - answeredCount;
+                  const answeredCount = coDirectorPitch.directorialQuestions.filter(
+                    (q) => selectedBeatForks[q.id] && selectedBeatForks[q.id] !== ''
+                  ).length;
+                  const remainingCount = totalQuestions - answeredCount;
 
-                  return (
-                    <div className="space-y-2 pt-1">
+                  if (answeredCount === totalQuestions) {
+                    return (
                       <button
                         type="button"
-                        onClick={() => handleAutoAssumeAndBuild()}
+                        onClick={() => handleDrawWithCoDirectorDirection(true)}
                         disabled={isLoading}
                         className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        <span>
-                          {answeredCount === 0
-                            ? '⚡ Auto-Assume All & Build Page'
-                            : unansweredCount === 0
-                            ? '🚀 Draw Page with Selected Choices'
-                            : `⚡ Assume Rest (${unansweredCount} more) & Build Page`}
-                        </span>
+                        <span>🚀 Build Page with Chosen Direction ({answeredCount}/{totalQuestions})</span>
                       </button>
+                    );
+                  }
 
-                      <div className="flex items-center justify-between px-1 text-[11px] text-zinc-400">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
-                            setPrompt('');
-                            setCoDirectorPitch(null);
-                            setSelectedBeatForks({});
-                          }}
-                          className="hover:text-zinc-700 dark:hover:text-zinc-200 underline cursor-pointer"
-                        >
-                          Skip Questions & Draw Raw
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCoDirectorPitch(null);
-                            setSelectedBeatForks({});
-                          }}
-                          className="hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
+                  if (answeredCount > 0) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => handleDrawWithCoDirectorDirection(true)}
+                        disabled={isLoading}
+                        className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
+                        title="AI will auto-assume the remaining questions and build immediately"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>⚡ Auto-Assume Remaining ({remainingCount}) & Build Page Now</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => handleDrawWithCoDirectorDirection(true)}
+                      disabled={isLoading}
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
+                      title="AI will auto-assume all directorial choices and build immediately"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>⚡ Auto-Assume All & Build Page Now</span>
+                    </button>
                   );
                 })()}
               </div>
@@ -1379,15 +1438,7 @@ export function ZenComicReader({
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() => {
-                  if (prompt.trim() && !coDirectorPitch) {
-                    handleFetchCoDirectorPitch();
-                  } else if (coDirectorPitch) {
-                    handleAutoAssumeAndBuild();
-                  } else {
-                    onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
-                  }
-                }}
+                onClick={() => onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens)}
                 disabled={isLoading}
                 className={`w-full py-3.5 px-5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg ${
                   isLoading
@@ -1404,13 +1455,9 @@ export function ZenComicReader({
                   <>
                     <Sparkles className="w-4 h-4 text-amber-300" />
                     <span>
-                      {coDirectorPitch
-                        ? '⚡ Auto-Assume Remaining & Draw Page →'
-                        : isAligningPitch
-                        ? 'Analyzing Cast & Scene...'
-                        : episode
-                        ? `Direct Episode #${(episode.episodeNumber || 1) + 1} →`
-                        : 'Direct Episode #1: Origin →'}
+                      {episode
+                        ? `Draw Episode #${(episode.episodeNumber || 1) + 1} →`
+                        : 'Draw Episode #1: Origin →'}
                     </span>
                   </>
                 )}
