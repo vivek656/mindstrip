@@ -40,14 +40,16 @@ export function generateHeuristicPitch(
   const focused = detectedFocused.length > 0 ? detectedFocused : [charNames[0] || 'Protagonist'];
   const excluded = charNames.filter((name: string) => !focused.includes(name));
 
-  const hasClient = /client|contract|deal|bid|customer|office|corporate|seduce/.test(lower);
+  const hasClient = /client|contract|deal|bid|customer/.test(lower);
   const guestList: CoDirectorGuestCharacter[] = [];
   if (hasClient) {
+    const clientMatch = cleanPremise.match(/(?:client|investor|buyer|partner)\s+([A-Z][a-z]+)/i);
+    const clientName = clientMatch ? `Client ${clientMatch[1]}` : 'The New Client';
     guestList.push({
-      name: 'The New Client (Mr. Sterling)',
+      name: clientName,
       role: 'client',
-      appearance: 'Distinguished executive in a bespoke tailored charcoal suit, luxury watch, discerning gaze',
-      description: 'High-stakes corporate client holding the multimillion-dollar contract',
+      appearance: 'Distinguished executive in a tailored charcoal suit, sharp observant gaze',
+      description: 'Key executive holding the multimillion-dollar deal',
       avatarEmoji: '💼'
     });
   }

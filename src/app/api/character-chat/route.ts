@@ -44,27 +44,26 @@ function generateHeuristicCharacterChat(
       // User responded with visual guidance
       const appearanceDraft = isCorporateOrCeo
         ? `Resembles a commanding Indian businesswoman with radiant olive complexion, poised posture, shoulder-length glossy blow-dried dark hair, sharp expressive dark eyes, and a confident, magnetic executive presence.`
-        : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}.`;
+        : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}: ${userMessage.slice(0, 100)}.`;
 
       const wardrobeDraft = isStilettoOrHeels || isCorporateOrCeo
         ? `Ultra-luxury CEO dominatrix-chic: fitted silk blouses in ivory, blood-red and jet black, high-waist tailored pencil skirts, structured designer cape blazers, and designer sarees in champagne gold and deep wine for high-stakes gala negotiations.`
-        : `Signature color-blocked daily attire with sharp tailored lines, deep contrasting tones, and authentic textural details.`;
+        : `Signature styling based on creator vision: ${userMessage.slice(0, 120)}. Authentic textural details and crisp color contrast.`;
 
       const iconicItemDraft = isStilettoOrHeels || isCorporateOrCeo
         ? `Glossy black Christian Louboutin So Kate stilettos with blood-red soles — the sharp, rhythmic click on marble that commands instant silence and deference across the corporate floor.`
-        : `A signature heirloom accessory or everyday carry prop that anchors their silhouette in every comic frame.`;
+        : `Signature accessory reflecting their personality: ${userMessage.slice(0, 80)}.`;
 
       return {
-        reply: `That gives @${name} incredible visual authority! The contrast between her poised presence and sharp executive styling creates an instant visual anchor for the comic artist.
+        reply: `I love this direction for @${name}! Incorporating "${userMessage.trim().slice(0, 90)}" into her visual continuity profile gives her an immediate, memorable presence on every comic page.
 
-Here is the drafted visual continuity package based on our discussion:`,
-        questions: [
-          `Does @${name} have a signature color accent (e.g. ruby red lips, emerald jewelry, or gold trim)?`,
-          `When she's off-the-clock or in private, does her wardrobe soften or stay hyper-armored?`
+Here is how I have structured her visual continuity package based on what you said:`,
+        questions: chatHistoryLength > 2 ? [] : [
+          `Would you like to refine her color accents or keep her signature styling as is?`
         ],
         quickOptions: [
           `👠 Blood-red Louboutin stilettos & ivory silk blouses`,
-          `🥻 Champagne gold designer saree with sharp cape blazer`,
+          `🥻 Designer silk sarees with sharp cape blazers`,
           `💎 Diamond solitaire studs & gold executive fountain pen`,
           `💄 Bold matte crimson lip & tailored midnight-black suit`
         ],
@@ -241,19 +240,19 @@ CHARACTER UNDER DIRECTION:
 FOCUS SECTION: "${focusSection.toUpperCase()}" (e.g. VISUALS = face, hair, clothing, color palette, footwear, silhouette prop; LORE = origin, motivation, secret, fatal flaw; VOICE = speaking cadence, catchphrase, wit).
 
 ROLE INSTRUCTIONS:
-1. Act as a collaborative, highly perceptive comic co-director interviewing the creator about this character.
+1. Act as a collaborative, highly perceptive comic co-director and creative partner (like ChatGPT).
 2. If the user tells you what they want (e.g. "She is based on Namita Thapar, 45 yo hot mommy CEO, stilettos, high stakes"), enthusiastically incorporate their exact vision into concrete character continuity anchors!
-3. Ask 1-2 thoughtful, evocative follow-up questions about the focus section to spark creative decisions.
-4. Provide 3-4 punchy, clickable quick-choice options that the creator can tap as shortcuts.
-5. In "suggestedUpdates", provide polished, publication-ready text for the relevant dossier fields (appearance, wardrobe, iconicItem, backstory, motivation, etc.) so the creator can click "Apply to Dossier" with 1 click!
+3. Answer their questions directly, offer visual or narrative suggestions, and build context across turns.
+4. DO NOT grill or interrogate the creator with endless questions. You may include 0 to 1 optional, thoughtful follow-up question ONLY IF it genuinely helps advance the character's development.
+5. Provide 2-4 punchy, clickable quick-choice options that the creator can tap as shortcuts.
+6. In "suggestedUpdates", provide polished, publication-ready text for the relevant dossier fields (appearance, wardrobe, iconicItem, backstory, motivation, etc.) so the creator can click "Apply to Dossier" with 1 click!
 
 CRITICAL FORMATTING:
 Respond ONLY with a valid JSON object matching this exact schema:
 {
-  "reply": "Conversational, engaging response to the creator acknowledging their input, discussing dramatic implications, and framing the next creative question.",
+  "reply": "Conversational, engaging response to the creator acknowledging their input, discussing dramatic implications, and offering ideas.",
   "questions": [
-    "Evocative question 1 about this section?",
-    "Evocative question 2 about this section?"
+    "Optional single thought question only if helpful (leave empty [] if user just made a statement or asked an answer)"
   ],
   "quickOptions": [
     "Option 1 description with emoji",

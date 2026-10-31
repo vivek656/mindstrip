@@ -945,3 +945,27 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Updated visual reference anchors to label pose references as `"signature pose and attitude anchor"` for civilians rather than `"action stance anchor"`.
   4. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 14 routes, zero errors).
+
+### Conversational ChatGPT-Style Co-Director Writers' Room (2026-10-31)
+- **User Feedback**:
+  *"AI co directroe whatever i am writing keeps of repeating same answer again ans again , and again and again"*
+  *"why cant it be like normal chatgpt , chat you know in chat gpt where ai can answer and build context , i am not aying to question me all the time just question is you want to , not suire but this is very bad"*
+- **Root Cause Identified**:
+  - The Episode Co-Director Studio panel was structured as a static alignment form (`/api/co-director-pitch`) with rigid multiple-choice questionnaire cards.
+  - When running without credentials or during heuristic fallback, `/api/co-director-pitch` and `/api/character-chat` returned hardcoded templates (e.g. static "Mr. Sterling" client questions) repeatedly whenever words like "client", "office", or "contract" appeared.
+  - Users typing follow-up thoughts or trying to have a back-and-forth conversation were trapped receiving the exact same quiz questions over and over.
+- **Implementation**:
+  1. **New Conversational Endpoint `/api/co-director-chat/route.ts`**:
+     - ChatGPT-style multi-turn conversational partner connecting with Meta `muse-spark-1.3` / `llama-v3p3-70b-instruct`.
+     - Maintains conversational history, builds narrative context across turns, brainstorms panel flow, dialogue, and dramatic twists.
+     - Never interrogates the creator with mandatory questionnaires; questions are strictly optional suggestions.
+     - Dynamic fallback engine parses the user's actual keywords, detects scene cast and guests, and generates tailored 4-panel breakdowns instead of static canned templates.
+  2. **Dedicated Writers' Room UI in `ZenComicReader.tsx` (Tab 1: Next Episode)**:
+     - Defaults to a sleek **`💬 Co-Director Chat`** interface with a full scrollable message stream.
+     - Highlights active scene cast (`🎯 In Scene: @Meera, Client` vs `🚫 Off-Scene: Simbo`) to ensure zero hero bleed.
+     - Includes expandable **4-Panel Scene Breakdown** previews and clickable quick-reply chips.
+     - Prominent **`🚀 Draw Episode with this Story Context`** button immediately compiles the agreed conversation context into the comic generation pipeline with 1 click.
+     - Seamlessly connects `[ 🎬 Re-Direct Story ]` to the conversation stream.
+     - Preserves `[ ⚡ Quick Prompt ]` mode for users who just want a 1-line prompt.
+  3. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 15 routes compiled cleanly with 0 TypeScript errors).

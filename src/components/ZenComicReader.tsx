@@ -12,6 +12,7 @@ import {
   CustomWorldAttribute,
   ArtStyle,
   SpeechBubble,
+  CoDirectorChatMessage,
 } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { CoDirectorPitchResult } from '@/app/api/co-director-pitch/route';
@@ -407,6 +408,127 @@ export function ZenComicReader({
   const [selectedBeatForks, setSelectedBeatForks] = useState<{ [questionId: string]: string }>({});
   const [isSidebarDialogueOpen, setIsSidebarDialogueOpen] = useState(false);
 
+  // ChatGPT-Style AI Co-Director Writers' Room Chat State
+  const [coDirectorChatMessages, setCoDirectorChatMessages] = useState<CoDirectorChatMessage[]>([]);
+  const [coDirectorInputText, setCoDirectorInputText] = useState('');
+  const [isSendingCoDirectorChat, setIsSendingCoDirectorChat] = useState(false);
+  const [activeStoryContext, setActiveStoryContext] = useState<string>('');
+  const [activeCastSpotlight, setActiveCastSpotlight] = useState<string[]>([]);
+  const [activeCastExcluded, setActiveCastExcluded] = useState<string[]>([]);
+  const [coDirectorMode, setCoDirectorMode] = useState<'chat' | 'quick'>('chat');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (coDirectorChatMessages.length === 0 && world) {
+      const lead = world.characters[0]?.name || 'the protagonist';
+      setCoDirectorChatMessages([
+        {
+          id: `seed-chat-${world.id || 'default'}`,
+          role: 'assistant',
+          content: `Welcome to the **AI Co-Director Writers' Room** for "${world.title}" (${world.genre})!
+
+I'm your creative partner here to build the story with you like in ChatGPT. Tell me what scene you envision next for @${lead} or another character.
+
+Who's in the room? What is the conflict, conversation, or twist? You can talk freely, bounce ideas, or ask for suggestions. When you like the direction, hit **Draw Episode**!`,
+          quickStarters: [
+            `@${lead} has a high-stakes meeting with a new client`,
+            `A tense standoff with rising stakes`,
+            `A witty conversation that takes an unexpected turn`,
+          ],
+        },
+      ]);
+    }
+  }, [world.id]);
+
+  React.useEffect(() => {
+    chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [coDirectorChatMessages, isSendingCoDirectorChat]);
+
+  const handleSendCoDirectorMessage = async (overrideText?: string) => {
+    const text = (typeof overrideText === 'string' ? overrideText : coDirectorInputText).trim();
+    if (!text || isSendingCoDirectorChat) return;
+
+    const userMsg: CoDirectorChatMessage = {
+      id: `usr-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    const updatedHistory = [...coDirectorChatMessages, userMsg];
+    setCoDirectorChatMessages(updatedHistory);
+    setCoDirectorInputText('');
+    setIsSendingCoDirectorChat(true);
+
+    try {
+      const res = await fetch('/api/co-director-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: updatedHistory.map((m) => ({ role: m.role, content: m.content })),
+          world: {
+            title: world.title,
+            genre: world.genre,
+            tagline: world.tagline,
+            lore: world.lore,
+            characters: world.characters,
+          },
+          currentEpisode: {
+            episodeNumber: episode?.episodeNumber || 1,
+            title: episode?.title,
+            summary: episode?.recap || episode?.rawBrainDump,
+          },
+          apiKey: apiConfig?.apiKey,
+          baseUrl: apiConfig?.baseUrl,
+          provider: apiConfig?.provider,
+          modelName: apiConfig?.modelName,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Co-Director chat API error (${res.status})`);
+      }
+
+      const data = await res.json();
+      const assistantMsg: CoDirectorChatMessage = {
+        id: `asst-${Date.now()}`,
+        role: 'assistant',
+        content: data.reply || 'Understood! Let us build this page together.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        synthesizedPremise: data.synthesizedPremise,
+        castSpotlight: data.castSpotlight,
+        castExcluded: data.castExcluded,
+        suggestedPanels: data.suggestedPanels,
+        quickStarters: data.quickStarters,
+      };
+
+      setCoDirectorChatMessages((prev) => [...prev, assistantMsg]);
+      if (data.synthesizedPremise) {
+        setActiveStoryContext(data.synthesizedPremise);
+        setPrompt(data.synthesizedPremise);
+      }
+      if (data.castSpotlight && Array.isArray(data.castSpotlight)) {
+        setActiveCastSpotlight(data.castSpotlight);
+      }
+      if (data.castExcluded && Array.isArray(data.castExcluded)) {
+        setActiveCastExcluded(data.castExcluded);
+      }
+    } catch (err: any) {
+      console.error('Co-Director chat failed:', err);
+    } finally {
+      setIsSendingCoDirectorChat(false);
+    }
+  };
+
+  const handleDrawFromCoDirectorChat = () => {
+    const finalPremise = activeStoryContext || prompt || coDirectorInputText || world.tagline;
+    let characterScopeDirective = '';
+    if (activeCastSpotlight.length > 0) {
+      characterScopeDirective = `\n[Scoped Cast for Page]: ${activeCastSpotlight.join(', ')}${activeCastExcluded.length > 0 ? ` | Off-Scene Excluded: ${activeCastExcluded.join(', ')}` : ''}`;
+    }
+    onGenerateNextEpisode(finalPremise + characterScopeDirective, selectedLayout, selectedLens);
+  };
+
   const handleFetchCoDirectorPitch = async (overridePremise?: any) => {
     const clean = (typeof overridePremise === 'string' ? overridePremise : prompt).trim();
     if (!clean) return;
@@ -447,8 +569,9 @@ export function ZenComicReader({
     if (!target.trim()) return;
     setPrompt(target);
     setRightPanelTab('next');
+    setCoDirectorMode('chat');
     setIsRightPanelOpen(true);
-    handleFetchCoDirectorPitch(target);
+    handleSendCoDirectorMessage(`Let's re-direct this episode: ${target}`);
   };
 
   const handleAutoFillAllAiAssumptions = () => {
@@ -918,324 +1041,302 @@ export function ZenComicReader({
           /* =========================================================
              TAB 1: NEXT EPISODE CO-DIRECTOR
           ========================================================= */
-          <div className="space-y-5 select-text">
-            {/* Episode Target Header */}
+          <div className="space-y-4 select-text">
+            {/* Mode Switcher: ChatGPT Co-Director Chat vs Simple Prompt */}
             <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/10">
-              <div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-500">
-                  Story Progression
-                </span>
-                <h3 className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
-                  {episode ? `Direct Episode #${(episode.episodeNumber || 1) + 1}` : 'Direct Episode #1: Origin'}
-                </h3>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg border bg-zinc-100 dark:bg-zinc-800 border-black/5 dark:border-white/10 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setCoDirectorMode('chat')}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                    coDirectorMode === 'chat'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950'
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>💬 Co-Director Chat</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCoDirectorMode('quick')}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                    coDirectorMode === 'quick'
+                      ? 'bg-purple-600 text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>⚡ Quick Prompt</span>
+                </button>
               </div>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                {selectedLayout.toUpperCase()} • {selectedLens.toUpperCase()}
+
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold">
+                Ep #{(episode?.episodeNumber || 1) + 1}
               </span>
             </div>
 
-            {/* Prompt Textarea */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                  <Edit2 className="w-3 h-3 text-blue-500" />
-                  <span>Story Premise / Scene Beat</span>
-                </label>
-                {prompt.trim() && (
+            {coDirectorMode === 'chat' ? (
+              /* =========================================================
+                 CHATGPT-STYLE CO-DIRECTOR CONVERSATION WRITERS' ROOM
+              ========================================================= */
+              <div className="space-y-4">
+                {/* Active Scoped Cast Pill Bar */}
+                {(activeCastSpotlight.length > 0 || activeCastExcluded.length > 0) && (
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold uppercase text-purple-700 dark:text-purple-300">
+                        Scene Cast Scoping (No Random Hero Bleed)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleDrawFromCoDirectorChat}
+                        disabled={isLoading}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-700 hover:bg-purple-600 text-white flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3 text-amber-300" />
+                        <span>Draw with this Cast</span>
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {activeCastSpotlight.map((name, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border border-emerald-500/30 text-[11px] font-bold">
+                          🎯 {name}
+                        </span>
+                      ))}
+                      {activeCastExcluded.map((name, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 text-[11px] line-through">
+                          🚫 {name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ChatGPT Message Stream */}
+                <div className="space-y-3 min-h-[220px]">
+                  {coDirectorChatMessages.map((msg) => {
+                    const isAssistant = msg.role === 'assistant';
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${isAssistant ? 'items-start' : 'items-end'} space-y-1.5`}
+                      >
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-zinc-400 px-1">
+                          <span>{isAssistant ? '🎬 AI Co-Director' : '👤 You'}</span>
+                          {msg.timestamp && <span>• {msg.timestamp}</span>}
+                        </div>
+
+                        <div
+                          className={`p-3 rounded-2xl text-xs sm:text-[13px] leading-relaxed max-w-[95%] whitespace-pre-wrap ${
+                            isAssistant
+                              ? readerTheme === 'cinema' && activeTab === 'comic'
+                                ? 'bg-zinc-800/90 text-zinc-100 border border-white/10'
+                                : 'bg-white text-zinc-900 border border-black/10 shadow-xs'
+                              : 'bg-blue-600 text-white font-medium shadow-xs'
+                          }`}
+                        >
+                          {msg.content}
+
+                          {/* Expandable 4-Panel Storyboard Breakdown if generated */}
+                          {msg.suggestedPanels && msg.suggestedPanels.length > 0 && (
+                            <details className="mt-3 pt-2.5 border-t border-black/10 dark:border-white/10 text-xs">
+                              <summary className="font-bold cursor-pointer text-purple-600 dark:text-purple-300 hover:underline flex items-center gap-1 select-none">
+                                <span>🎬 View 4-Panel Scene Breakdown ({msg.suggestedPanels.length} Panels)</span>
+                              </summary>
+                              <div className="mt-2 space-y-1.5 pl-1">
+                                {msg.suggestedPanels.map((p) => (
+                                  <div key={p.panelNumber} className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px]">
+                                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1.5">Panel {p.panelNumber}:</span>
+                                    <span>{p.description}</span>
+                                    {p.dialogue && (
+                                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400 italic">
+                                        "{p.dialogue}"
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          )}
+
+                          {/* Quick Thought-Starter Shortcut Pills */}
+                          {msg.quickStarters && msg.quickStarters.length > 0 && (
+                            <div className="mt-2.5 pt-2 border-t border-black/10 dark:border-white/10 flex flex-wrap gap-1.5">
+                              {msg.quickStarters.map((starter, sIdx) => (
+                                <button
+                                  key={sIdx}
+                                  type="button"
+                                  onClick={() => handleSendCoDirectorMessage(starter)}
+                                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 transition-all cursor-pointer text-left"
+                                >
+                                  💡 {starter}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {isSendingCoDirectorChat && (
+                    <div className="flex items-center gap-2 p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs font-mono text-purple-700 dark:text-purple-300 animate-pulse">
+                      <Brain className="w-4 h-4 animate-spin text-purple-600" />
+                      <span>Co-Director is thinking & building story context...</span>
+                    </div>
+                  )}
+                  <div ref={chatScrollRef} />
+                </div>
+
+                {/* One-Click Draw Action From Agreed Context */}
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => setPrompt('')}
-                    className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-mono cursor-pointer"
+                    onClick={handleDrawFromCoDirectorChat}
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-[0.99] disabled:opacity-50"
                   >
-                    Clear
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>🚀 Draw Episode with this Story Context</span>
                   </button>
-                )}
-              </div>
-
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={3}
-                placeholder={
-                  episode
-                    ? `Describe what happens next for @${world.characters[0]?.name || 'the cast'}...`
-                    : `How does the story begin for @${world.characters[0]?.name || 'our hero'}?...`
-                }
-                className={`w-full p-3 rounded-2xl text-xs sm:text-sm font-medium border resize-none transition-all outline-none focus:ring-2 focus:ring-blue-500 ${
-                  readerTheme === 'cinema' && activeTab === 'comic'
-                    ? 'bg-zinc-900 border-white/15 text-white placeholder:text-zinc-500'
-                    : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
-                }`}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    if (prompt.trim() && !isLoading) {
-                      onGenerateNextEpisode(prompt.trim(), selectedLayout, selectedLens);
-                      setPrompt('');
-                    }
-                  }
-                }}
-              />
-              <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
-                <span>Tip: Press ⌘/Ctrl + Enter to draw</span>
-                <span>{prompt.length} chars</span>
-              </div>
-            </div>
-
-            {/* AI Co-Director Brainstorming Action */}
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleFetchCoDirectorPitch}
-                  disabled={!prompt.trim() || isAligningPitch}
-                  className="py-2.5 px-3 rounded-xl text-xs font-bold border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
-                  title="Ask AI questions to align on character scoping and dramatic choices"
-                >
-                  <Brain className={`w-3.5 h-3.5 ${isAligningPitch ? 'animate-spin' : 'text-purple-600'}`} />
-                  <span>{isAligningPitch ? 'Analyzing Cast...' : '🎬 Align with Co-Director'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
-                    setPrompt('');
-                  }}
-                  disabled={isLoading}
-                  className="py-2.5 px-3 rounded-xl text-xs font-bold bg-zinc-950 hover:bg-zinc-800 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-                  title="Skip questions and auto-assume all character scoping and choices immediately"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>⚡ Quick Draw (Auto)</span>
-                </button>
-              </div>
-
-              {pitchError && (
-                <div className="text-[11px] text-red-500 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                  {pitchError}
                 </div>
-              )}
-            </div>
 
-            {/* Interactive Co-Director Pitch Alignment Card */}
-            {coDirectorPitch && (
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-purple-500/30 space-y-3 shadow-xs animate-in fade-in duration-200">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-purple-700 dark:text-purple-300">
-                    <Brain className="w-4 h-4 text-purple-600 animate-pulse" />
-                    <span>AI Co-Director Pipeline Alignment</span>
+                {/* Chat Composer Input */}
+                <div className="space-y-1.5 pt-2 border-t border-black/[0.08] dark:border-white/10">
+                  <div className="relative flex items-center">
+                    <textarea
+                      value={coDirectorInputText}
+                      onChange={(e) => setCoDirectorInputText(e.target.value)}
+                      placeholder="Chat with Co-Director: bounce ideas, tweak dialogue, suggest a twist..."
+                      rows={2}
+                      disabled={isSendingCoDirectorChat}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendCoDirectorMessage();
+                        }
+                      }}
+                      className={`w-full p-2.5 pr-10 rounded-xl text-xs sm:text-sm font-medium border resize-none outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                        readerTheme === 'cinema' && activeTab === 'comic'
+                          ? 'bg-zinc-900 border-white/15 text-white placeholder:text-zinc-500'
+                          : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSendCoDirectorMessage()}
+                      disabled={!coDirectorInputText.trim() || isSendingCoDirectorChat}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white cursor-pointer transition-all shadow-xs"
+                      title="Send message to Co-Director (Enter)"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+
+                  {/* Quick Action Brainstorm Helpers */}
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSendCoDirectorMessage('Can you suggest a dramatic twist for this episode?')}
+                        className="hover:text-blue-500 underline cursor-pointer shrink-0"
+                      >
+                        💡 Suggest Twist
+                      </button>
+                      <span>•</span>
+                      <button
+                        type="button"
+                        onClick={() => handleSendCoDirectorMessage('How should we pace this scene across 4 panels?')}
+                        className="hover:text-blue-500 underline cursor-pointer shrink-0"
+                      >
+                        🎬 4-Panel Breakdown
+                      </button>
+                    </div>
+                    <span className="shrink-0">Enter ↵ to chat</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* =========================================================
+                 SIMPLE QUICK PROMPT MODE
+              ========================================================= */
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                      <Edit2 className="w-3 h-3 text-blue-500" />
+                      <span>Story Premise / Scene Beat</span>
+                    </label>
+                    {prompt.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setPrompt('')}
+                        className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-mono cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    rows={4}
+                    placeholder={
+                      episode
+                        ? `Describe what happens next for @${world.characters[0]?.name || 'the cast'}...`
+                        : `How does the story begin for @${world.characters[0]?.name || 'our hero'}?...`
+                    }
+                    className={`w-full p-3 rounded-2xl text-xs sm:text-sm font-medium border resize-none transition-all outline-none focus:ring-2 focus:ring-blue-500 ${
+                      readerTheme === 'cinema' && activeTab === 'comic'
+                        ? 'bg-zinc-900 border-white/15 text-white placeholder:text-zinc-500'
+                        : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
+                    }`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        if (prompt.trim() && !isLoading) {
+                          onGenerateNextEpisode(prompt.trim(), selectedLayout, selectedLens);
+                          setPrompt('');
+                        }
+                      }
+                    }}
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                    <span>Tip: Press ⌘/Ctrl + Enter to draw</span>
+                    <span>{prompt.length} chars</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      setCoDirectorPitch(null);
-                      setSelectedBeatForks({});
+                      setCoDirectorMode('chat');
+                      if (prompt.trim()) {
+                        handleSendCoDirectorMessage(prompt.trim());
+                      }
                     }}
-                    className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer rounded"
-                    title="Dismiss alignment"
+                    className="py-2.5 px-3 rounded-xl text-xs font-bold border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                    <span>💬 Brainstorm in Chat</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
+                      setPrompt('');
+                    }}
+                    disabled={isLoading}
+                    className="py-2.5 px-3 rounded-xl text-xs font-bold bg-zinc-950 hover:bg-zinc-800 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>⚡ Quick Draw</span>
                   </button>
                 </div>
-
-                {/* Logline Summary */}
-                <div className="text-xs text-zinc-800 dark:text-zinc-200 bg-white/80 dark:bg-zinc-900/80 p-2.5 rounded-xl border border-purple-500/20 leading-relaxed font-medium">
-                  <span className="font-bold text-purple-900 dark:text-purple-200 mr-1">Logline:</span>
-                  {coDirectorPitch.premiseSummary}
-                </div>
-
-                {/* Scoped Cast Breakdown */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
-                    Intelligent Page Cast Scoping
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 text-xs">
-                    {coDirectorPitch.focusedCharacters.map((name) => (
-                      <span
-                        key={name}
-                        className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border border-emerald-500/30 font-semibold flex items-center gap-1"
-                      >
-                        <span>🎯 Spotlight:</span>
-                        <span>{name}</span>
-                      </span>
-                    ))}
-                    {coDirectorPitch.detectedGuestCharacters.map((guest, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30 font-semibold flex items-center gap-1"
-                        title={guest.description || guest.appearance}
-                      >
-                        <span>💼 Guest:</span>
-                        <span>{guest.name}</span>
-                        {guest.role && <span className="opacity-80 font-normal">({guest.role})</span>}
-                      </span>
-                    ))}
-                    {coDirectorPitch.excludedCharacters.map((name) => (
-                      <span
-                        key={name}
-                        className="px-2 py-0.5 rounded-md bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 line-through text-[11px]"
-                        title="Off-scene for this episode to prevent hero intrusion"
-                      >
-                        🚫 {name} (Off-Scene)
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Directorial Questions */}
-                {coDirectorPitch.directorialQuestions.length > 0 && (
-                  <div className="space-y-3 pt-2 border-t border-purple-500/20">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
-                        Directorial Choices (Answer or Let AI Assume)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAutoFillAllAiAssumptions}
-                        className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-0.5"
-                        title="Mark all questions as AI-assumed"
-                      >
-                        <span>✨ Auto-Fill All AI</span>
-                      </button>
-                    </div>
-
-                    {coDirectorPitch.directorialQuestions.map((q) => {
-                      const isAiAssumed = selectedBeatForks[q.id] === '__AI_ASSUME__';
-                      return (
-                        <div key={q.id} className="space-y-1.5 p-2.5 rounded-xl bg-white/70 dark:bg-zinc-900/60 border border-purple-500/15">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex-1">
-                              {q.question}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedBeatForks((prev) => ({
-                                  ...prev,
-                                  [q.id]: isAiAssumed ? '' : '__AI_ASSUME__',
-                                }));
-                              }}
-                              className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer border ${
-                                isAiAssumed
-                                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
-                                  : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/25'
-                              }`}
-                              title="Let AI assume the best dramatic fit for this question"
-                            >
-                              {isAiAssumed ? '✓ AI Assumed' : '✨ Let AI Assume'}
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-1.5 pt-0.5">
-                            {q.options.map((opt, oIdx) => {
-                              const isSelected = selectedBeatForks[q.id] === opt.beatAddition;
-                              return (
-                                <button
-                                  key={oIdx}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedBeatForks((prev) => ({
-                                      ...prev,
-                                      [q.id]: isSelected ? '' : opt.beatAddition,
-                                    }));
-                                  }}
-                                  className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border ${
-                                    isSelected
-                                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                                      : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-black/10 dark:border-white/10 hover:border-purple-300'
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between font-bold text-[11px]">
-                                    <span>{opt.label}</span>
-                                    {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                                  </div>
-                                  <div className={`text-[10px] mt-0.5 line-clamp-2 ${isSelected ? 'text-purple-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                                    {opt.description}
-                                  </div>
-                                </button>
-                              );
-                            })}
-
-                            {/* Dedicated "Let AI assume" option button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedBeatForks((prev) => ({
-                                  ...prev,
-                                  [q.id]: isAiAssumed ? '' : '__AI_ASSUME__',
-                                }));
-                              }}
-                              className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border flex items-center justify-between ${
-                                isAiAssumed
-                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                  : 'bg-purple-50/60 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300 border-dashed border-purple-300/70 dark:border-purple-700/70 hover:bg-purple-100/60'
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5 font-bold text-[11px]">
-                                <span>✨ Let AI Assume This Choice</span>
-                                <span className="font-normal opacity-80 text-[10px]">— Auto-decide best dramatic fit</span>
-                              </div>
-                              {isAiAssumed && <Check className="w-3.5 h-3.5 text-white" />}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Dynamic Draw / Build Button with Auto-Assume */}
-                {(() => {
-                  const totalQuestions = coDirectorPitch.directorialQuestions.length;
-                  const answeredCount = coDirectorPitch.directorialQuestions.filter(
-                    (q) => selectedBeatForks[q.id] && selectedBeatForks[q.id] !== ''
-                  ).length;
-                  const remainingCount = totalQuestions - answeredCount;
-
-                  if (answeredCount === totalQuestions) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => handleDrawWithCoDirectorDirection(true)}
-                        disabled={isLoading}
-                        className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        <span>🚀 Build Page with Chosen Direction ({answeredCount}/{totalQuestions})</span>
-                      </button>
-                    );
-                  }
-
-                  if (answeredCount > 0) {
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => handleDrawWithCoDirectorDirection(true)}
-                        disabled={isLoading}
-                        className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
-                        title="AI will auto-assume the remaining questions and build immediately"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                        <span>⚡ Auto-Assume Remaining ({remainingCount}) & Build Page Now</span>
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => handleDrawWithCoDirectorDirection(true)}
-                      disabled={isLoading}
-                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
-                      title="AI will auto-assume all directorial choices and build immediately"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      <span>⚡ Auto-Assume All & Build Page Now</span>
-                    </button>
-                  );
-                })()}
               </div>
             )}
 

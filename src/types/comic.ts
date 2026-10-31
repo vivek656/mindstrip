@@ -229,3 +229,16 @@ export interface PresetScenario {
   recommendedStyle: ArtStyle;
   recommendedLens?: PerspectiveLens;
 }
+
+export interface CoDirectorChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: string;
+  synthesizedPremise?: string;
+  castSpotlight?: string[];
+  castExcluded?: string[];
+  suggestedPanels?: { panelNumber: number; description: string; dialogue?: string }[];
+  quickStarters?: string[];
+}
+
