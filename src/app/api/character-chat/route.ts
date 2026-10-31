@@ -41,29 +41,38 @@ function generateHeuristicCharacterChat(
 
   if (focusSection === 'visuals') {
     if (userMessage && userMessage.trim()) {
+      // Check if user explicitly mentioned attire style
+      const mentionsWestern = /western|suit|blazer|trousers|skirt|pants|shirt|formal|dress/.test(rawInput);
+      const mentionsSaree = /saree|sari|traditional|ethnic/.test(rawInput);
+
+      let wardrobeDraft = '';
+      if (mentionsSaree) {
+        wardrobeDraft = `Designer silk sarees in champagne gold and deep wine with structured cape blazers.`;
+      } else if (mentionsWestern || isCorporateOrCeo) {
+        wardrobeDraft = `High-end modern executive western attire: tailored structured cape blazer in deep black and navy over an ivory silk blouse, high-waist tailored trousers or pencil skirt, and pointed-toe heels.`;
+      } else {
+        wardrobeDraft = `Signature styling based on creator vision: ${userMessage.slice(0, 120)}. Authentic textural details and crisp color contrast.`;
+      }
+
       // User responded with visual guidance
       const appearanceDraft = isCorporateOrCeo
         ? `Resembles a commanding Indian businesswoman with radiant olive complexion, poised posture, shoulder-length glossy blow-dried dark hair, sharp expressive dark eyes, and a confident, magnetic executive presence.`
         : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}: ${userMessage.slice(0, 100)}.`;
-
-      const wardrobeDraft = isStilettoOrHeels || isCorporateOrCeo
-        ? `Ultra-luxury CEO dominatrix-chic: fitted silk blouses in ivory, blood-red and jet black, high-waist tailored pencil skirts, structured designer cape blazers, and designer sarees in champagne gold and deep wine for high-stakes gala negotiations.`
-        : `Signature styling based on creator vision: ${userMessage.slice(0, 120)}. Authentic textural details and crisp color contrast.`;
 
       const iconicItemDraft = isStilettoOrHeels || isCorporateOrCeo
         ? `Glossy black Christian Louboutin So Kate stilettos with blood-red soles — the sharp, rhythmic click on marble that commands instant silence and deference across the corporate floor.`
         : `Signature accessory reflecting their personality: ${userMessage.slice(0, 80)}.`;
 
       return {
-        reply: `I love this direction for @${name}! Incorporating "${userMessage.trim().slice(0, 90)}" into her visual continuity profile gives her an immediate, memorable presence on every comic page.
+        reply: `Got it! Updating @${name}'s visual continuity anchors to reflect "${userMessage.trim().slice(0, 90)}". The attire and styling have been updated to your exact specification so all future comic panels will strictly render her in this look.
 
-Here is how I have structured her visual continuity package based on what you said:`,
+Here is her updated visual continuity package:`,
         questions: chatHistoryLength > 2 ? [] : [
           `Would you like to refine her color accents or keep her signature styling as is?`
         ],
         quickOptions: [
-          `👠 Blood-red Louboutin stilettos & ivory silk blouses`,
-          `🥻 Designer silk sarees with sharp cape blazers`,
+          `👠 Modern tailored blazer, ivory silk blouse & fitted trousers`,
+          `💼 Sharp double-breasted charcoal power suit & pointed heels`,
           `💎 Diamond solitaire studs & gold executive fountain pen`,
           `💄 Bold matte crimson lip & tailored midnight-black suit`
         ],
@@ -88,13 +97,13 @@ To get her look exactly right, tell me:
         `What signature item or footwear anchors her silhouette in wide shots?`
       ],
       quickOptions: [
-        `👠 Luxury CEO power suit with blood-red Louboutin stilettos`,
-        `🥻 Designer silk sarees with tailored cape blazers`,
-        `☕ Smart casual tailored pencil skirt with silk ivory blouse`,
-        `💼 Sharp double-breasted charcoal blazer & diamond studs`
+        `👠 Luxury modern western power suit with designer stilettos`,
+        `💼 Tailored cape blazer, ivory silk blouse & pencil skirt`,
+        `☕ Smart casual tailored trousers with silk blouse`,
+        `✨ Custom designer attire based on scene`
       ],
       suggestedUpdates: isCorporateOrCeo ? {
-        wardrobe: `Ultra-luxury CEO dominatrix-chic: fitted silk blouses in ivory, blood-red and jet black, high-waist pencil skirts and tailored designer sarees in champagne gold and wine.`,
+        wardrobe: `High-end modern executive western attire: tailored structured cape blazer in deep black and navy over an ivory silk blouse, high-waist tailored trousers, and pointed-toe heels.`,
         iconicItem: `Her glossy black Louboutin So Kate stilettos with blood-red soles — the sharp click on marble that silences the entire executive floor.`
       } : undefined
     };

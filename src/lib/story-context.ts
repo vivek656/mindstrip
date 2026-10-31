@@ -81,7 +81,7 @@ export function buildWorldBible(world: ComicWorld): string {
         .join(', ');
       let line = anchor ? `${c.name} (${roleAndGender}): ${anchor}` : `${c.name} (${roleAndGender})`;
       if (c.wardrobe || c.iconicItem) {
-        const visualAnchors = [c.wardrobe, c.iconicItem ? `Signature: ${c.iconicItem}` : null].filter(Boolean).join(', ');
+        const visualAnchors = [c.wardrobe ? `Mandatory Attire: ${c.wardrobe}` : null, c.iconicItem ? `Signature Prop: ${c.iconicItem}` : null].filter(Boolean).join(', ');
         line += ` [Visual Anchor: ${visualAnchors}]`;
       }
       if (c.motivation) line += ` | Drive: ${c.motivation}`;

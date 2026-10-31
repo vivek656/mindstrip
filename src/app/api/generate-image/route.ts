@@ -3,6 +3,8 @@ import { persistToPermanentBlob } from '@/lib/blob-storage';
 import {
   cleanPromptForWordlessArtwork,
   formatFrameWithRagDialogue,
+  applyCanonicalCharacterAttire,
+  stripSystemMetadataTags,
   COMIC_PAGE_PUBLICATION_DIRECTIVE
 } from '@/lib/agents/art-director';
 
@@ -24,6 +26,32 @@ export async function POST(req: NextRequest) {
       aspectRatio: userAspectRatio,
       panels = []
     } = body;
+
+    // Extract characters ACTUALLY featured in this episode's panels or prompt
+    const featuredNames = new Set<string>();
+    if (Array.isArray(panels)) {
+      panels.forEach((p: { characters?: string[]; bubbles?: { speaker?: string }[] }) => {
+        (p.characters || []).forEach((n: string) => featuredNames.add(n.toLowerCase().trim()));
+        (p.bubbles || []).forEach((b: { speaker?: string }) => {
+          if (b.speaker && b.speaker.toLowerCase() !== 'narrator' && b.speaker.toLowerCase() !== 'caption') {
+            featuredNames.add(b.speaker.toLowerCase().trim());
+          }
+        });
+      });
+    }
+
+    const promptSnippet = (customPrompt || prompt || episodeTitle || '').toLowerCase();
+
+    // Filter characters to only those who actually appear in this episode!
+    const activeEpisodeCharacters = (characters || []).filter((c: { name: string }) => {
+      const cName = c.name.toLowerCase();
+      if (featuredNames.size > 0) {
+        return Array.from(featuredNames).some((fn) => fn.includes(cName) || cName.includes(fn));
+      }
+      return promptSnippet.includes(cName);
+    });
+
+    const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : (characters || []).slice(0, 2);
 
     // Intelligent AI Layout Decision: Prioritize AI Showrunner's decision or analyze narrative pacing
     let effectiveLayout: '1-panel' | '2-panel' | '3-panel' | '4-panel' = '4-panel';
@@ -50,27 +78,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Thoroughly scrub all metadata, panel numbers, timestamps, and typography triggers so diffusion models never paint text
-    let sanitizedPrompt = cleanPromptForWordlessArtwork(customPrompt || prompt || episodeTitle || 'dynamic comic scene');
+    const rawClean = cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt || prompt || episodeTitle || 'dynamic comic scene'));
+    let sanitizedPrompt = applyCanonicalCharacterAttire(rawClean, targetCharacters);
 
     // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt with RAG dialogue
     const hasExplicitCustom = Boolean(customPrompt && customPrompt.trim().length > 0 && !customPrompt.includes('sequential narrative frames'));
     if (!hasExplicitCustom && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
-      const p1 = formatFrameWithRagDialogue(panels[0]);
+      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
       sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
     } else if (!hasExplicitCustom && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
-      const p1 = formatFrameWithRagDialogue(panels[0]);
-      const p2 = formatFrameWithRagDialogue(panels[1]);
+      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+      const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
       sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
     } else if (!hasExplicitCustom && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
-      const p1 = formatFrameWithRagDialogue(panels[0]);
-      const p2 = formatFrameWithRagDialogue(panels[1]);
-      const p3 = formatFrameWithRagDialogue(panels[2]);
+      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+      const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+      const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
       sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
     } else if (!hasExplicitCustom && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
-      const p1 = formatFrameWithRagDialogue(panels[0]);
-      const p2 = formatFrameWithRagDialogue(panels[1]);
-      const p3 = formatFrameWithRagDialogue(panels[2]);
-      const p4 = formatFrameWithRagDialogue(panels[3]);
+      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+      const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+      const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
+      const p4 = formatFrameWithRagDialogue(panels[3], targetCharacters);
       sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
     }
 
@@ -103,32 +132,6 @@ export async function POST(req: NextRequest) {
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
     const validNames = (characters || []).map((c: { name: string }) => c.name.toLowerCase().trim());
 
-    // Extract characters ACTUALLY featured in this episode's panels or prompt
-    const featuredNames = new Set<string>();
-    if (Array.isArray(panels)) {
-      panels.forEach((p: { characters?: string[]; bubbles?: { speaker?: string }[] }) => {
-        (p.characters || []).forEach((n: string) => featuredNames.add(n.toLowerCase().trim()));
-        (p.bubbles || []).forEach((b: { speaker?: string }) => {
-          if (b.speaker && b.speaker.toLowerCase() !== 'narrator' && b.speaker.toLowerCase() !== 'caption') {
-            featuredNames.add(b.speaker.toLowerCase().trim());
-          }
-        });
-      });
-    }
-
-    const promptSnippet = (customPrompt || prompt || episodeTitle || '').toLowerCase();
-
-    // Filter characters to only those who actually appear in this episode!
-    const activeEpisodeCharacters = (characters || []).filter((c: { name: string }) => {
-      const cName = c.name.toLowerCase();
-      if (featuredNames.size > 0) {
-        return Array.from(featuredNames).some((fn) => fn.includes(cName) || cName.includes(fn));
-      }
-      return promptSnippet.includes(cName);
-    });
-
-    const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : (characters || []).slice(0, 2);
-
     const charsListArray = targetCharacters.map((c: { name: string; appearance?: string; role?: string; wardrobe?: string }) => {
       const role = (c.role || '').toLowerCase();
       const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
@@ -155,6 +158,11 @@ export async function POST(req: NextRequest) {
 
     const charsList = charsListArray.join(' and ');
 
+    const mandatoryWardrobe = targetCharacters
+      .filter((c: any) => c.wardrobe && c.wardrobe.trim())
+      .map((c: any) => `${c.name} MUST be wearing: ${c.wardrobe.trim()} (strictly adhere to this attire; DO NOT render in saree, traditional robes, or combat battle gear)`)
+      .join('; ');
+
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
     let layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
     let calculatedAspect = userAspectRatio || '3:4';
@@ -174,7 +182,7 @@ export async function POST(req: NextRequest) {
     }
 
     const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
-    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}. Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${mandatoryWardrobe ? ` [MANDATORY ATTIRE]: ${mandatoryWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {

@@ -251,31 +251,36 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
   const buildSequentialPrompt = () => {
     const layout = selectedLayout || episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');
+    const mandatoryAttire = allPageCharacters
+      .filter((c) => c.wardrobe && c.wardrobe.trim())
+      .map((c) => `${c.name} MUST be wearing: ${c.wardrobe} (DO NOT render in saree or battle armor)`)
+      .join('; ');
+    const attirePrefix = mandatoryAttire ? ` [MANDATORY ATTIRE: ${mandatoryAttire}].` : '';
 
     if ((layout === '1-panel' || panels.length === 1) && panels[0]) {
-      const s1 = formatFrameWithRagDialogue(panels[0]);
-      return `${selectedArtStyle} full-page cinematic graphic novel splash illustration depicting ${charsSummary}. Climax scene: ${s1}. Panoramic dramatic composition, cinematic lighting, authentic comic speech balloons with dialogue.`;
+      const s1 = formatFrameWithRagDialogue(panels[0], allPageCharacters);
+      return `${selectedArtStyle} full-page cinematic graphic novel splash illustration depicting ${charsSummary}.${attirePrefix} Climax scene: ${s1}. Panoramic dramatic composition, cinematic lighting, authentic comic speech balloons with dialogue.`;
     }
     if ((layout === '2-panel' || panels.length === 2) && panels.length >= 2) {
-      const s1 = formatFrameWithRagDialogue(panels[0]);
-      const s2 = formatFrameWithRagDialogue(panels[1]);
-      return `${selectedArtStyle} two-panel comic page spread separated by a clean vertical white comic gutter, depicting ${charsSummary}. Left frame: ${s1}. Right frame: ${s2}. Authentic comic speech balloons with dialogue.`;
+      const s1 = formatFrameWithRagDialogue(panels[0], allPageCharacters);
+      const s2 = formatFrameWithRagDialogue(panels[1], allPageCharacters);
+      return `${selectedArtStyle} two-panel comic page spread separated by a clean vertical white comic gutter, depicting ${charsSummary}.${attirePrefix} Left frame: ${s1}. Right frame: ${s2}. Authentic comic speech balloons with dialogue.`;
     }
     if ((layout === '3-panel' || panels.length === 3) && panels.length >= 3) {
-      const s1 = formatFrameWithRagDialogue(panels[0]);
-      const s2 = formatFrameWithRagDialogue(panels[1]);
-      const s3 = formatFrameWithRagDialogue(panels[2]);
-      return `${selectedArtStyle} three-frame vertical comic strip separated by clean white gutters, depicting ${charsSummary}. Top frame: ${s1}. Middle frame: ${s2}. Bottom frame: ${s3}. Authentic comic speech balloons with dialogue.`;
+      const s1 = formatFrameWithRagDialogue(panels[0], allPageCharacters);
+      const s2 = formatFrameWithRagDialogue(panels[1], allPageCharacters);
+      const s3 = formatFrameWithRagDialogue(panels[2], allPageCharacters);
+      return `${selectedArtStyle} three-frame vertical comic strip separated by clean white gutters, depicting ${charsSummary}.${attirePrefix} Top frame: ${s1}. Middle frame: ${s2}. Bottom frame: ${s3}. Authentic comic speech balloons with dialogue.`;
     }
     if (panels.length >= 4) {
-      const s1 = formatFrameWithRagDialogue(panels[0]);
-      const s2 = formatFrameWithRagDialogue(panels[1]);
-      const s3 = formatFrameWithRagDialogue(panels[2]);
-      const s4 = formatFrameWithRagDialogue(panels[3]);
-      return `${selectedArtStyle} four-panel comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}. Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Authentic comic speech balloons with dialogue, sound effects, clean graphic novel publication.`;
+      const s1 = formatFrameWithRagDialogue(panels[0], allPageCharacters);
+      const s2 = formatFrameWithRagDialogue(panels[1], allPageCharacters);
+      const s3 = formatFrameWithRagDialogue(panels[2], allPageCharacters);
+      const s4 = formatFrameWithRagDialogue(panels[3], allPageCharacters);
+      return `${selectedArtStyle} four-panel comic page structured in a 2x2 grid with four distinct sequential frames separated by white comic gutters, depicting ${charsSummary}.${attirePrefix} Top-left frame depicts ${s1}. Top-right frame depicts ${s2}. Bottom-left frame depicts ${s3}. Bottom-right frame depicts ${s4}. Authentic comic speech balloons with dialogue, sound effects, clean graphic novel publication.`;
     }
     const cleanNarrative = cleanPromptForWordlessArtwork(episode.rawBrainDump || episode.title || '');
-    return `${selectedArtStyle} sequential comic art depicting ${charsSummary}. Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, authentic comic speech balloons with dialogue, pristine published graphic novel illustration.`;
+    return `${selectedArtStyle} sequential comic art depicting ${charsSummary}.${attirePrefix} Narrative scene: ${cleanNarrative}. Dynamic composition, expressive graphic novel layout with clean white gutters, authentic comic speech balloons with dialogue, pristine published graphic novel illustration.`;
   };
 
   const defaultPrompt = buildSequentialPrompt();

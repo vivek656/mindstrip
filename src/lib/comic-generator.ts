@@ -26,6 +26,7 @@ export function generateComicStripMock(
   const leadName = leadChar?.name || 'Protagonist';
   const leadAppearance = leadChar?.appearance || 'Expressive comic character design';
   const leadGender = leadChar?.gender && leadChar.gender !== 'unspecified' ? leadChar.gender : '';
+  const leadAttire = leadChar?.wardrobe ? `, strictly wearing ${leadChar.wardrobe}` : '';
 
   // 2. DETECT EPISODIC GUEST CHARACTERS (e.g. "client", "boss", "guest", "customer", "rival")
   const isWorkplaceOrClient = /client|contract|deal|bid|customer|office|meeting|presentation|corporate|seduce|negotiat/.test(lowerPrompt);
@@ -136,7 +137,7 @@ export function generateComicStripMock(
         soundEffect: 'STEP',
         soundEffectPosition: { x: 75, y: 20 },
         mood: 'determined',
-        imagePrompt: `${stylePrefix}. ${leadName} ${leadGender ? `(${leadGender})` : ''} (${leadAppearance}) in high-end office environment, reviewing confidential papers, elegant modern corporate aesthetic, pure visual graphic novel art.`,
+        imagePrompt: `${stylePrefix}. ${leadName} ${leadGender ? `(${leadGender})` : ''} (${leadAppearance}${leadAttire}) in high-end office environment, reviewing confidential papers, elegant modern corporate aesthetic, pure visual graphic novel art.`,
         imageUrl: buildImageUrl('panel-1', 1)
       },
       {
@@ -164,7 +165,7 @@ export function generateComicStripMock(
         soundEffect: 'CLICK',
         soundEffectPosition: { x: 20, y: 70 },
         mood: 'stressed',
-        imagePrompt: `${stylePrefix}. ${leadName} confronting ${guestPartner.name} (${partnerAppearance}), luxurious boardroom meeting, intense eye contact and captivating charisma, atmospheric corporate lighting, pure graphic novel art.`,
+        imagePrompt: `${stylePrefix}. ${leadName} (${leadAppearance}${leadAttire}) confronting ${guestPartner.name} (${partnerAppearance}), luxurious boardroom meeting, intense eye contact and captivating charisma, atmospheric corporate lighting, pure graphic novel art.`,
         imageUrl: buildImageUrl('panel-2', 2)
       },
       {
@@ -192,7 +193,7 @@ export function generateComicStripMock(
         soundEffect: 'SPARK',
         soundEffectPosition: { x: 60, y: 35 },
         mood: 'epiphany',
-        imagePrompt: `${stylePrefix}. ${leadName} leaning forward with dazzling confidence, ${guestPartner.name} visibly impressed, glowing warm rimlight, cinematic composition, pure graphic novel art.`,
+        imagePrompt: `${stylePrefix}. ${leadName} (${leadAppearance}${leadAttire}) leaning forward with dazzling confidence, ${guestPartner.name} visibly impressed, glowing warm rimlight, cinematic composition, pure graphic novel art.`,
         imageUrl: buildImageUrl('panel-3', 3)
       },
       {
@@ -220,7 +221,7 @@ export function generateComicStripMock(
         soundEffect: 'SIGN',
         soundEffectPosition: { x: 80, y: 75 },
         mood: 'serene',
-        imagePrompt: `${stylePrefix}. ${guestPartner.name} signing legal agreement with fountain pen alongside ${leadName}, golden hour sunbeams through office windows, triumphant conclusion, pure visual art.`,
+        imagePrompt: `${stylePrefix}. ${guestPartner.name} signing legal agreement with fountain pen alongside ${leadName} (${leadAppearance}${leadAttire}), golden hour sunbeams through office windows, triumphant conclusion, pure visual art.`,
         imageUrl: buildImageUrl('panel-4', 4)
       }
     ];

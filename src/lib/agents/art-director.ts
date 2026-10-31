@@ -48,12 +48,74 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
 }
 
 /**
+ * Strips accumulated system metadata tags from premises, preventing director directives
+ * and cast scoping locks from piling up or appending repeatedly across turns.
+ */
+export function stripSystemMetadataTags(raw: string): string {
+  if (!raw) return '';
+  return raw
+    .replace(/\[DIRECTORIAL CAST LOCK\][\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+    .replace(/\[Director Direction & Beats\]:[\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+    .replace(/\[Scoped Cast for Page\]:[\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+    .replace(/\[MANDATORY CHARACTER WARDROBE\]:[\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+    .replace(/\[MANDATORY WARDROBE\]:[\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+    .trim();
+}
+
+/**
+ * Enforces canonical character visual metadata (wardrobe, appearance) across frame descriptions.
+ * Scrubs contradictory legacy clothing mentions (e.g. saree when western attire is defined)
+ * so image generation models strictly follow the character's latest saved wardrobe.
+ */
+export function applyCanonicalCharacterAttire(
+  sceneText: string,
+  characters?: { name: string; wardrobe?: string; appearance?: string }[]
+): string {
+  if (!sceneText || !characters || characters.length === 0) return sceneText;
+  let updated = sceneText;
+
+  for (const c of characters) {
+    if (!c.name) continue;
+    const charRegex = new RegExp(`\\b${c.name}\\b`, 'i');
+    if (!charRegex.test(updated)) continue;
+
+    if (c.wardrobe && c.wardrobe.trim()) {
+      const wardrobeLower = c.wardrobe.toLowerCase();
+      const isWestern = /western|suit|blazer|trousers|skirt|shirt|pants|jacket|coat|business/.test(wardrobeLower);
+      const isTraditional = /saree|sari|lehenga|kimono|hanbok|traditional/.test(wardrobeLower);
+
+      if (isWestern) {
+        // Scrub contradictory traditional clothing terms
+        updated = updated.replace(
+          /(?:wearing|in|clad in|draped in)\s+(?:an?\s+)?(?:intricate\s+|elegant\s+|silk\s+|designer\s+)?(?:saree|sari|lehenga|traditional\s+attire|robe|superhero\s+suit|tactical\s+armor|battle\s+gear)[^,.;]*/gi,
+          `wearing ${c.wardrobe}`
+        );
+      } else if (isTraditional) {
+        // Scrub contradictory western/armor terms
+        updated = updated.replace(
+          /(?:wearing|in|clad in)\s+(?:an?\s+)?(?:western\s+suit|blazer|trousers|tactical\s+armor|battle\s+suit)[^,.;]*/gi,
+          `wearing ${c.wardrobe}`
+        );
+      }
+    }
+  }
+
+  return updated;
+}
+
+/**
  * Injects RAG-grounded dialogue, speech balloons, and sound effects directly into
  * a sequential frame's visual prompt for native in-image generation.
  */
-export function formatFrameWithRagDialogue(panel: ComicPanel): string {
+export function formatFrameWithRagDialogue(
+  panel: ComicPanel,
+  characters?: { name: string; wardrobe?: string; appearance?: string }[]
+): string {
   if (!panel) return '';
-  const visualDesc = cleanStructuralMetadata(panel.imagePrompt || panel.sceneDescription || '');
+  let visualDesc = cleanStructuralMetadata(panel.imagePrompt || panel.sceneDescription || '');
+  if (characters && characters.length > 0) {
+    visualDesc = applyCanonicalCharacterAttire(visualDesc, characters);
+  }
 
   const speechParts: string[] = [];
   if (panel.bubbles && panel.bubbles.length > 0) {
@@ -191,7 +253,7 @@ export function directVisualArtwork(
 
   // 4. Sanitize and update each panel's imagePrompt in the draft with dialogue
   const sanitizedPanels = draft.panels.map((panel) => {
-    const frameWithDialogue = formatFrameWithRagDialogue(panel);
+    const frameWithDialogue = formatFrameWithRagDialogue(panel, targetCharacters);
     const sanitized = `${styleDescriptor}. ${frameWithDialogue}. Dynamic composition, expressive comic frame.`;
     return {
       ...panel,
@@ -209,22 +271,22 @@ export function directVisualArtwork(
   let premiseSnippet = cleanStructuralMetadata(context.rawDump || draft.title || 'dynamic comic scene');
 
   if (layout === '1-panel' && draft.panels.length >= 1) {
-    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
+    const p1 = formatFrameWithRagDialogue(draft.panels[0], targetCharacters);
     premiseSnippet = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
   } else if (layout === '2-panel' && draft.panels.length >= 2) {
-    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
-    const p2 = formatFrameWithRagDialogue(draft.panels[1]);
+    const p1 = formatFrameWithRagDialogue(draft.panels[0], targetCharacters);
+    const p2 = formatFrameWithRagDialogue(draft.panels[1], targetCharacters);
     premiseSnippet = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
   } else if (layout === '3-panel' && draft.panels.length >= 3) {
-    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
-    const p2 = formatFrameWithRagDialogue(draft.panels[1]);
-    const p3 = formatFrameWithRagDialogue(draft.panels[2]);
+    const p1 = formatFrameWithRagDialogue(draft.panels[0], targetCharacters);
+    const p2 = formatFrameWithRagDialogue(draft.panels[1], targetCharacters);
+    const p3 = formatFrameWithRagDialogue(draft.panels[2], targetCharacters);
     premiseSnippet = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
   } else if (draft.panels.length >= 4) {
-    const p1 = formatFrameWithRagDialogue(draft.panels[0]);
-    const p2 = formatFrameWithRagDialogue(draft.panels[1]);
-    const p3 = formatFrameWithRagDialogue(draft.panels[2]);
-    const p4 = formatFrameWithRagDialogue(draft.panels[3]);
+    const p1 = formatFrameWithRagDialogue(draft.panels[0], targetCharacters);
+    const p2 = formatFrameWithRagDialogue(draft.panels[1], targetCharacters);
+    const p3 = formatFrameWithRagDialogue(draft.panels[2], targetCharacters);
+    const p4 = formatFrameWithRagDialogue(draft.panels[3], targetCharacters);
     layoutDescriptor = 'a four-panel comic strip page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
     premiseSnippet = `Four sequential narrative frames in a 2x2 comic grid with white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
   }

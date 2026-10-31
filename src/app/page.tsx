@@ -12,6 +12,7 @@ import { INITIAL_WORLDS } from '@/lib/worlds';
 import { generateMindStrip, ApiConfig } from '@/lib/meta-models';
 import { generateComicStripMock } from '@/lib/comic-generator';
 import { buildStoryContext, writeRecap } from '@/lib/story-context';
+import { stripSystemMetadataTags } from '@/lib/agents/art-director';
 
 const DEFAULT_CONFIG: ApiConfig = {
   mode: 'meta',
@@ -382,9 +383,10 @@ export default function Home() {
     setIsLoading(true);
     try {
       // Full chain assembly: bible + recaps + pointer-resolved episodes.
-      const storyContext = buildStoryContext(activeWorld, storyPremise);
+      const cleanPremise = stripSystemMetadataTags(storyPremise);
+      const storyContext = buildStoryContext(activeWorld, cleanPremise);
       const generated = await generateMindStrip(
-        storyPremise,
+        cleanPremise,
         activeWorld.artStyle,
         lens,
         apiConfig,
@@ -471,7 +473,7 @@ export default function Home() {
         p.bubbles?.some(b => b.speaker.toLowerCase() !== 'narrator' && !activeCastNames.some(acn => b.speaker.toLowerCase().includes(acn)))
       );
 
-      let effectivePremise = activeEpisode.rawBrainDump || activeWorld.tagline;
+      let effectivePremise = stripSystemMetadataTags(activeEpisode.rawBrainDump || activeWorld.tagline);
       if (hasObsoleteCast || !effectivePremise.trim()) {
         const castRoles = activeWorld.characters.map((c) => `${c.name} (${c.role})`).join(', ');
         effectivePremise = `${activeWorld.title}: ${activeWorld.tagline}. Featuring active cast: ${castRoles}.`;

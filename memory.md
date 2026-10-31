@@ -969,3 +969,23 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Preserves `[ ⚡ Quick Prompt ]` mode for users who just want a 1-line prompt.
   3. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 15 routes compiled cleanly with 0 TypeScript errors).
+
+### Character Attire Dynamic Synchronization & Metadata Clean Branching (2026-10-31)
+- **User Feedback**:
+  *"another thing ont working is the page itself and the apperaeance does not match at all , if the appereance is not explictly propvided it has to be implict from previous page or by the viusual that added, i updated the visuals my self to change the chanracter clocktihng from saree to western attire , stil the page is with saree no matter how much i tried , the thing like chracter , attire, appereance and other data are metadata they has to be replaced not appedned to previous one so that cuirrect data is ropesent when i refresh the last thing i aksed should be replace d so it branch correctlt see how chatgpt workd etc"*
+- **Root Causes Identified**:
+  1. *Contradictory Script vs Character Attire*: In `ComicPageSpread.tsx` and `/api/generate-image`, `formatFrameWithRagDialogue` output raw `panel.sceneDescription` from the initial script draft (e.g. "wearing an elegant silk saree"). Even though `charsSummary` had the updated western attire, the diffusion model prioritized the explicit saree description in the frame text.
+  2. *Hardcoded Saree in Heuristic Fallback*: In `/api/character-chat/route.ts`, `isCorporateOrCeo` had hardcoded `designer sarees` in `wardrobeDraft`, re-injecting sarees upon clicking "Apply to Dossier".
+  3. *Chained Appending of Directives*: `rawBrainDump` and `prompt` accumulated multiple `[Director Direction & Beats]` and `[Scoped Cast]` tags over repeated turns without replacing old metadata.
+- **Implementation**:
+  1. **Canonical Attire Scrubbing & Overrides (`art-director.ts`, `ComicPageSpread.tsx`, `generate-image/route.ts`)**:
+     - Introduced `applyCanonicalCharacterAttire(sceneText, characters)`: Dynamically scrubs conflicting wardrobe keywords (e.g. saree when western is defined) and injects canonical attire into every panel description.
+     - Added `[MANDATORY ATTIRE]: ${name} MUST be wearing: ${wardrobe}` directive directly into `pagePrompt` to enforce 100% diffusion model compliance.
+  2. **Dossier Save Propagation (`ZenComicReader.tsx`)**:
+     - When a character's wardrobe or appearance is updated in `handleSaveCharacterDossier`, updates are actively scrubbed and propagated across all episodes featuring that character.
+  3. **Metadata Stripping & Clean Turn Branching (`stripSystemMetadataTags`)**:
+     - Created `stripSystemMetadataTags(premise)` to sanitize prompts before redrawing or generating, replacing prior turn annotations rather than appending duplicate blocks.
+  4. **Purged Hardcoded Saree Fallbacks**:
+     - Updated `/api/character-chat/route.ts` and `CharacterDossierModal.tsx` to detect western/formal attire and default to modern western blazers, trousers, and skirts rather than hardcoded sarees.
+  5. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 15 routes compiled cleanly with 0 TypeScript errors).

@@ -16,6 +16,7 @@ import {
 } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { CoDirectorPitchResult } from '@/app/api/co-director-pitch/route';
+import { applyCanonicalCharacterAttire, stripSystemMetadataTags } from '@/lib/agents/art-director';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
@@ -237,26 +238,49 @@ export function ZenComicReader({
       ? world.characters.map((c) => (c.id === updatedChar.id ? updatedChar : c))
       : [...world.characters, updatedChar];
 
-    // If existing character was renamed, propagate new name across episodes
+    // If existing character was renamed or visual metadata changed, propagate across episodes
     let updatedEpisodes = world.episodes;
-    if (oldChar && oldChar.name !== updatedChar.name) {
+    const wardrobeChanged = Boolean(oldChar && oldChar.wardrobe !== updatedChar.wardrobe);
+    const appearanceChanged = Boolean(oldChar && oldChar.appearance !== updatedChar.appearance);
+
+    if (oldChar && (oldChar.name !== updatedChar.name || wardrobeChanged || appearanceChanged)) {
       updatedEpisodes = (world.episodes || []).map((ep) => {
         const updatedPanels = (ep.panels || []).map((p) => {
-          const updatedPanelChars = (p.characters || []).map((cn) =>
-            cn.toLowerCase() === oldChar.name.toLowerCase() ? updatedChar.name : cn
-          );
+          let updatedPanelChars = p.characters || [];
+          if (oldChar.name !== updatedChar.name) {
+            updatedPanelChars = updatedPanelChars.map((cn) =>
+              cn.toLowerCase() === oldChar.name.toLowerCase() ? updatedChar.name : cn
+            );
+          }
+
+          let updatedDesc = p.sceneDescription || '';
+          let updatedPrompt = p.imagePrompt || '';
+
+          // If wardrobe or appearance changed, dynamically update canonical visual continuity in panel descriptions
+          if ((wardrobeChanged || appearanceChanged) && updatedChar.wardrobe) {
+            const charRegex = new RegExp(`\\b${updatedChar.name}\\b`, 'i');
+            if (charRegex.test(updatedDesc) || updatedPanelChars.some((cn) => cn.toLowerCase() === updatedChar.name.toLowerCase())) {
+              updatedDesc = applyCanonicalCharacterAttire(updatedDesc, [updatedChar]);
+              updatedPrompt = applyCanonicalCharacterAttire(updatedPrompt, [updatedChar]);
+            }
+          }
+
           const updatedBubbles = (p.bubbles || []).map((b) => {
-            if (b.speaker.toLowerCase() === oldChar.name.toLowerCase()) {
+            if (oldChar.name !== updatedChar.name && b.speaker.toLowerCase() === oldChar.name.toLowerCase()) {
               return { ...b, speaker: updatedChar.name };
             }
             return b;
           });
+
           return {
             ...p,
             characters: updatedPanelChars,
+            sceneDescription: updatedDesc,
+            imagePrompt: updatedPrompt,
             bubbles: updatedBubbles,
           };
         });
+
         return {
           ...ep,
           panels: updatedPanels,
@@ -521,12 +545,13 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
   };
 
   const handleDrawFromCoDirectorChat = () => {
-    const finalPremise = activeStoryContext || prompt || coDirectorInputText || world.tagline;
+    const raw = activeStoryContext || prompt || coDirectorInputText || world.tagline;
+    const clean = stripSystemMetadataTags(raw);
     let characterScopeDirective = '';
     if (activeCastSpotlight.length > 0) {
       characterScopeDirective = `\n[Scoped Cast for Page]: ${activeCastSpotlight.join(', ')}${activeCastExcluded.length > 0 ? ` | Off-Scene Excluded: ${activeCastExcluded.join(', ')}` : ''}`;
     }
-    onGenerateNextEpisode(finalPremise + characterScopeDirective, selectedLayout, selectedLens);
+    onGenerateNextEpisode(clean + characterScopeDirective, selectedLayout, selectedLens);
   };
 
   const handleFetchCoDirectorPitch = async (overridePremise?: any) => {
@@ -565,7 +590,8 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
   };
 
   const handleStartCoDirectorRedirection = (premiseText?: string) => {
-    const target = premiseText || episode?.rawBrainDump || prompt || '';
+    const raw = premiseText || episode?.rawBrainDump || prompt || '';
+    const target = stripSystemMetadataTags(raw);
     if (!target.trim()) return;
     setPrompt(target);
     setRightPanelTab('next');
@@ -614,7 +640,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
       characterScopeDirective = `\n[Scoped Cast for Page]: ${pageChars}${guestChars ? ` | Guest: ${guestChars}` : ''}${excludedChars ? ` | Off-Scene Excluded: ${excludedChars}` : ''}`;
     }
 
-    let finalPremise = prompt.trim();
+    let finalPremise = stripSystemMetadataTags(prompt);
     if (resolvedBeats.length > 0) {
       finalPremise += `\n\n[Director Direction & Beats]:\n${resolvedBeats.map((b) => `• ${b}`).join('\n')}`;
     }

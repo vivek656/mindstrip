@@ -413,7 +413,7 @@ What would you like to discuss or refine first?`,
             ],
             quickOptions: [
               `👠 Luxury power attire with Louboutin stilettos`,
-              `🥻 Designer silk sarees with cape blazers`,
+              `💼 Modern western executive blazer & trousers`,
               `📖 Explore her origin backstory & motivation`,
               `💬 Dial in her speech cadence & catchphrase`
             ],
