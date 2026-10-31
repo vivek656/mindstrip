@@ -26,6 +26,8 @@ export interface ShowrunnerDraft {
   newFacts: string[];
   openThreads: string[];
   nextSuggestions: string[];
+  pageCharacters?: string[]; // Names of characters appearing specifically in this episode
+  guestCharacters?: ComicCharacter[]; // Episodic guest characters introduced in this episode
   directorQuestion?: {
     question: string;
     options: {

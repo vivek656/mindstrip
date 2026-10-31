@@ -14,6 +14,7 @@ import {
   SpeechBubble,
 } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
+import { CoDirectorPitchResult } from '@/app/api/co-director-pitch/route';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
@@ -353,6 +354,103 @@ export function ZenComicReader({
 
   const handleInsertBeat = (beatText: string) => {
     setPrompt((prev) => (prev ? `${prev} ${beatText}` : beatText));
+  };
+
+  // Dynamic Guest Character Promotion State & Handler
+  const [promotedGuestIds, setPromotedGuestIds] = useState<string[]>([]);
+
+  const handlePromoteGuestCharacter = (guest: ComicCharacter) => {
+    if (!onUpdateWorld) return;
+    const exists = world.characters.some(
+      (c) => c.name.toLowerCase() === guest.name.toLowerCase()
+    );
+    if (exists) return;
+
+    const promotedChar: ComicCharacter = {
+      id: guest.id || `char-promoted-${Date.now()}`,
+      name: guest.name,
+      role: (guest.role as any) || 'supporting',
+      gender: guest.gender || 'unspecified',
+      appearance: guest.appearance || 'Sharp contemporary attire',
+      description: guest.description || `Promoted from episodic guest character in "${episode?.title || 'Episode'}".`,
+      avatarEmoji: guest.avatarEmoji || '💼',
+      traits: guest.traits && guest.traits.length > 0 ? guest.traits : ['Introduced as episodic guest', 'Key scene partner'],
+    };
+
+    const updatedEpisodes = (world.episodes || []).map((ep) => {
+      if (ep.id === episode?.id) {
+        return {
+          ...ep,
+          guestCharacters: (ep.guestCharacters || []).filter(
+            (g) => g.name.toLowerCase() !== guest.name.toLowerCase()
+          ),
+        };
+      }
+      return ep;
+    });
+
+    const updatedWorld: ComicWorld = {
+      ...world,
+      characters: [...world.characters, promotedChar],
+      episodes: updatedEpisodes,
+    };
+
+    setPromotedGuestIds((prev) => [...prev, guest.id || guest.name]);
+    onUpdateWorld(updatedWorld);
+  };
+
+  // AI Co-Director Alignment & Interactive Brainstorming
+  const [isAligningPitch, setIsAligningPitch] = useState(false);
+  const [pitchError, setPitchError] = useState<string | null>(null);
+  const [coDirectorPitch, setCoDirectorPitch] = useState<CoDirectorPitchResult | null>(null);
+  const [selectedBeatForks, setSelectedBeatForks] = useState<{ [questionId: string]: string }>({});
+
+  const handleFetchCoDirectorPitch = async () => {
+    const clean = prompt.trim();
+    if (!clean) return;
+    setIsAligningPitch(true);
+    setPitchError(null);
+    try {
+      const res = await fetch('/api/co-director-pitch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          premise: clean,
+          characters: world.characters,
+          worldTitle: world.title,
+          genre: world.genre,
+          apiKey: apiConfig?.apiKey,
+          baseUrl: apiConfig?.baseUrl,
+          provider: apiConfig?.provider,
+          modelName: apiConfig?.modelName,
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `Pitch API returned status ${res.status}`);
+      }
+      const data: CoDirectorPitchResult = await res.json();
+      setCoDirectorPitch(data);
+      setSelectedBeatForks({});
+    } catch (err: any) {
+      console.error('Co-Director pitch failed:', err);
+      setPitchError(err.message || 'Failed to brainstorm with Co-Director.');
+    } finally {
+      setIsAligningPitch(false);
+    }
+  };
+
+  const handleDrawWithCoDirectorDirection = () => {
+    if (!prompt.trim() && !coDirectorPitch) return;
+    const chosenBeats = Object.values(selectedBeatForks).filter(Boolean);
+    let finalPremise = prompt.trim();
+    if (chosenBeats.length > 0) {
+      finalPremise += `\n\n[Director Direction & Beats]:\n${chosenBeats.map((b) => `• ${b}`).join('\n')}`;
+    }
+    onGenerateNextEpisode(finalPremise, selectedLayout, selectedLens);
+    setPrompt('');
+    setCoDirectorPitch(null);
+    setSelectedBeatForks({});
   };
 
   const handleSaveNewCharacter = (e: React.FormEvent) => {
@@ -832,6 +930,151 @@ export function ZenComicReader({
               </div>
             </div>
 
+            {/* AI Co-Director Brainstorming Action */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleFetchCoDirectorPitch}
+                disabled={!prompt.trim() || isAligningPitch}
+                className="w-full py-2 px-3 rounded-xl text-xs font-bold border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                title="Brainstorm cast scoping, guest characters, and tone options with AI Co-Director"
+              >
+                <Brain className={`w-3.5 h-3.5 ${isAligningPitch ? 'animate-spin' : 'text-purple-500'}`} />
+                <span>{isAligningPitch ? 'Analyzing Cast & Scene...' : '🎬 Brainstorm with AI Co-Director'}</span>
+              </button>
+
+              {pitchError && (
+                <div className="text-[11px] text-red-500 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+                  {pitchError}
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Co-Director Pitch Alignment Card */}
+            {coDirectorPitch && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-purple-500/30 space-y-3 shadow-xs animate-in fade-in duration-200">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-purple-700 dark:text-purple-300">
+                    <Brain className="w-4 h-4 text-purple-600 animate-pulse" />
+                    <span>AI Co-Director Alignment</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoDirectorPitch(null);
+                      setSelectedBeatForks({});
+                    }}
+                    className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer rounded"
+                    title="Dismiss alignment"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Logline Summary */}
+                <div className="text-xs text-zinc-800 dark:text-zinc-200 bg-white/80 dark:bg-zinc-900/80 p-2.5 rounded-xl border border-purple-500/20 leading-relaxed font-medium">
+                  <span className="font-bold text-purple-900 dark:text-purple-200 mr-1">Logline:</span>
+                  {coDirectorPitch.premiseSummary}
+                </div>
+
+                {/* Scoped Cast Breakdown */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
+                    Episode Cast Scoping
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 text-xs">
+                    {coDirectorPitch.focusedCharacters.map((name) => (
+                      <span
+                        key={name}
+                        className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 border border-emerald-500/30 font-semibold flex items-center gap-1"
+                      >
+                        <span>🎯 Spotlight:</span>
+                        <span>{name}</span>
+                      </span>
+                    ))}
+                    {coDirectorPitch.detectedGuestCharacters.map((guest, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30 font-semibold flex items-center gap-1"
+                        title={guest.description || guest.appearance}
+                      >
+                        <span>💼 Guest:</span>
+                        <span>{guest.name}</span>
+                        {guest.role && <span className="opacity-80 font-normal">({guest.role})</span>}
+                      </span>
+                    ))}
+                    {coDirectorPitch.excludedCharacters.map((name) => (
+                      <span
+                        key={name}
+                        className="px-2 py-0.5 rounded-md bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 line-through text-[11px]"
+                        title="Off-scene for this episode to prevent hero intrusion"
+                      >
+                        🚫 {name} (Off-Scene)
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Directorial Questions */}
+                {coDirectorPitch.directorialQuestions.length > 0 && (
+                  <div className="space-y-2.5 pt-2 border-t border-purple-500/20">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 block">
+                      Directorial Choices (Click to Align Tone & Strategy)
+                    </span>
+                    {coDirectorPitch.directorialQuestions.map((q) => (
+                      <div key={q.id} className="space-y-1">
+                        <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                          {q.question}
+                        </p>
+                        <div className="grid grid-cols-1 gap-1.5">
+                          {q.options.map((opt, oIdx) => {
+                            const isSelected = selectedBeatForks[q.id] === opt.beatAddition;
+                            return (
+                              <button
+                                key={oIdx}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedBeatForks((prev) => ({
+                                    ...prev,
+                                    [q.id]: isSelected ? '' : opt.beatAddition,
+                                  }));
+                                }}
+                                className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                                    : 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-black/10 dark:border-white/10 hover:border-purple-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between font-bold text-[11px]">
+                                  <span>{opt.label}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <div className={`text-[10px] mt-0.5 line-clamp-2 ${isSelected ? 'text-purple-100' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                                  {opt.description}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Primary Draw Page Button */}
+                <button
+                  type="button"
+                  onClick={handleDrawWithCoDirectorDirection}
+                  disabled={isLoading}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>🚀 Draw Page with Co-Director Direction</span>
+                </button>
+              </div>
+            )}
+
             {/* Interactive Meta AI Director Question / Choice Forks */}
             {episode?.directorQuestion && (
               <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-indigo-500/10 to-purple-500/15 border border-purple-500/30 space-y-2.5">
@@ -1160,6 +1403,65 @@ export function ZenComicReader({
                     <span>{isExporting ? 'Exporting...' : 'Export High-Res PNG'}</span>
                   </button>
                 </div>
+
+                {/* Episode Cast & Guest Character Promotions */}
+                {((episode.pageCharacters && episode.pageCharacters.length > 0) || (episode.guestCharacters && episode.guestCharacters.length > 0)) && (
+                  <div className="space-y-2 pt-2 border-t border-black/[0.06] dark:border-white/10">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
+                      Characters on this Page
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {episode.pageCharacters?.map((char) => (
+                        <button
+                          key={char.id}
+                          type="button"
+                          onClick={() => handleOpenDossier(char)}
+                          className="px-2.5 py-1 rounded-lg text-xs bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-black/5 flex items-center gap-1.5 cursor-pointer font-medium"
+                          title="Open character dossier"
+                        >
+                          <span>{char.avatarEmoji || '👤'}</span>
+                          <span>{char.name}</span>
+                        </button>
+                      ))}
+                      {episode.guestCharacters?.map((guest, idx) => {
+                        const isPromoted = promotedGuestIds.includes(guest.id || guest.name) ||
+                          world.characters.some((c) => c.name.toLowerCase() === guest.name.toLowerCase());
+                        return (
+                          <div
+                            key={guest.id || idx}
+                            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-900 dark:text-amber-200"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="font-bold flex items-center gap-1">
+                                <span>💼</span>
+                                <span>{guest.name}</span>
+                                {guest.role && <span className="font-normal opacity-80 text-[10px]">({guest.role})</span>}
+                              </div>
+                              {guest.description && (
+                                <div className="text-[10px] opacity-75 line-clamp-1 mt-0.5">{guest.description}</div>
+                              )}
+                            </div>
+                            {isPromoted ? (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 shrink-0">
+                                ✓ Core Cast
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handlePromoteGuestCharacter(guest)}
+                                className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-600 hover:bg-amber-500 text-white cursor-pointer transition-all shadow-2xs shrink-0 flex items-center gap-1"
+                                title="Promote to permanent Core Cast in World Bible"
+                              >
+                                <span>⭐</span>
+                                <span>Promote</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Art Style Quick Switcher */}
                 <div className="space-y-2">
@@ -1689,6 +1991,7 @@ export function ZenComicReader({
                     onSelectCharacterForDossier={handleOpenDossier}
                     isCinemaTheme={readerTheme === 'cinema'}
                     directorReasoning={episode.directorReasoning}
+                    onPromoteGuestCharacter={handlePromoteGuestCharacter}
                   />
 
                   {/* Minimal Core Truth Reflection Banner */}

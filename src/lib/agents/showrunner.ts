@@ -78,6 +78,16 @@ Return ONLY valid JSON with this schema:
   "layoutStyle": "1-panel" | "2-panel" | "3-panel" | "4-panel",
   "directorReasoning": "Why this pacing and layout was selected",
   "coreTruth": "Insight or takeaway",
+  "pageCharacters": ["Names of characters appearing on this page"],
+  "guestCharacters": [
+    {
+      "name": "Guest Name",
+      "role": "e.g. client, boss, stranger",
+      "appearance": "Visual look & clothing",
+      "description": "Short bio & scene role",
+      "avatarEmoji": "emoji"
+    }
+  ],
   "recap": "Summary of this episode (under 80 words)",
   "newFacts": ["Canon facts introduced"],
   "openThreads": ["Unresolved hooks left open"],
@@ -143,6 +153,8 @@ Episode Premise / Brain Dump: "${rawDump}"`;
             newFacts: parsed.newFacts || [],
             openThreads: parsed.openThreads || [],
             nextSuggestions: parsed.nextSuggestions || [],
+            pageCharacters: parsed.pageCharacters || [],
+            guestCharacters: parsed.guestCharacters || [],
             directorQuestion: parsed.directorQuestion,
             panels: parsed.panels
           };

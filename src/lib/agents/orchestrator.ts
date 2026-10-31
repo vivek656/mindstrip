@@ -196,6 +196,10 @@ export function buildComicStripFromProduction(
     newFacts: draft.newFacts,
     openThreads: draft.openThreads,
     nextSuggestions: draft.nextSuggestions,
+    pageCharacters: draft.pageCharacters
+      ? (context.characters || []).filter((c) => draft.pageCharacters?.some((pn) => c.name.toLowerCase().includes(pn.toLowerCase()) || pn.toLowerCase().includes(c.name.toLowerCase())))
+      : undefined,
+    guestCharacters: draft.guestCharacters,
     directorQuestion: draft.directorQuestion,
     agentTrace: trace,
     canonScore,

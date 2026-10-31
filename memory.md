@@ -831,3 +831,29 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   4. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
+
+
+### Interactive AI Co-Director Alignment & Guest Character Promotion (2026-10-31)
+- **Problem Statement**:
+  - The creator requested a collaborative back-and-forth mechanism before drawing the comic page:
+    *"We have to make correct use of AI thinking here, if I am saying a client the AI should know OK there is a client, might be a new temporary character, should go to temporary character array which might promote to recurring or something. Not all characters need to be in page all the time it depends on the premise so we will have page characters. 2nd ask AI to ask questions so we can do back and forth before reaching conclusions about the page and then with page context and world context build something."*
+- **Solution & Workflow Built**:
+  1. **Co-Director Pitch Alignment API (`/api/co-director-pitch/route.ts`)**:
+     - Analyzes creator's premise alongside the World Bible.
+     - Automatically separates cast into:
+       - 🎯 **Page Spotlight Cast**: e.g., `@Meera`
+       - 💼 **Temporary Guest Characters**: e.g., `The New Client (Mr. Sterling)` (temporary scene partner with name, role, appearance, description)
+       - 🚫 **Off-Scene Excluded Cast**: e.g., `Simbo` (explicitly excluded to preserve episode focus and prevent intrusion)
+     - Generates 2-3 interactive directorial questions with clickable strategic options (`beatAddition`).
+  2. **Interactive Brainstorming Card in Studio (`ZenComicReader.tsx`)**:
+     - Added `[ 🎬 Brainstorm with AI Co-Director ]` button next to the premise prompt area.
+     - Displays logline summary, cast scoping badges, and interactive option pills.
+     - Selecting options highlights choices and compiles directorial guidance.
+     - `[ 🚀 Draw Page with Co-Director Direction ]` button passes enriched prompt + directorial choices to the multi-agent production room.
+  3. **Temporary Guest Array & 1-Click Promotion to Core Cast**:
+     - Episodic guest characters are stored in `episode.guestCharacters` on the `ComicStrip`.
+     - Scoped page characters are stored in `episode.pageCharacters`.
+     - In both the Comic Spread header (`ComicPageSpread.tsx`) and the Studio panel (`ZenComicReader.tsx`), guest characters display with a `💼 Guest: [Name] ([Role])` pill.
+     - A 1-click `[ ⭐ Promote to Core Cast ]` button allows the creator to permanently add any guest character into `world.characters` in the World Bible, syncing immediately to MongoDB Atlas and localStorage!
+  4. **Verification**:
+     - Verified with `npm run build` (0 TypeScript / Turbopack errors across all 13 routes).

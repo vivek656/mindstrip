@@ -58,6 +58,7 @@ interface ComicPageSpreadProps {
   onSelectCharacterForDossier?: (character: ComicCharacter) => void;
   isCinemaTheme?: boolean;
   directorReasoning?: string;
+  onPromoteGuestCharacter?: (guest: ComicCharacter) => void;
 }
 
 const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
@@ -111,6 +112,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     onSelectCharacterForDossier,
     isCinemaTheme = false,
     directorReasoning = '',
+    onPromoteGuestCharacter,
   },
   ref
 ) {
@@ -388,6 +390,53 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               }`}>
                 &ldquo;{episode.rawBrainDump}&rdquo;
               </p>
+            )}
+
+            {/* Scoped Page Characters & Episodic Guest Badges */}
+            {((episode.pageCharacters && episode.pageCharacters.length > 0) || (episode.guestCharacters && episode.guestCharacters.length > 0)) && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+                <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
+                  isCinemaTheme ? 'text-zinc-500' : 'text-zinc-400'
+                }`}>
+                  Cast on Page:
+                </span>
+                {episode.pageCharacters?.map((char) => (
+                  <button
+                    key={char.id}
+                    type="button"
+                    onClick={() => onSelectCharacterForDossier?.(char)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                      isCinemaTheme
+                        ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
+                        : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-200'
+                    }`}
+                    title={`View Dossier for ${char.name}`}
+                  >
+                    <span>{char.avatarEmoji || '👤'}</span>
+                    <span>{char.name}</span>
+                  </button>
+                ))}
+                {episode.guestCharacters?.map((guest, idx) => (
+                  <span
+                    key={guest.id || idx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30"
+                  >
+                    <span>💼 Guest:</span>
+                    <span className="font-bold">{guest.name}</span>
+                    {guest.role && <span className="text-[10px] opacity-80 font-normal">({guest.role})</span>}
+                    {onPromoteGuestCharacter && (
+                      <button
+                        type="button"
+                        onClick={() => onPromoteGuestCharacter(guest)}
+                        className="ml-1 text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 dark:text-amber-100 font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
+                        title="Promote to recurring core cast in World Bible"
+                      >
+                        ⭐ Promote to Core
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 

@@ -151,6 +151,8 @@ export interface ComicStrip {
   layoutStyle?: '1-panel' | '2-panel' | '3-panel' | '4-panel'; // Dynamic panel format
   directorReasoning?: string; // Meta AI Agent rationale for why this pacing/layout was selected
   imageModel?: string; // Model used to synthesize page artwork (e.g. muse-image-1.0)
+  pageCharacters?: ComicCharacter[]; // Characters specifically featured on this comic page
+  guestCharacters?: ComicCharacter[]; // Temporary/episodic guest characters introduced on this page
   nextSuggestions?: string[]; // 2-3 proactive story continuation suggestions from the AI Co-Director
   directorQuestion?: {
     question: string; // The creative fork question (e.g. "What should happen next?")
@@ -204,6 +206,7 @@ export interface ComicWorld {
   artStyle: ArtStyle;
   imageModel?: string; // Preferred image model for this universe
   characters: ComicCharacter[];
+  guestCharacters?: ComicCharacter[]; // Temporary/episodic characters that can be promoted to core cast
   episodes: ComicStrip[];
   createdAt: string;
   lore?: string; // Rich world backstory & ongoing conflict
