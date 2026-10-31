@@ -40,112 +40,59 @@ export function generateHeuristicPitch(
   const focused = detectedFocused.length > 0 ? detectedFocused : [charNames[0] || 'Protagonist'];
   const excluded = charNames.filter((name: string) => !focused.includes(name));
 
-  const hasClient = /client|contract|deal|bid|customer/.test(lower);
+  const guestMatch = cleanPremise.match(/(?:a|the|new)\s+(client|customer|investor|buyer|partner|stranger|visitor|rival|detective|merchant|boss|guest)\b/i);
   const guestList: CoDirectorGuestCharacter[] = [];
-  if (hasClient) {
-    const clientMatch = cleanPremise.match(/(?:client|investor|buyer|partner)\s+([A-Z][a-z]+)/i);
-    const clientName = clientMatch ? `Client ${clientMatch[1]}` : 'The New Client';
+  if (guestMatch) {
+    const roleFound = guestMatch[1].toLowerCase();
+    const roleCapitalized = roleFound.charAt(0).toUpperCase() + roleFound.slice(1);
     guestList.push({
-      name: clientName,
-      role: 'client',
-      appearance: 'Distinguished executive in a tailored charcoal suit, sharp observant gaze',
-      description: 'Key executive holding the multimillion-dollar deal',
-      avatarEmoji: '💼'
+      name: `The ${roleCapitalized}`,
+      role: roleFound,
+      appearance: `Visual styling appropriate for a ${roleFound} in ${genre}`,
+      description: `Episodic scene partner in ${worldTitle}`,
+      avatarEmoji: '👤'
     });
   }
 
   const primaryLead = focused[0] || 'the protagonist';
 
-  const mockQuestions: CoDirectorQuestion[] = hasClient
-    ? [
+  const mockQuestions: CoDirectorQuestion[] = [
+    {
+      id: 'q-dynamic',
+      question: `How does ${primaryLead} confront the central dilemma in "${cleanPremise.slice(0, 60)}"?`,
+      options: [
         {
-          id: 'q-strategy',
-          question: `What is ${primaryLead}'s tactical negotiation approach with the new client?`,
-          options: [
-            {
-              label: 'Subtle Charm & Psychological Flattery',
-              description: 'Reading micro-expressions over dinner, disarming defenses with calculated warmth and wit',
-              beatAddition: `${primaryLead} uses disarming charisma and keen psychological observation to lower his guard`
-            },
-            {
-              label: 'Bold Corporate Counter-Pitch',
-              description: 'Commanding the boardroom with razor-sharp financial acumen and undeniable authority',
-              beatAddition: `${primaryLead} playfully challenges his skeptical valuation with incisive corporate mastery`
-            }
-          ]
+          label: 'Direct Assertive Action',
+          description: 'Taking immediate charge of the situation with bold courage',
+          beatAddition: `${primaryLead} takes decisive charge with confident action`
         },
         {
-          id: 'q-reaction',
-          question: 'How does the client respond to the proposition?',
-          options: [
-            {
-              label: 'Intrigued yet Guarded',
-              description: 'He smiles enigmatically and probes for hidden motives or vulnerabilities',
-              beatAddition: 'The client swirls his glass with an enigmatic smirk, intrigued yet probing for true motives'
-            },
-            {
-              label: 'Completely Captivated & Ready to Sign',
-              description: 'Thoroughly persuaded by the pitch, he slides the contract forward before dessert',
-              beatAddition: 'The client pushes the contract forward, thoroughly captivated by the magnetic persuasion'
-            }
-          ]
-        },
-        {
-          id: 'q-climax',
-          question: 'What is the dramatic resolution / cliffhanger of the meeting?',
-          options: [
-            {
-              label: 'Triumphant Deal Secured',
-              description: 'The deal is inked with mutual admiration and high-stakes promises',
-              beatAddition: 'The fountain pen signs the contract, sealing a monumental new partnership'
-            },
-            {
-              label: 'Lingering Romantic Tension',
-              description: 'The contract is signed, but an intense lingering gaze suggests deeper complications ahead',
-              beatAddition: 'The contract is finalized, but a lingering touch and unspoken glance hint at dangerous chemistry'
-            }
-          ]
+          label: 'Calculated Strategic Patience',
+          description: 'Analyzing the environment for hidden angles before making a move',
+          beatAddition: `${primaryLead} observes the situation strategically before committing`
         }
       ]
-    : [
+    },
+    {
+      id: 'q-climax',
+      question: 'How does this dramatic scene conclude for the next episode?',
+      options: [
         {
-          id: 'q-dynamic',
-          question: `How does ${primaryLead} confront the central dilemma?`,
-          options: [
-            {
-              label: 'Direct Assertive Action',
-              description: 'Taking immediate charge of the situation with bold courage',
-              beatAddition: `${primaryLead} takes decisive charge with confident action`
-            },
-            {
-              label: 'Calculated Strategic Patience',
-              description: 'Analyzing the environment for hidden angles before making the move',
-              beatAddition: `${primaryLead} waits for the opportune moment to strike strategically`
-            }
-          ]
+          label: 'Decisive Breakthrough',
+          description: 'Clear forward momentum gained with tangible progress',
+          beatAddition: 'The immediate challenge resolves with clear forward momentum'
         },
         {
-          id: 'q-climax',
-          question: 'How does the scene resolve for the next episode?',
-          options: [
-            {
-              label: 'Decisive Victory',
-              description: 'Clear forward momentum gained with high morale',
-              beatAddition: 'The dilemma resolves decisively with forward momentum'
-            },
-            {
-              label: 'Suspenseful Cliffhanger',
-              description: 'An unexpected discovery leaves questions open for the next chapter',
-              beatAddition: 'A sudden unexpected revelation raises the stakes for the next chapter'
-            }
-          ]
+          label: 'Suspenseful Cliffhanger',
+          description: 'An unexpected discovery raises the stakes for the next chapter',
+          beatAddition: 'A sudden unexpected revelation raises the stakes for the next chapter'
         }
-      ];
+      ]
+    }
+  ];
 
   return {
-    premiseSummary: hasClient
-      ? `High-stakes corporate meeting between ${primaryLead} and The New Client`
-      : `Spotlight episode centered on ${focused.join(', ')}`,
+    premiseSummary: `Spotlight episode centered on ${focused.join(', ')}: "${cleanPremise.slice(0, 80)}"`,
     focusedCharacters: focused,
     excludedCharacters: excluded,
     detectedGuestCharacters: guestList,

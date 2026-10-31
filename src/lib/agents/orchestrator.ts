@@ -36,19 +36,21 @@ export async function runProductionRoom(
     return normalizedPrompt.includes(normalizedChar);
   });
 
-  // Check if premise introduces an episodic guest (e.g. "client", "boss", "investor")
-  const hasGuestClient = /client|customer|investor|buyer|contract|deal|prospect|negotiat/.test(rawDumpLower);
+  // Dynamically detect any guest characters introduced in the premise (e.g. "a client", "the detective", "a customer")
+  const guestMatch = context.rawDump.match(/(?:a|the|new)\s+(client|customer|investor|buyer|partner|stranger|visitor|rival|detective|merchant|boss|guest)\b/i);
   const detectedGuestChars: any[] = [];
-  if (hasGuestClient) {
+  if (guestMatch) {
+    const roleFound = guestMatch[1].toLowerCase();
+    const roleCapitalized = roleFound.charAt(0).toUpperCase() + roleFound.slice(1);
     detectedGuestChars.push({
-      id: `guest-client-${Date.now()}`,
-      name: 'The New Client',
-      role: 'client',
-      gender: 'male',
-      appearance: 'Distinguished executive in a tailored charcoal suit with a luxury watch and discerning gaze',
-      description: 'High-stakes prospective corporate client evaluating the proposal',
-      avatarEmoji: '💼',
-      traits: ['Discerning', 'Influential', 'Cautious']
+      id: `guest-${roleFound}-${Date.now()}`,
+      name: `The ${roleCapitalized}`,
+      role: roleFound,
+      gender: 'unspecified',
+      appearance: `Styling suited for a ${roleFound} in ${context.genre || 'this world'}`,
+      description: `Episodic scene partner in this chapter`,
+      avatarEmoji: '👤',
+      traits: ['Dynamic']
     });
   }
 

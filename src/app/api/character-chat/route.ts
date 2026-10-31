@@ -112,67 +112,67 @@ To get her look exactly right, tell me:
   if (focusSection === 'lore') {
     if (userMessage && userMessage.trim()) {
       return {
-        reply: `This backstory gives @${name} so much dramatic depth. Balancing high-stakes ambitions with personal vulnerability makes her an unforgettable character in the story!
+        reply: `This direction gives @${name} great dramatic depth for "${worldTitle}". Balancing their core conviction with personal vulnerability makes for a compelling comic lead!
 
-Here is how we can refine her psychological profile:`,
+Here is how we can anchor their psychological profile:`,
         questions: [
-          `What is the one line she would NEVER cross, even to win?`,
-          `Who in the world holds the key to her hidden soft spot?`
+          `What line would @${name} never cross, even to achieve their goal?`,
+          `Who or what represents their greatest vulnerability in this story?`
         ],
         quickOptions: [
-          `🎯 Driven to prove she built her empire on merit, not favors`,
-          `🔒 Keeps a classified personal diary under biometric lock`,
-          `⚠️ Blindspot: Overconfidence and refusal to show hesitation`,
-          `💔 Hides a past heartbreak behind an impenetrable corporate persona`
+          `🎯 Relentless determination to prove themselves on their own terms`,
+          `🔒 Guards a classified secret or personal artifact closely`,
+          `⚠️ Blindspot: Excessive self-reliance and reluctance to ask for help`,
+          `📖 Deeply loyal to their convictions, regardless of external pressure`
         ],
         suggestedUpdates: {
-          backstory: character?.backstory || `@${name} rose through the cutthroat ranks through relentless preparation and ruthless emotional discipline. Behind her poised demeanor lies someone who fought for every inch of authority she wields.`,
-          motivation: `To maintain absolute control over her empire and negotiate from an unassailable position of strength.`,
-          flaws: `Inability to display vulnerability or delegate critical trust to others.`,
-          secret: `Has secretly orchestrated a personal contingency buyout to protect her firm against hostile takeovers.`
+          backstory: character?.backstory || `${name} has navigated demanding trials to establish their position in ${worldTitle}. Their journey has forged an unwavering resolve: ${userMessage.trim().slice(0, 140)}.`,
+          motivation: `To achieve their defining purpose in ${worldTitle} and protect what they have built.`,
+          flaws: `A fierce independence that makes delegating trust difficult during crises.`,
+          secret: `Guards an unrevealed truth from their past that could shift the stakes if discovered.`
         }
       };
     }
 
     return {
-      reply: `Let's dig into @${name}'s core psychology and origin. What drives her beneath the surface?
+      reply: `Let's explore @${name}'s core psychology and origins for "${worldTitle}". What drives them beneath the surface?
 
-1. What formative trial or triumph made her who she is today?
-2. What is her core motivation or what does she fear losing most?
-3. What fatal flaw or blindspot could cause high-stakes drama?`,
+1. What defining experience made them who they are today?
+2. What is their primary ambition or what do they fear losing most?
+3. What fatal flaw or blindspot could create dramatic tension?`,
       questions: [
-        `What is her ultimate ambition in "${worldTitle}"?`,
-        `What secret truth does she guard from colleagues and rivals?`
+        `What is their ultimate ambition in "${worldTitle}"?`,
+        `What secret truth do they guard from others?`
       ],
       quickOptions: [
-        `🎯 Total executive independence and boardroom supremacy`,
-        `🔒 Guarding an emotional vulnerability behind an iron facade`,
-        `⚠️ Believing she can charm or outmaneuver any competitor`,
-        `📖 Self-made origin: started with nothing and trusts nobody`
+        `🎯 Fierce independence and autonomy in pursuing their goals`,
+        `🔒 Protecting a hidden vulnerability behind a confident facade`,
+        `⚠️ Believing they must carry every burden alone`,
+        `📖 Self-made path: built their standing through relentless preparation`
       ]
     };
   }
 
   if (focusSection === 'voice') {
     return {
-      reply: `How does @${name} sound when she commands a room or speaks in private?
+      reply: `How does @${name} sound when commanding a room or speaking in confidence?
 
-1. What is her speech cadence (sharp, teasing, honeyed, velvety, deadpan)?
-2. Does she have a signature phrase or verbal tic?
-3. How does her voice change when she's negotiating vs when she's alone?`,
+1. What is their vocal cadence (sharp, warm, deliberate, deadpan)?
+2. Do they have a signature catchphrase or speaking habit?
+3. How does their tone shift when under pressure vs when at ease?`,
       questions: [
-        `What is her signature line or verbal sting?`,
-        `How does she disarm opponents in dialogue?`
+        `What is their signature line or verbal attitude?`,
+        `How do they assert authority in dialogue?`
       ],
       quickOptions: [
-        `💬 "Let's cut the pleasantries and talk valuation."`,
-        `💬 "I don't ask for contracts, darling. People beg me to take them."`,
-        `💬 Velvety, measured cadence with sharp razor-like precision`,
-        `💬 Warm, teasing wit masked with strategic corporate calculation`
+        `💬 Sharp, articulate delivery with quiet confidence`,
+        `💬 Warm and disarming with a quick, observant wit`,
+        `💬 Measured, deliberate tone that commands immediate attention`,
+        `💬 Candid, no-nonsense clarity with zero wasted words`
       ],
       suggestedUpdates: {
-        voiceTone: `Velvety, deliberate cadence with razor-sharp articulation; effortlessly shifts from disarming corporate warmth to ice-cold leverage in a heartbeat.`,
-        catchphrase: `"I don't negotiate for table scraps, darling. I decide who eats."`
+        voiceTone: `Measured, articulate cadence with a calm, authoritative presence suited for ${genre}.`,
+        catchphrase: `"When the moment arrives, I don't hesitate."`
       }
     };
   }

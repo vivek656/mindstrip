@@ -1019,3 +1019,27 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - `git grep -inE "louboutin|namita|thapar|dominatrix|sterling|champagne|deep wine|so kate"`: 0 matches found in `src/`.
   - `git grep -inE "Indian|olive complexion"`: 0 matches found in `src/`.
   - `npm run build`: verified clean compilation with zero TypeScript errors.
+
+### Eradication of Hardcoded Story Scripts & Real Server AI Activation (2026-10-31)
+- **User Feedback**:
+  *"see every where AI agents should not work on hardcoded defaults what sthe use of AI agent themn"*
+- **Critical Discovery**:
+  1. *Server AI Bypass*: In `src/lib/meta-models.ts`, `DEFAULT_CONFIG` defaulted to `mode: 'free'` / `provider: 'simulation'`. When `mode === 'free'`, `generateMindStrip` intercepted the request in the browser and executed local client-side mocks without EVER calling `/api/generate`. Because `.env.local` only exists on the server, the browser never saw `META_MODEL_API_KEY`, forcing execution into client-side fallbacks even though a real Meta API key was configured on the server!
+  2. *Hardcoded Corporate Mocks Across 5 Files*: Whenever words like "client", "office", "contract", or "meeting" appeared:
+     - `src/lib/comic-generator.ts`: `isWorkplaceOrClient` injected a hardcoded 4-panel script ("Executive Entry", "Disarming Rapport", "A dozen firms have pitched me this week...", "The contract is yours...").
+     - `src/lib/agents/orchestrator.ts`: `hasGuestClient` injected "The New Client, male, tailored charcoal suit, luxury watch".
+     - `src/app/api/co-director-pitch/route.ts`: injected dinner negotiation questions ("reading micro-expressions over dinner", "swirling wine glass", "signing with fountain pen").
+     - `src/app/api/co-director-chat/route.ts`: injected "high-floor glass boardroom, mahogany table, swirling espresso".
+     - `src/app/api/character-chat/route.ts`: injected "hostile takeovers, contingency buyouts, table scraps".
+- **Architectural Fixes**:
+  1. **Activate Real Server AI Everywhere**:
+     - Updated `DEFAULT_CONFIG` in `src/lib/meta-models.ts` to `mode: 'meta'` / `provider: 'meta-api'`.
+     - `generateMindStrip` now **always calls `/api/generate`** on the server first, ensuring the server's `.env.local` `META_MODEL_API_KEY` is loaded and passed to Meta `muse-spark-1.3` / `muse-image-1.0` on every generation.
+  2. **Purged All Canned Story Scripts & Replaced with Dynamic Generators**:
+     - Completely deleted `isWorkplaceOrClient` and all pre-written 4-panel corporate dialogues from `comic-generator.ts`.
+     - Replaced with a dynamic algorithmic generator that parses the user's actual premise, actions, and entities.
+     - Removed hardcoded guest character properties (`male`, `charcoal suit`, `luxury watch`) from `orchestrator.ts` and `co-director-pitch/route.ts`; guest roles are now dynamically parsed from creator input.
+     - Neutralized `co-director-chat` and `character-chat` fallbacks to be completely genre-agnostic and driven by the user's actual message.
+- **Verification**:
+  - `npm run build`: verified clean compilation in ~1.2s across all 13 routes.
+  - Commits verified and pushed to `main`.

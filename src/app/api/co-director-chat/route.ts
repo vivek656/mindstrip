@@ -35,14 +35,13 @@ function generateDynamicCoDirectorResponse(
   }
   const excludedChars = allCharNames.filter((name) => !spotlightChars.includes(name));
 
-  // Detect episodic guests
-  const hasClient = /client|deal|contract|bid|customer/.test(lower);
-  const hasBoss = /boss|manager|executive|director/.test(lower);
-  const hasRival = /rival|competitor|enemy/.test(lower);
+  // Detect episodic guests dynamically from text
+  const guestMatch = lower.match(/(?:a|the|new)\s+(client|customer|investor|buyer|partner|stranger|visitor|rival|detective|merchant|boss|guest)\b/i);
   const guestLabels: string[] = [];
-  if (hasClient) guestLabels.push('The New Client');
-  if (hasBoss) guestLabels.push('The Corporate Boss');
-  if (hasRival) guestLabels.push('The Rival Bidder');
+  if (guestMatch) {
+    const roleCapitalized = guestMatch[1].charAt(0).toUpperCase() + guestMatch[1].slice(1).toLowerCase();
+    guestLabels.push(`The ${roleCapitalized}`);
+  }
 
   const leadName = spotlightChars[0] || 'The Lead';
   const guestsStr = guestLabels.length > 0 ? guestLabels.join(' & ') : '';
@@ -62,29 +61,30 @@ function generateDynamicCoDirectorResponse(
   let premise = '';
   let quickStarters: string[] = [];
 
-  if (isCorporateOffice || hasClient || isSeductionOrCharm) {
+  if (isCorporateOffice || Boolean(guestMatch) || isSeductionOrCharm) {
+    const userTopic = lastUserMsg.trim().slice(0, 80) || 'the upcoming interaction';
     reply = `I like where you're taking this scene! Focusing specifically on **${leadName}** ${guestsStr ? `and **${guestsStr}**` : ''} keeps the spotlight razor-sharp without unnecessary cast clutter.
 
 Here is how we can pace this dramatic beat across the 4 panels:
 
-• **Panel 1 — The Approach:** ${leadName} enters the high-floor glass boardroom with effortless poise and confidence, locking eyes with ${guestsStr || 'her counterpart'}.
-• **Panel 2 — The Maneuver:** ${leadName} leans forward across the polished mahogany table, pairing calculated charisma with incisive business insight to disarm defenses.
-• **Panel 3 — The Reaction:** ${guestsStr || 'The client'} leans back, swirling an espresso or checking the contract numbers, clearly intrigued but assessing her motives.
-• **Panel 4 — The Pivot:** A high-tension beat — the pen is poised over the signature line, or an unexpected counter-condition is put on the table.
+• **Panel 1 — Setting the Stage:** ${leadName} steps into the scene with clear intent, preparing for "${userTopic}".
+• **Panel 2 — The Encounter:** ${leadName} engages directly with ${guestsStr || 'their counterpart'}, establishing the interpersonal dynamic and conversational friction.
+• **Panel 3 — The Core Exchange:** A compelling exchange of perspectives or strategic revelation where ${leadName} asserts their conviction.
+• **Panel 4 — The Decision:** A decisive moment or unexpected turn that sets up the immediate cliffhanger for the next episode.
 
-How does that pacing feel? We can either push straight for her sealing the contract, or introduce a sudden complication.`;
+How does that pacing feel? We can either push for a decisive breakthrough or introduce an unexpected complication.`;
 
-    panel1 = `${leadName} enters the sleek glass-walled boardroom with commanding posture, carrying the confidential proposal dossier.`;
-    panel2 = `${leadName} sits opposite ${guestsStr || 'the executive'}, leaning in with a disarming smile and sharp, persuasive gaze.`;
-    panel3 = `${guestsStr || 'The client'} studies the terms with an enigmatic expression, visibly impressed yet testing her resolve.`;
-    panel4 = `High-stakes close-up: A luxury fountain pen hovers above the signature block as eye contact intensifies.`;
+    panel1 = `${leadName} enters the setting with focused composure, establishing the scene for "${userTopic}".`;
+    panel2 = `${leadName} engages ${guestsStr || 'their counterpart'}, exchanging sharp, observant dialogue.`;
+    panel3 = `A critical development occurs as the dialogue and stakes over "${userTopic}" reach a pivotal peak.`;
+    panel4 = `A decisive choice is made, leaving an intriguing narrative opening for the next chapter.`;
 
-    premise = `Episode #${(currentEpisode?.episodeNumber || 1) + 1}: ${leadName} conducts high-stakes negotiations with ${guestsStr || 'a high-profile client'} in a sleek modern boardroom, using magnetic charm and razor-sharp intellect to close the deal.`;
+    premise = `Episode #${(currentEpisode?.episodeNumber || 1) + 1}: ${leadName} navigates "${userTopic}" with ${guestsStr || 'key scene partners'}, balancing wits with dramatic narrative stakes.`;
 
     quickStarters = [
-      'Seal the deal cleanly with a toast',
-      'The client adds a dangerous unexpected condition',
-      'Security or the boss interrupts right before signing'
+      'Resolve the scene with a decisive breakthrough',
+      'Introduce an unexpected complication or rival twist',
+      'End on a suspenseful cliffhanger for the next issue'
     ];
   } else if (isTensionOrConflict) {
     reply = `That raises the stakes dramatically! Having **${leadName}** face this conflict head-on creates great narrative momentum.

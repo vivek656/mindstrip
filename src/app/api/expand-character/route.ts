@@ -146,22 +146,22 @@ Current draft notes:
     const isDaily = isRomanceOrOffice || gLower.includes('slice') || gLower.includes('daily') || gLower.includes('comedy') || gLower.includes('romance') || gLower.includes('office') || gLower.includes('drama');
 
     const fallbackExpansion = isRomanceOrOffice ? {
-      appearance: character.appearance || `${charName} possesses warm, perceptive hazel eyes, soft shoulder-length dark hair, and a grounded, confident posture that instantly cuts through workplace tension.`,
-      wardrobe: character.wardrobe || `Tailored business-casual blazer in warm dusty rose over an ivory silk blouse, relaxed dark trousers, and comfortable pointed-toe leather flats.`,
-      iconicItem: character.iconicItem || `A delicate gold pendant on a fine chain, and a thermal ceramic coffee tumbler.`,
-      backstory: character.backstory || (userDirective || `Works as a sharp brand strategist at the corporate agency where the protagonist works by day. Their connection deepened over late-night pitch decks, shared takeout, and quiet moments between deadlines. She is his emotional anchor to ordinary reality—someone who loves him for who he is, without expecting him to carry the weight of the world alone.`),
-      motivation: character.motivation || `To build a peaceful, authentic future with the person she loves, and rise to creative director without compromising her integrity.`,
-      flaws: character.flaws || `Often swallows her own anxieties so she doesn't add to his stress; struggles to voice her need for him to stay when duty calls him away.`,
-      secret: character.secret || `Quietly discovered his secret double identity weeks ago after finding his emergency kit in his desk, but keeps quiet so he always has a safe, normal haven to come home to.`,
-      abilities: character.abilities || `High-stakes client negotiation, corporate crisis navigation, empathetic conflict de-escalation, and an uncanny radar for when someone is burning out.`,
-      gear: character.gear || `Leather commuter tote bag, noise-canceling earbuds, fountain pen, and a shared set of apartment keys.`,
-      voiceTone: character.voiceTone || `Warm, witty, and grounded; delivers dry teasing remarks that playfully deflate superhero drama.`,
-      catchphrase: character.catchphrase || `The world will still be there in twenty minutes — sit down and have lunch first.`,
+      appearance: character.appearance || `${charName} possesses warm, perceptive eyes, styled hair, and a grounded, confident posture suited for professional and personal environments.`,
+      wardrobe: character.wardrobe || `Clean modern attire: tailored blazer, crisp shirt or blouse, dark trousers, and comfortable leather shoes.`,
+      iconicItem: character.iconicItem || `A personalized everyday accessory and sleek notebook.`,
+      backstory: character.backstory || (userDirective ? `${charName}'s background in ${worldTitle}: ${userDirective.slice(0, 150)}` : `${charName} has built a solid standing in ${worldTitle} through strategic preparation, sharp wit, and genuine interpersonal loyalty.`),
+      motivation: character.motivation || `To succeed on their own terms in ${worldTitle} while staying true to those they care about.`,
+      flaws: character.flaws || `Struggles to ask for support during overwhelming crises, preferring to bear pressure quietly.`,
+      secret: character.secret || `Keeps a personal contingency plan that few in their circle know about.`,
+      abilities: character.abilities || `Strategic negotiation, crisis management, empathetic interpersonal diplomacy, and sharp observation.`,
+      gear: character.gear || `Professional commuter bag, personal communication device, and notebook.`,
+      voiceTone: character.voiceTone || `Warm, articulate, and grounded; pairs observant humor with calm clarity under pressure.`,
+      catchphrase: character.catchphrase || `Let's focus on what we can control and take it one step at a time.`,
       suggestedRelationships: otherCast.length > 0 ? [
         {
           targetCharacterName: otherCast[0],
           relationType: 'love-interest',
-          dynamicDescription: `Deep mutual affection tempered by the quiet tension of his double life.`
+          dynamicDescription: `Close mutual bond with shared ambitions and quiet emotional trust.`
         }
       ] : []
     } : isDaily ? {

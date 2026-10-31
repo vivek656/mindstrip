@@ -89,8 +89,8 @@ export const META_PRESETS: MetaPreset[] = [
 ];
 
 export const DEFAULT_CONFIG: ApiConfig = {
-  mode: 'free',
-  provider: 'simulation',
+  mode: 'meta',
+  provider: 'meta-api',
   modelName: 'muse-spark-1.3',
 };
 
@@ -107,39 +107,7 @@ export async function generateMindStrip(
   world?: ComicWorld,
   pastEpisodes?: ComicStrip[]
 ): Promise<ComicStrip> {
-  // 1. FREE MODE: Local Autonomous Multi-Agent Production Room ($0.00)
-  if (config.mode === 'free' || config.provider === 'simulation') {
-    // Natural subtle delay for realistic AI agent deliberation
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    const prodResult = await runProductionRoom({
-      rawDump,
-      artStyle,
-      lens,
-      characters,
-      worldTitle,
-      genre,
-      storyContext,
-      layoutPreference,
-      world,
-      pastEpisodes: pastEpisodes || world?.episodes,
-      provider: 'simulation',
-      modelName: 'Meta Muse Spark (Autonomous Production Room)'
-    });
-
-    return buildComicStripFromProduction(prodResult, {
-      rawDump,
-      artStyle,
-      lens,
-      characters,
-      worldTitle,
-      genre,
-      world,
-      pastEpisodes: pastEpisodes || world?.episodes,
-      modelName: 'Meta AI Production Room (Open Weights • $0.00)'
-    });
-  }
-
-  // 2. META AI MODE: Call Meta Model API / Hackathon Partner Endpoints
+  // Always invoke server generation endpoint first so server-side Meta API keys in .env.local are utilized
   try {
     const response = await fetch('/api/generate', {
       method: 'POST',
@@ -157,14 +125,19 @@ export async function generateMindStrip(
         layoutPreference,
         world,
         pastEpisodes: pastEpisodes || world?.episodes,
-        provider: config.provider,
+        provider: config.provider || 'meta-api',
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
-        modelName: config.modelName
+        modelName: config.modelName || 'muse-spark-1.3'
       })
     });
 
-    if (!response.ok) {
+    if (response.ok) {
+      const data = await response.json();
+      if (data.comicStrip) {
+        return data.comicStrip;
+      }
+    } else {
       let errMsg = `Meta API returned HTTP ${response.status}`;
       try {
         const errJson = await response.json();
@@ -172,52 +145,37 @@ export async function generateMindStrip(
       } catch {
         // ignore
       }
-      console.warn('Meta API returned non-200:', errMsg);
-      const fallback = generateComicStripMock(
-        rawDump,
-        artStyle,
-        lens,
-        `Meta AI (${config.modelName || 'Muse Spark 1.3'}) • Offline`,
-        characters,
-        worldTitle,
-        genre
-      );
-      return {
-        ...fallback,
-        generationError: errMsg
-      };
+      console.warn('Server generation endpoint returned non-200 status:', errMsg);
     }
-
-    const data = await response.json();
-    if (data.comicStrip) {
-      return data.comicStrip;
-    }
-
-    const fallback = generateComicStripMock(
-      rawDump,
-      artStyle,
-      lens,
-      `Meta AI (${config.modelName || 'Muse Spark 1.3'})`,
-      characters,
-      worldTitle,
-      genre
-    );
-    return fallback;
   } catch (err) {
-    const errMessage = err instanceof Error ? err.message : String(err);
-    console.error('Error calling Meta API:', errMessage);
-    const fallback = generateComicStripMock(
-      rawDump,
-      artStyle,
-      lens,
-      `Meta AI (${config.modelName || 'Muse Spark 1.3'}) • Offline`,
-      characters,
-      worldTitle,
-      genre
-    );
-    return {
-      ...fallback,
-      generationError: `Meta API connection offline: ${errMessage}`
-    };
+    console.warn('Could not connect to /api/generate, falling back to local multi-agent production:', err);
   }
+
+  // Graceful offline fallback if server endpoint was unreachable
+  const prodResult = await runProductionRoom({
+    rawDump,
+    artStyle,
+    lens,
+    characters,
+    worldTitle,
+    genre,
+    storyContext,
+    layoutPreference,
+    world,
+    pastEpisodes: pastEpisodes || world?.episodes,
+    provider: 'simulation',
+    modelName: 'Meta AI Production Room (Local Fallback)'
+  });
+
+  return buildComicStripFromProduction(prodResult, {
+    rawDump,
+    artStyle,
+    lens,
+    characters,
+    worldTitle,
+    genre,
+    world,
+    pastEpisodes: pastEpisodes || world?.episodes,
+    modelName: 'Meta AI Production Room (Local Fallback)'
+  });
 }

@@ -225,7 +225,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     return world.characters.slice(0, 1);
   }, [episode.pageCharacters, episode.rawBrainDump, panels, world.characters]);
 
-  // Combine with episodic guest characters (e.g. "The New Client")
+  // Combine with episodic guest characters (e.g. from episode.guestCharacters)
   const allPageCharacters = useMemo(() => {
     const list = [...activePageCharacters];
     (episode.guestCharacters || []).forEach((g) => {
