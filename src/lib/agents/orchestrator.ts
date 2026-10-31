@@ -22,13 +22,61 @@ export async function runProductionRoom(
   let correctionsCount = 0;
 
   // -------------------------------------------------------------
+  // STEP 0: CAST SCOPING & HERO/VILLAIN DECOUPLING
+  // -------------------------------------------------------------
+  const rawDumpLower = (context.rawDump || '').toLowerCase();
+  const allCharacters = context.characters || context.world?.characters || [];
+
+  // Match characters mentioned in prompt (supporting typos like meeera / meera, @mentions, and whole names)
+  const explicitlyMentioned = allCharacters.filter((c) => {
+    const nameLower = c.name.toLowerCase();
+    if (rawDumpLower.includes(`@${nameLower}`) || rawDumpLower.includes(nameLower)) return true;
+    const normalizedChar = nameLower.replace(/(.)\1+/g, '$1');
+    const normalizedPrompt = rawDumpLower.replace(/(.)\1+/g, '$1');
+    return normalizedPrompt.includes(normalizedChar);
+  });
+
+  // Check if premise introduces an episodic guest (e.g. "client", "boss", "investor")
+  const hasGuestClient = /client|customer|investor|buyer|contract|deal|prospect|negotiat/.test(rawDumpLower);
+  const detectedGuestChars: any[] = [];
+  if (hasGuestClient) {
+    detectedGuestChars.push({
+      id: `guest-client-${Date.now()}`,
+      name: 'The New Client',
+      role: 'client',
+      gender: 'male',
+      appearance: 'Distinguished executive in a tailored charcoal suit with a luxury watch and discerning gaze',
+      description: 'High-stakes prospective corporate client evaluating the proposal',
+      avatarEmoji: '💼',
+      traits: ['Discerning', 'Influential', 'Cautious']
+    });
+  }
+
+  // If specific characters were targeted, strictly isolate them!
+  let activeCast = allCharacters;
+  let excludedNames: string[] = [];
+
+  if (explicitlyMentioned.length > 0) {
+    activeCast = [...explicitlyMentioned, ...detectedGuestChars];
+    excludedNames = allCharacters
+      .filter((c) => !explicitlyMentioned.some((ec) => ec.id === c.id))
+      .map((c) => c.name);
+  }
+
+  const activeContext: AgentContext = {
+    ...context,
+    characters: activeCast,
+    rawDump: context.rawDump + (excludedNames.length > 0 ? `\n\n[DIRECTORIAL CAST LOCK]: ONLY ${activeCast.map(c => c.name).join(' and ')} are in this scene. STRICTLY EXCLUDED: ${excludedNames.join(', ')}. Under NO circumstances should ${excludedNames.join(', ')} appear, speak, or be referenced.` : '')
+  };
+
+  // -------------------------------------------------------------
   // STEP 1: CANON RAG ENGINE
   // -------------------------------------------------------------
   const ragMemories = queryCanonRag(
-    context.rawDump,
-    context.world,
-    context.characters,
-    context.pastEpisodes
+    activeContext.rawDump,
+    activeContext.world,
+    activeContext.characters,
+    activeContext.pastEpisodes
   );
   const ragBlock = formatRagContextBlock(ragMemories);
 
@@ -42,14 +90,14 @@ export async function runProductionRoom(
     summary: ragMemories.length > 0
       ? `Indexed past episode beats, unresolved threads, and character dossier lore.`
       : `First episode initialized with world premise and founding cast.`,
-    thoughts: `Scored relevance across ${context.pastEpisodes?.length || 0} episodes, ${context.world?.laws?.length || 0} laws, and ${context.characters?.length || 0} characters.`,
+    thoughts: `Scored relevance across ${activeContext.pastEpisodes?.length || 0} episodes, ${activeContext.world?.laws?.length || 0} laws, and ${activeContext.characters?.length || 0} characters.`,
     anchors: ragMemories.map((m) => `${m.title} (${Math.round(m.relevanceScore * 100)}% match)`)
   });
 
   // -------------------------------------------------------------
   // STEP 2: SHOWRUNNER AGENT (Initial Draft)
   // -------------------------------------------------------------
-  let currentDraft = await draftEpisodeBeats(context, ragBlock);
+  let currentDraft = await draftEpisodeBeats(activeContext, ragBlock);
 
   trace.push({
     id: `trace-showrunner-${Date.now()}`,
@@ -65,7 +113,7 @@ export async function runProductionRoom(
   // -------------------------------------------------------------
   // STEP 3: CANON AUDITOR AGENT (First Audit)
   // -------------------------------------------------------------
-  let auditResult = auditEpisodeDraft(currentDraft, context);
+  let auditResult = auditEpisodeDraft(currentDraft, activeContext);
 
   trace.push({
     id: `trace-audit-1-${Date.now()}`,
@@ -92,10 +140,10 @@ export async function runProductionRoom(
       .join(' -- ');
 
     // Re-run Showrunner with critique feedback
-    const revisedDraft = await draftEpisodeBeats(context, ragBlock, auditResult);
+    const revisedDraft = await draftEpisodeBeats(activeContext, ragBlock, auditResult);
     
     // Re-audit the revised draft
-    const reAuditResult = auditEpisodeDraft(revisedDraft, context);
+    const reAuditResult = auditEpisodeDraft(revisedDraft, activeContext);
 
     const revisedAntagonistAction = revisedDraft.panels
       .map((p) => p.bubbles.map((b) => `${b.speaker}: ${b.text}`).join(' | '))
@@ -126,7 +174,7 @@ export async function runProductionRoom(
   // -------------------------------------------------------------
   // STEP 5: VISUAL ART DIRECTOR AGENT
   // -------------------------------------------------------------
-  const artResult = directVisualArtwork(currentDraft, context);
+  const artResult = directVisualArtwork(currentDraft, activeContext);
   currentDraft = artResult.sanitizedDraft;
 
   trace.push({
@@ -140,6 +188,12 @@ export async function runProductionRoom(
     thoughts: `Enforced strict textless directive: pure visual illustration, zero printed panel labels, and consistent character aesthetics.`,
     anchors: artResult.visualAnchors
   });
+
+  // Stamp scoped page characters and guest characters directly onto the draft
+  if (explicitlyMentioned.length > 0) {
+    currentDraft.pageCharacters = explicitlyMentioned.map((c) => c.name);
+    currentDraft.guestCharacters = detectedGuestChars;
+  }
 
   return {
     draft: currentDraft,

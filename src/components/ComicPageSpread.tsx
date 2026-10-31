@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, forwardRef } from 'react';
+import React, { useState, useEffect, useMemo, forwardRef } from 'react';
 import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, ComicCharacter } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
 import { cleanPromptForWordlessArtwork, formatFrameWithRagDialogue } from '@/lib/agents/art-director';
@@ -122,6 +122,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   const [isSamActive, setIsSamActive] = useState(false);
   // Expandable director pacing reasoning drawer
   const [showPacingDrawer, setShowPacingDrawer] = useState(false);
+  // Expandable dialogue transcript drawer under comic artwork
+  const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false);
 
   // Granular state controls
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyle>(world.artStyle || 'webcomic');
@@ -192,8 +194,50 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   // View mode switcher: 'page' (full-page AI spread) vs 'panels' (sequential comic strip)
   const [spreadViewMode, setSpreadViewMode] = useState<'page' | 'panels'>('page');
 
-  // Default seed prompt for granular editing (purged of all panel labels, numbers & timestamps)
-  const charsSummary = world.characters
+  // Isolate strictly to the characters appearing on this page/episode
+  const activePageCharacters = useMemo(() => {
+    // 1. If episode explicitly tracks pageCharacters, respect it
+    if (episode.pageCharacters && episode.pageCharacters.length > 0) {
+      return episode.pageCharacters;
+    }
+
+    // 2. Derive from dialogue speakers & characters referenced across panels
+    const namesInScene = new Set<string>();
+    panels.forEach((p) => {
+      (p.characters || []).forEach((name) => namesInScene.add(name.toLowerCase().trim()));
+      (p.bubbles || []).forEach((b) => {
+        if (b.speaker && b.speaker.toLowerCase() !== 'narrator') {
+          namesInScene.add(b.speaker.toLowerCase().trim());
+        }
+      });
+    });
+
+    // Also check rawBrainDump / premise for @ mentions
+    const promptText = (episode.rawBrainDump || '').toLowerCase();
+
+    const matched = world.characters.filter((c) => {
+      const lower = c.name.toLowerCase().trim();
+      return namesInScene.has(lower) || promptText.includes(`@${lower}`) || promptText.includes(lower);
+    });
+
+    if (matched.length > 0) return matched;
+    // Default to the first character if nothing else detected
+    return world.characters.slice(0, 1);
+  }, [episode.pageCharacters, episode.rawBrainDump, panels, world.characters]);
+
+  // Combine with episodic guest characters (e.g. "The New Client")
+  const allPageCharacters = useMemo(() => {
+    const list = [...activePageCharacters];
+    (episode.guestCharacters || []).forEach((g) => {
+      if (!list.some((c) => c.name.toLowerCase() === g.name.toLowerCase())) {
+        list.push(g);
+      }
+    });
+    return list;
+  }, [activePageCharacters, episode.guestCharacters]);
+
+  // Scoped characters summary for prompt synthesis (strictly excludes uninvited heroes/antagonists)
+  const charsSummary = allPageCharacters
     .map((c) => {
       const role = (c.role || '').toLowerCase();
       const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
@@ -1048,56 +1092,68 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
             />
           </div>
 
-          {/* Integrated Graphic Novel Dialogue & SFX Deck */}
-          <div className="w-full">
-            <div className={`grid gap-3.5 ${
-              panels.length === 1 ? 'grid-cols-1' :
-              panels.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
-              panels.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
-              'grid-cols-1 md:grid-cols-2'
-            }`}>
-              {panels.map((p, idx) => (
-                <div
-                  key={p.panelNumber || idx}
-                  className="p-4 rounded-2xl bg-white border border-zinc-200 shadow-2xs space-y-2.5 transition-all hover:border-zinc-300"
-                >
-                  <div className="flex items-center justify-between text-xs pb-2 border-b border-black/5">
-                    <span className="font-bold text-zinc-950 flex items-center gap-1.5 font-mono">
-                      <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-[10px] font-black">
-                        {p.panelNumber}
-                      </span>
-                      <span className="truncate max-w-[200px]">{p.title || `Panel ${p.panelNumber}`}</span>
-                    </span>
-                    {p.soundEffect && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-amber-100 text-amber-900 border border-amber-200">
-                        ⚡ {p.soundEffect}
-                      </span>
-                    )}
-                  </div>
+          {/* Integrated Graphic Novel Dialogue & SFX Deck (Collapsible to keep focus on Comic Page Art) */}
+          <div className="w-full pt-1">
+            <button
+              type="button"
+              onClick={() => setShowTranscriptDrawer(!showTranscriptDrawer)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-zinc-200 hover:border-zinc-300 text-xs text-zinc-700 hover:text-zinc-950 font-medium transition-all shadow-2xs cursor-pointer"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-zinc-400" />
+              <span>{showTranscriptDrawer ? 'Hide Dialogue Transcript' : `View Dialogue Transcript (${panels.length} Panels)`}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${showTranscriptDrawer ? 'rotate-180' : ''}`} />
+            </button>
 
-                  <div className="space-y-2">
-                    {p.bubbles && p.bubbles.length > 0 ? (
-                      p.bubbles.map((b) => (
-                        <div
-                          key={b.id}
-                          className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-200/80 text-xs text-zinc-900 flex items-start gap-2 leading-relaxed"
-                        >
-                          <span className="font-bold font-mono text-[11px] text-zinc-600 shrink-0 flex items-center gap-1">
-                            <span>{getCharacterEmoji(b.speaker)}</span>
-                            <span>{b.speaker}:</span>
-                          </span>
-                          <span className="font-medium text-zinc-900">&ldquo;{b.text}&rdquo;</span>
+            {showTranscriptDrawer && (
+              <div className={`grid gap-3.5 mt-3 ${
+                panels.length === 1 ? 'grid-cols-1' :
+                panels.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                panels.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
+                'grid-cols-1 md:grid-cols-2'
+              }`}>
+                {panels.map((p, idx) => (
+                  <div
+                    key={p.panelNumber || idx}
+                    className="p-4 rounded-2xl bg-white border border-zinc-200 shadow-2xs space-y-2.5 transition-all hover:border-zinc-300"
+                  >
+                    <div className="flex items-center justify-between text-xs pb-2 border-b border-black/5">
+                      <span className="font-bold text-zinc-950 flex items-center gap-1.5 font-mono">
+                        <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-[10px] font-black">
+                          {p.panelNumber}
+                        </span>
+                        <span className="truncate max-w-[200px]">{p.title || `Panel ${p.panelNumber}`}</span>
+                      </span>
+                      {p.soundEffect && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-amber-100 text-amber-900 border border-amber-200">
+                          ⚡ {p.soundEffect}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      {p.bubbles && p.bubbles.length > 0 ? (
+                        p.bubbles.map((b) => (
+                          <div
+                            key={b.id}
+                            className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-200/80 text-xs text-zinc-900 flex items-start gap-2 leading-relaxed"
+                          >
+                            <span className="font-bold font-mono text-[11px] text-zinc-600 shrink-0 flex items-center gap-1">
+                              <span>{getCharacterEmoji(b.speaker)}</span>
+                              <span>{b.speaker}:</span>
+                            </span>
+                            <span className="font-medium text-zinc-900">&ldquo;{b.text}&rdquo;</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-zinc-400 italic">
+                          (Visual action scene)
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-xs text-zinc-400 italic">
-                        (Visual action scene)
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -1213,293 +1269,296 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
       {/* =========================================================================
           COLLAPSIBLE STORY & DIALOGUE SCRIPT ACCORDION (WITH GRANULAR SCRIPT EDITING)
+          Only displayed when drafting (no page artwork yet) to keep the comic presentation clean
       ========================================================================= */}
-      <div className="mt-5 border border-zinc-200 rounded-2xl bg-white overflow-hidden shadow-2xs">
-        <button
-          type="button"
-          onClick={() => setIsScriptExpanded(!isScriptExpanded)}
-          className="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">📝</span>
-            <span className="text-xs sm:text-sm font-bold text-zinc-900">
-              Written Story Script, Dialogue & Sound Effects ({panels.length} Scenes)
-            </span>
-            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
-              • Granular dialogue, sound, and scene controls
-            </span>
-          </div>
+      {!pageImage && (
+        <div className="mt-5 border border-zinc-200 rounded-2xl bg-white overflow-hidden shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setIsScriptExpanded(!isScriptExpanded)}
+            className="w-full px-5 py-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">📝</span>
+              <span className="text-xs sm:text-sm font-bold text-zinc-900">
+                Written Story Script, Dialogue & Sound Effects ({panels.length} Scenes)
+              </span>
+              <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+                • Granular dialogue, sound, and scene controls
+              </span>
+            </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
-            <span>{isScriptExpanded ? 'Hide Script' : 'View & Edit Script'}</span>
-            {isScriptExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
-        </button>
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
+              <span>{isScriptExpanded ? 'Hide Script' : 'View & Edit Script'}</span>
+              {isScriptExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </button>
 
-        {isScriptExpanded && (
-          <div className="p-5 border-t border-zinc-100 bg-zinc-50/50 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {panels.map((p, idx) => {
-              const sceneNum = idx + 1;
-              const sceneTitle =
-                idx === 0 ? 'Scene 1: The Inciting Dilemma' :
-                idx === 1 ? 'Scene 2: Conflict Escalation' :
-                idx === 2 ? 'Scene 3: The Breakthrough' :
-                'Scene 4: The Outcome';
+          {isScriptExpanded && (
+            <div className="p-5 border-t border-zinc-100 bg-zinc-50/50 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {panels.map((p, idx) => {
+                const sceneNum = idx + 1;
+                const sceneTitle =
+                  idx === 0 ? 'Scene 1: The Inciting Dilemma' :
+                  idx === 1 ? 'Scene 2: Conflict Escalation' :
+                  idx === 2 ? 'Scene 3: The Breakthrough' :
+                  'Scene 4: The Outcome';
 
-              const isAddingBubble = addingBubblePanel === p.panelNumber;
-              const isEditingSound = editingSoundPanel === p.panelNumber;
+                const isAddingBubble = addingBubblePanel === p.panelNumber;
+                const isEditingSound = editingSoundPanel === p.panelNumber;
 
-              return (
-                <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
-                  {/* Scene Title & Sound Effect Header */}
-                  <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
-                    <span className="text-xs font-bold text-zinc-900 font-mono">
-                      {sceneTitle}
-                    </span>
+                return (
+                  <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-4 space-y-3 shadow-2xs">
+                    {/* Scene Title & Sound Effect Header */}
+                    <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                      <span className="text-xs font-bold text-zinc-900 font-mono">
+                        {sceneTitle}
+                      </span>
 
-                    {/* Sound Effect Pill (Clickable / Editable) */}
-                    <div className="flex items-center gap-1.5">
-                      {isEditingSound ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={soundDraft}
-                            onChange={(e) => setSoundDraft(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSaveSoundEffect(p.panelNumber)}
-                            placeholder="e.g. BAM!"
-                            autoFocus
-                            className="w-20 px-1.5 py-0.5 text-[10px] font-mono border rounded outline-none bg-white"
-                          />
+                      {/* Sound Effect Pill (Clickable / Editable) */}
+                      <div className="flex items-center gap-1.5">
+                        {isEditingSound ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={soundDraft}
+                              onChange={(e) => setSoundDraft(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSaveSoundEffect(p.panelNumber)}
+                              placeholder="e.g. BAM!"
+                              autoFocus
+                              className="w-20 px-1.5 py-0.5 text-[10px] font-mono border rounded outline-none bg-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveSoundEffect(p.panelNumber)}
+                              className="text-emerald-600 hover:text-emerald-700 p-0.5 cursor-pointer"
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            onClick={() => handleSaveSoundEffect(p.panelNumber)}
-                            className="text-emerald-600 hover:text-emerald-700 p-0.5 cursor-pointer"
+                            onClick={() => {
+                              setEditingSoundPanel(p.panelNumber);
+                              setSoundDraft(p.soundEffect || '');
+                            }}
+                            className="text-[10px] font-mono font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded border border-amber-200 transition-colors cursor-pointer flex items-center gap-1"
+                            title="Click to edit sound effect"
                           >
-                            <Check className="w-3 h-3" />
+                            <Volume2 className="w-2.5 h-2.5" />
+                            <span>{p.soundEffect || '+ SFX'}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scene Description */}
+                    <p className="text-xs text-zinc-600 font-serif italic leading-relaxed">
+                      &ldquo;{p.sceneDescription}&rdquo;
+                    </p>
+
+                    {/* Dialogue Bubbles */}
+                    {p.bubbles && p.bubbles.length > 0 && (
+                      <div className="space-y-2 pt-1 border-t border-zinc-100">
+                        {p.bubbles.map((b: SpeechBubble) => {
+                          const isEditing = editingBubbleId === b.id;
+                          const charEmoji = getCharacterEmoji(b.speaker);
+
+                          return (
+                            <div key={b.id} className="bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-xs group">
+                              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 mb-1">
+                                <span className="font-bold text-zinc-900 flex items-center gap-1">
+                                  <span>{charEmoji}</span>
+                                  <span>{b.speaker}</span>
+                                  {b.type !== 'speech' && (
+                                    <span className="text-[9px] uppercase px-1 rounded bg-black/5 text-zinc-500">
+                                      {b.type}
+                                    </span>
+                                  )}
+                                </span>
+
+                                <div className="flex items-center gap-1.5">
+                                  {onUpdateDialogue && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        isEditing
+                                          ? handleSaveEdit(p.panelNumber, b.id)
+                                          : handleStartEdit(b.id, b.text)
+                                      }
+                                      className="text-zinc-400 hover:text-zinc-900 p-0.5 cursor-pointer"
+                                      title={isEditing ? 'Save' : 'Edit text'}
+                                    >
+                                      {isEditing ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Edit2 className="w-3.5 h-3.5" />}
+                                    </button>
+                                  )}
+
+                                  {onDeleteDialogue && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onDeleteDialogue(p.panelNumber, b.id)}
+                                      className="text-zinc-400 hover:text-red-600 p-0.5 cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
+                                      title="Delete dialogue"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={draftText}
+                                  onChange={(e) => setDraftText(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)}
+                                  autoFocus
+                                  className="w-full bg-white border border-blue-500 rounded px-2 py-1 text-xs text-zinc-900 font-medium outline-none"
+                                />
+                              ) : (
+                                <p
+                                  onClick={() => onUpdateDialogue && handleStartEdit(b.id, b.text)}
+                                  className="text-zinc-800 leading-snug cursor-pointer hover:text-blue-600"
+                                >
+                                  &ldquo;{b.text}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Add Dialogue Form */}
+                    {isAddingBubble ? (
+                      <div className="p-3 bg-zinc-100 rounded-xl border border-zinc-300 space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-zinc-800 font-mono text-[11px]">Add Dialogue:</span>
+                          <button
+                            type="button"
+                            onClick={() => setAddingBubblePanel(null)}
+                            className="text-zinc-400 hover:text-zinc-700"
+                          >
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                      ) : (
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={isCustomSpeaker ? '__custom__' : newSpeaker}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setIsCustomSpeaker(true);
+                              } else {
+                                setIsCustomSpeaker(false);
+                                setNewSpeaker(e.target.value);
+                              }
+                            }}
+                            className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
+                          >
+                            {world.characters.map((c) => (
+                              <option key={c.id} value={c.name}>
+                                {c.avatarEmoji} {c.name}
+                              </option>
+                            ))}
+                            <option value="Narrator">📜 Narrator</option>
+                            <option value="__custom__">✨ Custom Speaker...</option>
+                          </select>
+
+                          <select
+                            value={isCustomBubbleType ? '__custom__' : newBubbleType}
+                            onChange={(e) => {
+                              if (e.target.value === '__custom__') {
+                                setIsCustomBubbleType(true);
+                              } else {
+                                setIsCustomBubbleType(false);
+                                setNewBubbleType(e.target.value as any);
+                              }
+                            }}
+                            className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
+                          >
+                            <option value="speech">💬 Speech</option>
+                            <option value="thought">💭 Thought</option>
+                            <option value="shout">💥 Shout</option>
+                            <option value="caption">📜 Caption</option>
+                            <option value="whisper">🤫 Whisper</option>
+                            <option value="radio">📻 Comm / Radio</option>
+                            <option value="__custom__">✨ Custom Type...</option>
+                          </select>
+                        </div>
+
+                        {isCustomSpeaker && (
+                          <input
+                            type="text"
+                            value={customSpeakerText}
+                            onChange={(e) => setCustomSpeakerText(e.target.value)}
+                            placeholder="Type custom speaker name..."
+                            className="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs outline-none font-mono"
+                            autoFocus
+                          />
+                        )}
+
+                        {isCustomBubbleType && (
+                          <input
+                            type="text"
+                            value={customBubbleTypeText}
+                            onChange={(e) => setCustomBubbleTypeText(e.target.value)}
+                            placeholder="Type custom bubble type (e.g. telepathy, digital-chime)..."
+                            className="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs outline-none font-mono"
+                            autoFocus
+                          />
+                        )}
+
+                        <input
+                          type="text"
+                          value={newBubbleText}
+                          onChange={(e) => setNewBubbleText(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveNewBubble(p.panelNumber)}
+                          placeholder="Type line of dialogue..."
+                          autoFocus
+                          className="w-full bg-white border border-zinc-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
+                        />
+
+                        <div className="flex justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setAddingBubblePanel(null)}
+                            className="px-2 py-1 text-[11px] text-zinc-500 hover:text-zinc-800"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveNewBubble(p.panelNumber)}
+                            className="px-3 py-1 rounded bg-zinc-950 text-white font-bold text-[11px] hover:bg-blue-600"
+                          >
+                            Add Bubble
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      onAddDialogue && (
                         <button
                           type="button"
                           onClick={() => {
-                            setEditingSoundPanel(p.panelNumber);
-                            setSoundDraft(p.soundEffect || '');
+                            setAddingBubblePanel(p.panelNumber);
+                            setNewBubbleText('');
                           }}
-                          className="text-[10px] font-mono font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded border border-amber-200 transition-colors cursor-pointer flex items-center gap-1"
-                          title="Click to edit sound effect"
+                          className="w-full py-1.5 border border-dashed border-zinc-300 hover:border-zinc-400 rounded-lg text-zinc-500 hover:text-zinc-800 font-mono text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
                         >
-                          <Volume2 className="w-2.5 h-2.5" />
-                          <span>{p.soundEffect || '+ SFX'}</span>
+                          <Plus className="w-3 h-3" />
+                          <span>Add Dialogue Bubble</span>
                         </button>
-                      )}
-                    </div>
+                      )
+                    )}
                   </div>
-
-                  {/* Scene Description */}
-                  <p className="text-xs text-zinc-600 font-serif italic leading-relaxed">
-                    &ldquo;{p.sceneDescription}&rdquo;
-                  </p>
-
-                  {/* Dialogue Bubbles */}
-                  {p.bubbles && p.bubbles.length > 0 && (
-                    <div className="space-y-2 pt-1 border-t border-zinc-100">
-                      {p.bubbles.map((b: SpeechBubble) => {
-                        const isEditing = editingBubbleId === b.id;
-                        const charEmoji = getCharacterEmoji(b.speaker);
-
-                        return (
-                          <div key={b.id} className="bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-xs group">
-                            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 mb-1">
-                              <span className="font-bold text-zinc-900 flex items-center gap-1">
-                                <span>{charEmoji}</span>
-                                <span>{b.speaker}</span>
-                                {b.type !== 'speech' && (
-                                  <span className="text-[9px] uppercase px-1 rounded bg-black/5 text-zinc-500">
-                                    {b.type}
-                                  </span>
-                                )}
-                              </span>
-
-                              <div className="flex items-center gap-1.5">
-                                {onUpdateDialogue && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      isEditing
-                                        ? handleSaveEdit(p.panelNumber, b.id)
-                                        : handleStartEdit(b.id, b.text)
-                                    }
-                                    className="text-zinc-400 hover:text-zinc-900 p-0.5 cursor-pointer"
-                                    title={isEditing ? 'Save' : 'Edit text'}
-                                  >
-                                    {isEditing ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Edit2 className="w-3.5 h-3.5" />}
-                                  </button>
-                                )}
-
-                                {onDeleteDialogue && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onDeleteDialogue(p.panelNumber, b.id)}
-                                    className="text-zinc-400 hover:text-red-600 p-0.5 cursor-pointer opacity-70 group-hover:opacity-100 transition-opacity"
-                                    title="Delete dialogue"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            {isEditing ? (
-                              <input
-                                type="text"
-                                value={draftText}
-                                onChange={(e) => setDraftText(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(p.panelNumber, b.id)}
-                                autoFocus
-                                className="w-full bg-white border border-blue-500 rounded px-2 py-1 text-xs text-zinc-900 font-medium outline-none"
-                              />
-                            ) : (
-                              <p
-                                onClick={() => onUpdateDialogue && handleStartEdit(b.id, b.text)}
-                                className="text-zinc-800 leading-snug cursor-pointer hover:text-blue-600"
-                              >
-                                &ldquo;{b.text}&rdquo;
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Add Dialogue Form */}
-                  {isAddingBubble ? (
-                    <div className="p-3 bg-zinc-100 rounded-xl border border-zinc-300 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-zinc-800 font-mono text-[11px]">Add Dialogue:</span>
-                        <button
-                          type="button"
-                          onClick={() => setAddingBubblePanel(null)}
-                          className="text-zinc-400 hover:text-zinc-700"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <select
-                          value={isCustomSpeaker ? '__custom__' : newSpeaker}
-                          onChange={(e) => {
-                            if (e.target.value === '__custom__') {
-                              setIsCustomSpeaker(true);
-                            } else {
-                              setIsCustomSpeaker(false);
-                              setNewSpeaker(e.target.value);
-                            }
-                          }}
-                          className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
-                        >
-                          {world.characters.map((c) => (
-                            <option key={c.id} value={c.name}>
-                              {c.avatarEmoji} {c.name}
-                            </option>
-                          ))}
-                          <option value="Narrator">📜 Narrator</option>
-                          <option value="__custom__">✨ Custom Speaker...</option>
-                        </select>
-
-                        <select
-                          value={isCustomBubbleType ? '__custom__' : newBubbleType}
-                          onChange={(e) => {
-                            if (e.target.value === '__custom__') {
-                              setIsCustomBubbleType(true);
-                            } else {
-                              setIsCustomBubbleType(false);
-                              setNewBubbleType(e.target.value as any);
-                            }
-                          }}
-                          className="bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-mono"
-                        >
-                          <option value="speech">💬 Speech</option>
-                          <option value="thought">💭 Thought</option>
-                          <option value="shout">💥 Shout</option>
-                          <option value="caption">📜 Caption</option>
-                          <option value="whisper">🤫 Whisper</option>
-                          <option value="radio">📻 Comm / Radio</option>
-                          <option value="__custom__">✨ Custom Type...</option>
-                        </select>
-                      </div>
-
-                      {isCustomSpeaker && (
-                        <input
-                          type="text"
-                          value={customSpeakerText}
-                          onChange={(e) => setCustomSpeakerText(e.target.value)}
-                          placeholder="Type custom speaker name..."
-                          className="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs outline-none font-mono"
-                          autoFocus
-                        />
-                      )}
-
-                      {isCustomBubbleType && (
-                        <input
-                          type="text"
-                          value={customBubbleTypeText}
-                          onChange={(e) => setCustomBubbleTypeText(e.target.value)}
-                          placeholder="Type custom bubble type (e.g. telepathy, digital-chime)..."
-                          className="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs outline-none font-mono"
-                          autoFocus
-                        />
-                      )}
-
-                      <input
-                        type="text"
-                        value={newBubbleText}
-                        onChange={(e) => setNewBubbleText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSaveNewBubble(p.panelNumber)}
-                        placeholder="Type line of dialogue..."
-                        autoFocus
-                        className="w-full bg-white border border-zinc-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
-                      />
-
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setAddingBubblePanel(null)}
-                          className="px-2 py-1 text-[11px] text-zinc-500 hover:text-zinc-800"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveNewBubble(p.panelNumber)}
-                          className="px-3 py-1 rounded bg-zinc-950 text-white font-bold text-[11px] hover:bg-blue-600"
-                        >
-                          Add Bubble
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    onAddDialogue && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAddingBubblePanel(p.panelNumber);
-                          setNewBubbleText('');
-                        }}
-                        className="w-full py-1.5 border border-dashed border-zinc-300 hover:border-zinc-400 rounded-lg text-zinc-500 hover:text-zinc-800 font-mono text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>Add Dialogue Bubble</span>
-                      </button>
-                    )
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* =========================================================================
           COMIC BOOK FOOTER
@@ -1511,14 +1570,19 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
             <span>Cast in this Issue:</span>
           </span>
           <div className="flex items-center gap-2 flex-wrap">
-            {world.characters.map((c) => (
+            {allPageCharacters.map((c) => (
               <span
-                key={c.id}
+                key={c.id || c.name}
                 className="px-3 py-1 rounded-full bg-zinc-100 border border-black/10 text-xs font-semibold text-zinc-800 flex items-center gap-1.5 shadow-2xs"
               >
-                <span>{c.avatarEmoji}</span>
+                <span>{c.avatarEmoji || '👤'}</span>
                 <span>{c.name}</span>
-                <span className="text-[11px] text-zinc-500 capitalize">({c.role})</span>
+                <span className="text-[11px] text-zinc-500 capitalize">({c.role || 'Guest'})</span>
+                {episode.guestCharacters?.some((g) => g.name.toLowerCase() === c.name.toLowerCase()) && (
+                  <span className="text-[9px] uppercase px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-mono font-bold">
+                    Guest
+                  </span>
+                )}
               </span>
             ))}
           </div>

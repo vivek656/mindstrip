@@ -884,3 +884,26 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Premise analysis now scopes panels strictly to characters mentioned in `rawDump` (e.g. Meera) and introduces episodic guest characters (e.g. The New Client), returning proper `pageCharacters` and `guestCharacters`.
   5. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 13 routes).
+
+
+### Complete Clutter Elimination, Strict Cast Scoping & Co-Director Re-Direction (2026-10-31)
+- **User Feedback**:
+  *"tooo cluterred i did redraw and ai asked none question and literally redraw same i though only meera and a new client will be in the csne but ahain the hero and villaian are present , and this is way to cluttered and information oveloard i dont know what i am seeing"*
+- **Root Causes Discovered & Eliminated**:
+  1. *Visual Clutter*: In `ComicPageSpread.tsx`, when `pageImage` was present, 3 large dialogue cards were rendered directly below the image, followed by a second 300-line collapsible script accordion duplicating the dialogue a second time, and a footer dumping all universe characters (`Simbo`, `Dr mischief`, `meeera`). In `ZenComicReader.tsx`, the studio sidebar had a 3rd duplicate dialogue editor and a purple wall of text for "Director Pacing Rationale".
+  2. *Hero/Villain Infiltration in Artwork*: In `ComicPageSpread.tsx`, `charsSummary` was hardcoded to `world.characters.map(...)`, baking `Simbo` and `Dr mischief` into the artwork synthesis prompt even when the script only featured Meera!
+  3. *Redraw Silent Loop*: "Re-draw" in navbar and "Re-script Story" in sidebar called `onRegenerateEpisode()` silently with no questions asked and with the old contaminated context.
+- **Architectural Solutions Implemented**:
+  1. **Strict Cast Isolation Engine (`orchestrator.ts`, `showrunner.ts`, `ComicPageSpread.tsx`)**:
+     - Step 0 in `orchestrator.ts`: scans premise for `@mentions` and characters. Filters `activeContext.characters` strictly to mentioned characters (e.g. `meeera`) and episodic guests (e.g. `The New Client`), identifies excluded heroes/villains (`Simbo`, `Dr mischief`), and enforces `[DIRECTORIAL CAST LOCK]`.
+     - In `ComicPageSpread.tsx`: computed `activePageCharacters` and `allPageCharacters` via `useMemo`. `charsSummary` for prompt synthesis is strictly restricted to `allPageCharacters`, preventing off-scene characters from ever entering the image prompt.
+     - Footer "Cast in this Issue" now renders only `allPageCharacters` with `Guest` badges, completely eliminating off-scene character listings.
+  2. **Total UI Clutter Elimination (`ComicPageSpread.tsx` & `ZenComicReader.tsx`)**:
+     - Wrapped dialogue cards under `pageImage` in `showTranscriptDrawer` (collapsed by default). When artwork exists, the comic page spread takes center stage in pristine, distraction-free quality with a single lightweight toggle `[ 💬 View Dialogue Transcript (X Panels) ▾ ]`.
+     - Suppressed the second redundant script accordion when `pageImage` exists (`{!pageImage && ...}`).
+     - In the studio sidebar, wrapped dialogue bubble editor in collapsible toggle `[ 💬 Script & Bubbles ▾ ]` and converted "Director Pacing Rationale" into a subtle collapsible `<details>` element.
+  3. **Interactive "Re-Direct Story" Action**:
+     - Replaced the silent "Re-draw" / "Re-script" buttons with `[ 🎬 Re-Direct Story ]` in both the top navbar and the studio sidebar.
+     - Automatically sets prompt to the episode premise, switches to Co-Director tab, and fetches directorial questions with `[ ✨ Let AI Assume ]` and `[ ⚡ Auto-Assume Remaining & Build Page Now ]`.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 TypeScript errors, all routes compiled cleanly).

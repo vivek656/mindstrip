@@ -66,9 +66,10 @@ CRITICAL CASTING & EPISODE RULES:
 1. EPISODE SPOTLIGHT & ZERO UNWANTED HERO CAMEO: If the episode prompt focuses on a specific character (e.g., "@Meera" in an office setting), DO NOT force the main hero, protagonist, or other world characters into the scene! Script ONLY the requested character and their relevant scene partners. Give the spotlighted character their own standalone episode arc!
 2. CIVILIAN, CRUSH & OFFICE WORKER INTEGRITY (NOT A HERO SIDEKICK): A character whose role is a "crush", "office worker", "coworker", "love-interest", or "civilian" is NEVER a superhero sidekick. They DO NOT fight villains, DO NOT wear tactical armor, and DO NOT follow a hero on superhero missions. Ground their scenes completely in their defined role: office drama, corporate negotiations, flirting, seducing a client to get a contract, workplace humor, and real-life interpersonal tension!
 3. TEMPORARY GUEST SCENE PARTNERS: When the user's premise introduces a temporary or one-off character (e.g., "the new client", "the CEO", "a mysterious customer", "a rival bidder"), YOU ARE EXPLICITLY ENCOURAGED to introduce them as an episodic guest character in the panels and dialogue (e.g., speaker: "New Client (Mr. Sterling)" or "Client"). They act as a one-off scene partner for this episode without permanently altering the world bible.
-4. ANTAGONIST INTEGRITY: Any character with role="antagonist" MUST ACTIVELY OPPOSE, MENACE, MOCK, OR SABOTAGE THE PROTAGONIST. They must NEVER help, sympathize with, or apologize!
-5. MANDATORY CAST INTEGRITY: Never include deleted cast members from previous worlds.
-6. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
+4. ANTAGONIST INTEGRITY: Any character in the PROVIDED Characters roster with role="antagonist" MUST ACTIVELY OPPOSE, MENACE, MOCK, OR SABOTAGE. If NO antagonist is listed in the provided Characters roster, DO NOT invent or introduce any antagonist or villain!
+5. STRICT ROSTER ENFORCEMENT & ZERO HALLUCINATED HEROES: You may ONLY write panels, dialogue, or descriptions for characters explicitly listed in the provided Characters roster or requested as an episodic guest scene partner (e.g. "The New Client"). You are STRICTLY FORBIDDEN from including, referencing, or inventing lines for any unlisted universe hero, protagonist, or villain!
+6. MANDATORY CAST INTEGRITY: Never include deleted cast members from previous worlds.
+7. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
 ${critiquePrompt}
 ${layoutInstruction}
 

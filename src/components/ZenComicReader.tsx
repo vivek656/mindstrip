@@ -68,6 +68,7 @@ import {
   Eye,
   HelpCircle,
   Wand2,
+  ChevronDown,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -404,9 +405,10 @@ export function ZenComicReader({
   const [pitchError, setPitchError] = useState<string | null>(null);
   const [coDirectorPitch, setCoDirectorPitch] = useState<CoDirectorPitchResult | null>(null);
   const [selectedBeatForks, setSelectedBeatForks] = useState<{ [questionId: string]: string }>({});
+  const [isSidebarDialogueOpen, setIsSidebarDialogueOpen] = useState(false);
 
-  const handleFetchCoDirectorPitch = async () => {
-    const clean = prompt.trim();
+  const handleFetchCoDirectorPitch = async (overridePremise?: any) => {
+    const clean = (typeof overridePremise === 'string' ? overridePremise : prompt).trim();
     if (!clean) return;
     setIsAligningPitch(true);
     setPitchError(null);
@@ -438,6 +440,15 @@ export function ZenComicReader({
     } finally {
       setIsAligningPitch(false);
     }
+  };
+
+  const handleStartCoDirectorRedirection = (premiseText?: string) => {
+    const target = premiseText || episode?.rawBrainDump || prompt || '';
+    if (!target.trim()) return;
+    setPrompt(target);
+    setRightPanelTab('next');
+    setIsRightPanelOpen(true);
+    handleFetchCoDirectorPitch(target);
   };
 
   const handleAutoFillAllAiAssumptions = () => {
@@ -1506,18 +1517,17 @@ export function ZenComicReader({
                       </button>
                     )}
 
-                    {/* Quick Regenerate Story & Art */}
-                    {onRegenerateEpisode && (
-                      <button
-                        type="button"
-                        onClick={onRegenerateEpisode}
-                        disabled={isLoading}
-                        className="p-2.5 rounded-xl text-xs font-bold border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                        <span>Re-script Story</span>
-                      </button>
-                    )}
+                    {/* Re-Direct Story with Co-Director */}
+                    <button
+                      type="button"
+                      onClick={() => handleStartCoDirectorRedirection(episode?.rawBrainDump || episode?.title)}
+                      disabled={isLoading || isAligningPitch}
+                      className="p-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      title="Re-direct story with AI Co-Director questions & cast isolation"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>🎬 Re-Direct Story</span>
+                    </button>
 
                     {/* Multiverse Branch */}
                     {onForkBranch && (
@@ -1661,72 +1671,85 @@ export function ZenComicReader({
                   </div>
                 </div>
 
-                {/* Dialogue & Bubbles Quick Editor */}
-                <div className="space-y-2 pt-1">
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3 text-blue-400" />
-                    <span>Script & Dialogue Editor ({episode.panels.reduce((sum, p) => sum + (p.bubbles?.length || 0), 0)} bubbles)</span>
-                  </span>
+                {/* Dialogue & Bubbles Quick Editor - Collapsible to eliminate visual clutter */}
+                <div className="space-y-2 pt-1 border-t border-black/[0.06] dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setIsSidebarDialogueOpen(!isSidebarDialogueOpen)}
+                    className="w-full flex items-center justify-between text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3 text-blue-400" />
+                      <span>Script & Bubbles ({episode.panels.reduce((sum, p) => sum + (p.bubbles?.length || 0), 0)})</span>
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isSidebarDialogueOpen ? 'rotate-180' : ''}`} />
+                  </button>
 
-                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                    {episode.panels.map((p) => (
-                      <div
-                        key={p.panelNumber}
-                        className={`p-3 rounded-xl border space-y-2 ${
-                          readerTheme === 'cinema' && activeTab === 'comic'
-                            ? 'bg-zinc-900/70 border-white/10'
-                            : 'bg-zinc-50 border-black/[0.06]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-[11px] font-mono font-bold text-zinc-500">
-                          <span>Panel #{p.panelNumber}</span>
-                          <span className="italic truncate max-w-[170px] text-[10px]">{p.sceneDescription}</span>
-                        </div>
-
-                        {(p.bubbles || []).map((bubble: SpeechBubble) => (
-                          <div key={bubble.id} className="space-y-1">
-                            <div className="flex items-center justify-between text-[10px] font-mono">
-                              <span className="font-bold text-zinc-700 dark:text-zinc-300">
-                                @{bubble.speaker} <span className="text-zinc-400">({bubble.type})</span>
-                              </span>
-                              {onDeleteDialogue && (
-                                <button
-                                  type="button"
-                                  onClick={() => onDeleteDialogue(p.panelNumber, bubble.id)}
-                                  className="text-red-400 hover:text-red-500 cursor-pointer"
-                                  title="Delete bubble"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                            <input
-                              type="text"
-                              value={bubble.text}
-                              onChange={(e) => onUpdateDialogue(p.panelNumber, bubble.id, e.target.value)}
-                              className={`w-full text-xs p-2 rounded-lg border outline-none focus:ring-1 focus:ring-blue-500 ${
-                                readerTheme === 'cinema' && activeTab === 'comic'
-                                  ? 'bg-zinc-950 border-white/15 text-white'
-                                  : 'bg-white border-black/10 text-zinc-900'
-                              }`}
-                            />
+                  {isSidebarDialogueOpen && (
+                    <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                      {episode.panels.map((p) => (
+                        <div
+                          key={p.panelNumber}
+                          className={`p-3 rounded-xl border space-y-2 ${
+                            readerTheme === 'cinema' && activeTab === 'comic'
+                              ? 'bg-zinc-900/70 border-white/10'
+                              : 'bg-zinc-50 border-black/[0.06]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[11px] font-mono font-bold text-zinc-500">
+                            <span>Panel #{p.panelNumber}</span>
+                            <span className="italic truncate max-w-[170px] text-[10px]">{p.sceneDescription}</span>
                           </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+
+                          {(p.bubbles || []).map((bubble: SpeechBubble) => (
+                            <div key={bubble.id} className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-mono">
+                                <span className="font-bold text-zinc-700 dark:text-zinc-300">
+                                  @{bubble.speaker} <span className="text-zinc-400">({bubble.type})</span>
+                                </span>
+                                {onDeleteDialogue && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onDeleteDialogue(p.panelNumber, bubble.id)}
+                                    className="text-red-400 hover:text-red-500 cursor-pointer"
+                                    title="Delete bubble"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                              <input
+                                type="text"
+                                value={bubble.text}
+                                onChange={(e) => onUpdateDialogue(p.panelNumber, bubble.id, e.target.value)}
+                                className={`w-full text-xs p-2 rounded-lg border outline-none focus:ring-1 focus:ring-blue-500 ${
+                                  readerTheme === 'cinema' && activeTab === 'comic'
+                                    ? 'bg-zinc-950 border-white/15 text-white'
+                                    : 'bg-white border-black/10 text-zinc-900'
+                                }`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Director Pacing Rationale */}
+                {/* Director Pacing Rationale - Collapsed disclosure to prevent visual overload */}
                 {episode.directorReasoning && (
-                  <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs space-y-1">
-                    <span className="font-mono text-[10px] font-bold uppercase text-purple-400">
-                      Director Pacing Rationale:
-                    </span>
-                    <p className="italic text-zinc-300">
+                  <details className="group rounded-xl bg-purple-500/5 border border-purple-500/15 p-2.5 text-xs">
+                    <summary className="font-mono text-[10px] font-bold uppercase text-purple-600 dark:text-purple-400 cursor-pointer list-none flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <span>🎬</span>
+                        <span>Director Pacing Rationale</span>
+                      </span>
+                      <ChevronDown className="w-3 h-3 text-purple-400 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <p className="mt-2 text-[11px] italic text-zinc-600 dark:text-zinc-300 leading-relaxed font-serif">
                       &ldquo;{episode.directorReasoning}&rdquo;
                     </p>
-                  </div>
+                  </details>
                 )}
               </div>
             ) : (
@@ -1966,17 +1989,17 @@ export function ZenComicReader({
               </button>
             )}
 
-            {/* Quick Regenerate Story & Art Button */}
-            {onRegenerateEpisode && episode && (
+            {/* Re-Direct Story with Co-Director Button */}
+            {episode && (
               <button
                 type="button"
-                onClick={onRegenerateEpisode}
-                disabled={isLoading}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-black/10 text-zinc-700 hover:bg-black/[0.04] transition-all cursor-pointer"
-                title="Regenerate this episode with Meta AI"
+                onClick={() => handleStartCoDirectorRedirection(episode.rawBrainDump || episode.title)}
+                disabled={isLoading || isAligningPitch}
+                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 transition-all cursor-pointer shadow-2xs"
+                title="Re-direct this scene with AI Co-Director questions & cast isolation"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                <span>Re-draw</span>
+                <span>🎬</span>
+                <span>Re-Direct Story</span>
               </button>
             )}
 
