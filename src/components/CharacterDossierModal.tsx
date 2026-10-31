@@ -1,8 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ComicCharacter, ComicWorld, CharacterRelationship, CharacterReferenceImage } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
+
+export interface CharacterChatMessage {
+  id: string;
+  role: 'assistant' | 'user';
+  content: string;
+  questions?: string[];
+  quickOptions?: string[];
+  suggestedUpdates?: {
+    appearance?: string;
+    wardrobe?: string;
+    iconicItem?: string;
+    backstory?: string;
+    motivation?: string;
+    flaws?: string;
+    secret?: string;
+    voiceTone?: string;
+    catchphrase?: string;
+    personality?: string;
+    abilities?: string;
+    gear?: string;
+  };
+  applied?: boolean;
+  timestamp: string;
+}
 import {
   X,
   Sparkles,
@@ -279,6 +303,20 @@ export function CharacterDossierModal({
   const [isCoWriterOpen, setIsCoWriterOpen] = useState(true);
   const [fieldFleshing, setFieldFleshing] = useState<string | null>(null);
 
+  // Character Co-Director Chat & Interview Studio State
+  const [coWriterMode, setCoWriterMode] = useState<'chat' | 'quick'>('chat');
+  const [chatMessages, setChatMessages] = useState<CharacterChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatSending, setIsChatSending] = useState(false);
+  const [chatFocusSection, setChatFocusSection] = useState<'visuals' | 'lore' | 'voice' | 'gear' | 'full'>('visuals');
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, isChatSending]);
+
   // Character Visual Model Sheet & Reference Studio State (Character Visual RAG)
   const [lockedImageUrl, setLockedImageUrl] = useState<string>(
     character?.imageUrl || character?.characterSheetUrl || ''
@@ -358,6 +396,33 @@ export function CharacterDossierModal({
       } else {
         setReferenceImages([]);
       }
+
+      // Seed initial character co-director conversation
+      if (character.name) {
+        setChatMessages([
+          {
+            id: `seed-${Date.now()}`,
+            role: 'assistant',
+            content: `Hello! I'm your AI Character Co-Director for @${character.name}. Let's make sure her visual style, wardrobe, and backstory are 100% dialled in for "${world.title}".
+
+What would you like to discuss or refine first?`,
+            questions: [
+              `What is her signature daily power wardrobe and footwear?`,
+              `Does she carry an iconic accessory or silhouette prop?`,
+              `What hidden emotional truth or ambition drives her in this story?`
+            ],
+            quickOptions: [
+              `👠 Luxury power attire with Louboutin stilettos`,
+              `🥻 Designer silk sarees with cape blazers`,
+              `📖 Explore her origin backstory & motivation`,
+              `💬 Dial in her speech cadence & catchphrase`
+            ],
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          }
+        ]);
+      } else {
+        setChatMessages([]);
+      }
     } else {
       setName('');
       setRole('sidekick');
@@ -387,6 +452,7 @@ export function CharacterDossierModal({
       setReferenceImages([]);
       setCustomViewPrompt('');
       setGenerationError(null);
+      setChatMessages([]);
     }
   }, [character, isOpen]);
 
@@ -549,6 +615,175 @@ export function CharacterDossierModal({
   };
 
   const handleFleshOutWithAi = () => handleExecuteCoWriter(coWriterDirective, undefined, false);
+
+  const handleStartChatForSection = async (
+    section: 'visuals' | 'lore' | 'voice' | 'gear' | 'full',
+    initialUserMsg?: string
+  ) => {
+    setIsCoWriterOpen(true);
+    setCoWriterMode('chat');
+    setChatFocusSection(section);
+
+    if (initialUserMsg) {
+      await handleSendChatMessage(initialUserMsg, section);
+      return;
+    }
+
+    setIsChatSending(true);
+    try {
+      const res = await fetch('/api/character-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          character: {
+            name: name.trim() || 'Character',
+            role,
+            gender,
+            appearance,
+            wardrobe,
+            iconicItem,
+            backstory,
+            motivation,
+            flaws,
+            secret,
+            abilities,
+            gear,
+            voiceTone,
+            catchphrase,
+          },
+          worldTitle: world.title,
+          worldTagline: world.tagline,
+          genre: world.genre,
+          worldLore: world.lore,
+          worldLaws: (world.laws || []).map((l) => `${l.title}: ${l.rule}`),
+          chatHistory: chatMessages.map((m) => ({ role: m.role, content: m.content })),
+          userMessage: '',
+          focusSection: section,
+          apiKey: apiConfig?.apiKey,
+          baseUrl: apiConfig?.baseUrl,
+          provider: apiConfig?.provider,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: data.reply,
+            questions: data.questions,
+            quickOptions: data.quickOptions,
+            suggestedUpdates: data.suggestedUpdates,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error('Character chat section switch failed:', err);
+    } finally {
+      setIsChatSending(false);
+    }
+  };
+
+  const handleSendChatMessage = async (
+    textToSend?: string,
+    sectionOverride?: 'visuals' | 'lore' | 'voice' | 'gear' | 'full'
+  ) => {
+    const text = (textToSend !== undefined ? textToSend : chatInput).trim();
+    if (!text && !chatMessages.length) return;
+
+    const targetSection = sectionOverride || chatFocusSection;
+    const userMsg: CharacterChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    const newHistory = [...chatMessages, userMsg];
+    setChatMessages(newHistory);
+    setChatInput('');
+    setIsChatSending(true);
+
+    try {
+      const res = await fetch('/api/character-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          character: {
+            name: name.trim() || 'Character',
+            role,
+            gender,
+            appearance,
+            wardrobe,
+            iconicItem,
+            backstory,
+            motivation,
+            flaws,
+            secret,
+            abilities,
+            gear,
+            voiceTone,
+            catchphrase,
+          },
+          worldTitle: world.title,
+          worldTagline: world.tagline,
+          genre: world.genre,
+          worldLore: world.lore,
+          worldLaws: (world.laws || []).map((l) => `${l.title}: ${l.rule}`),
+          chatHistory: newHistory.map((m) => ({ role: m.role, content: m.content })),
+          userMessage: text,
+          focusSection: targetSection,
+          apiKey: apiConfig?.apiKey,
+          baseUrl: apiConfig?.baseUrl,
+          provider: apiConfig?.provider,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Chat API returned error');
+      const data = await res.json();
+
+      const assistantMsg: CharacterChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: data.reply,
+        questions: data.questions,
+        quickOptions: data.quickOptions,
+        suggestedUpdates: data.suggestedUpdates,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      setChatMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      console.error('Character chat error:', err);
+    } finally {
+      setIsChatSending(false);
+    }
+  };
+
+  const handleApplyChatUpdates = (msgId: string, updates?: any) => {
+    if (!updates) return;
+    if (updates.appearance) setAppearance(updates.appearance);
+    if (updates.wardrobe) setWardrobe(updates.wardrobe);
+    if (updates.iconicItem) setIconicItem(updates.iconicItem);
+    if (updates.backstory) setBackstory(updates.backstory);
+    if (updates.motivation) setMotivation(updates.motivation);
+    if (updates.flaws) setFlaws(updates.flaws);
+    if (updates.secret) setSecret(updates.secret);
+    if (updates.voiceTone) setVoiceTone(updates.voiceTone);
+    if (updates.catchphrase) setCatchphrase(updates.catchphrase);
+    if (updates.personality) setPersonality(updates.personality);
+    if (updates.abilities) setAbilities(updates.abilities);
+    if (updates.gear) setGear(updates.gear);
+
+    setChatMessages((prev) =>
+      prev.map((m) => (m.id === msgId ? { ...m, applied: true } : m))
+    );
+    setExpandNotice('✓ Applied Co-Director recommendations directly to character dossier!');
+    setTimeout(() => setExpandNotice(null), 3000);
+  };
 
   const handleLockAsCanon = (imgUrl: string) => {
     setLockedImageUrl(imgUrl);
@@ -1587,16 +1822,27 @@ export function CharacterDossierModal({
                       <span>Physical Appearance (Face, Hair, Build)</span>
                       <span className="text-[10px] text-zinc-400 font-mono">Image Anchor</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'appearance', true)}
-                      disabled={fieldFleshing === 'appearance' || isExpanding || !name.trim()}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                      title="AI Draft appearance based on your directive"
-                    >
-                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'appearance' ? 'animate-spin' : ''}`} />
-                      <span>{fieldFleshing === 'appearance' ? '...' : 'AI Fill'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartChatForSection('visuals', `Let's discuss and design @${name || 'Character'}'s physical appearance: ${appearance || 'Not set yet'}`)}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="Chat with AI Co-Director about physical look"
+                      >
+                        <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                        <span>Chat with AI</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'appearance', true)}
+                        disabled={fieldFleshing === 'appearance' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="AI Quick Fill"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'appearance' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'appearance' ? '...' : 'Quick Fill'}</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     rows={3}
@@ -1613,16 +1859,27 @@ export function CharacterDossierModal({
                       <label className="text-xs font-bold text-zinc-900">
                         Signature Wardrobe & Color Palette
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'wardrobe', true)}
-                        disabled={fieldFleshing === 'wardrobe' || isExpanding || !name.trim()}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                        title="AI Draft wardrobe based on your directive"
-                      >
-                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'wardrobe' ? 'animate-spin' : ''}`} />
-                        <span>{fieldFleshing === 'wardrobe' ? '...' : 'AI Fill'}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartChatForSection('visuals', `Let's discuss @${name || 'Character'}'s signature wardrobe and styling: ${wardrobe || 'Not set yet'}`)}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title="Chat with AI Co-Director about wardrobe"
+                        >
+                          <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                          <span>Chat with AI</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExecuteCoWriter(coWriterDirective, 'wardrobe', true)}
+                          disabled={fieldFleshing === 'wardrobe' || isExpanding || !name.trim()}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                          title="AI Quick Fill"
+                        >
+                          <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'wardrobe' ? 'animate-spin' : ''}`} />
+                          <span>{fieldFleshing === 'wardrobe' ? '...' : 'Quick Fill'}</span>
+                        </button>
+                      </div>
                     </div>
                     <textarea
                       rows={3}
@@ -1639,16 +1896,27 @@ export function CharacterDossierModal({
                         <span>Iconic Accessory / Silhouette Item</span>
                         <span className="text-[10px] text-purple-600 font-mono">(Key Prop)</span>
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'iconicItem', true)}
-                        disabled={fieldFleshing === 'iconicItem' || isExpanding || !name.trim()}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                        title="AI Draft iconic item based on your directive"
-                      >
-                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'iconicItem' ? 'animate-spin' : ''}`} />
-                        <span>{fieldFleshing === 'iconicItem' ? '...' : 'AI Fill'}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartChatForSection('visuals', `What iconic accessory or silhouette prop should @${name || 'Character'} carry? Current note: ${iconicItem || 'Not set yet'}`)}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title="Chat with AI Co-Director about signature prop"
+                        >
+                          <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                          <span>Chat with AI</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExecuteCoWriter(coWriterDirective, 'iconicItem', true)}
+                          disabled={fieldFleshing === 'iconicItem' || isExpanding || !name.trim()}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                          title="AI Quick Fill"
+                        >
+                          <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'iconicItem' ? 'animate-spin' : ''}`} />
+                          <span>{fieldFleshing === 'iconicItem' ? '...' : 'Quick Fill'}</span>
+                        </button>
+                      </div>
                     </div>
                     <textarea
                       rows={3}
@@ -1681,16 +1949,27 @@ export function CharacterDossierModal({
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
                     Origin & Formative Backstory
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => handleExecuteCoWriter(coWriterDirective, 'backstory', true)}
-                    disabled={fieldFleshing === 'backstory' || isExpanding}
-                    className="px-2.5 py-1 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                    title="Draft or enhance backstory using your co-writer vision"
-                  >
-                    <Sparkles className={`w-3 h-3 ${fieldFleshing === 'backstory' ? 'animate-spin' : ''}`} />
-                    <span>{fieldFleshing === 'backstory' ? 'Writing...' : 'AI Fill'}</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleStartChatForSection('lore', `Let's develop @${name || 'Character'}'s origin and formative history. Current note: "${backstory || 'Not set yet'}"`)}
+                      className="px-2.5 py-1 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      title="Chat with AI Co-Director about origin backstory"
+                    >
+                      <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                      <span>Chat with AI</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'backstory', true)}
+                      disabled={fieldFleshing === 'backstory' || isExpanding}
+                      className="px-2.5 py-1 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      title="Quick AI Fill"
+                    >
+                      <Sparkles className={`w-3 h-3 ${fieldFleshing === 'backstory' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'backstory' ? 'Writing...' : 'Quick Fill'}</span>
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   rows={5}
@@ -1708,15 +1987,26 @@ export function CharacterDossierModal({
                       <span>Core Motivation</span>
                       <span className="text-[10px] text-blue-600 font-mono">(What they want)</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'motivation', true)}
-                      disabled={fieldFleshing === 'motivation' || isExpanding}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                    >
-                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'motivation' ? 'animate-spin' : ''}`} />
-                      <span>{fieldFleshing === 'motivation' ? '...' : 'AI Fill'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartChatForSection('lore', `What is @${name || 'Character'}'s core motivation and driving ambition? Current note: "${motivation || 'Not set yet'}"`)}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="Chat with AI Co-Director about motivation"
+                      >
+                        <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                        <span>Chat with AI</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'motivation', true)}
+                        disabled={fieldFleshing === 'motivation' || isExpanding}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'motivation' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'motivation' ? '...' : 'Quick Fill'}</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     rows={3}
@@ -1733,15 +2023,26 @@ export function CharacterDossierModal({
                       <span>Fatal Flaw / Blindspot</span>
                       <span className="text-[10px] text-amber-600 font-mono">(What trips them up)</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'flaws', true)}
-                      disabled={fieldFleshing === 'flaws' || isExpanding}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                    >
-                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'flaws' ? 'animate-spin' : ''}`} />
-                      <span>{fieldFleshing === 'flaws' ? '...' : 'AI Fill'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartChatForSection('lore', `What is @${name || 'Character'}'s fatal flaw or vulnerability? Current note: "${flaws || 'Not set yet'}"`)}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="Chat with AI Co-Director about fatal flaw"
+                      >
+                        <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                        <span>Chat with AI</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'flaws', true)}
+                        disabled={fieldFleshing === 'flaws' || isExpanding}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'flaws' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'flaws' ? '...' : 'Quick Fill'}</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     rows={3}
@@ -1759,15 +2060,26 @@ export function CharacterDossierModal({
                     <span>Classified Secret / Hidden Truth</span>
                     <span className="text-[10px] text-purple-600 font-mono">(Plot Twist Fuel)</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => handleExecuteCoWriter(coWriterDirective, 'secret', true)}
-                    disabled={fieldFleshing === 'secret' || isExpanding}
-                    className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                  >
-                    <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'secret' ? 'animate-spin' : ''}`} />
-                    <span>{fieldFleshing === 'secret' ? '...' : 'AI Fill'}</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleStartChatForSection('lore', `What secret truth or hidden past does @${name || 'Character'} guard? Current note: "${secret || 'Not set yet'}"`)}
+                      className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      title="Chat with AI Co-Director about secret"
+                    >
+                      <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                      <span>Chat with AI</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'secret', true)}
+                      disabled={fieldFleshing === 'secret' || isExpanding}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'secret' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'secret' ? '...' : 'Quick Fill'}</span>
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   rows={2}
@@ -1789,16 +2101,27 @@ export function CharacterDossierModal({
                     <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
                       Dialogue Cadence & Voice Tone
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'voiceTone', true)}
-                      disabled={fieldFleshing === 'voiceTone' || isExpanding || !name.trim()}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                      title="AI Draft voice tone based on directive"
-                    >
-                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'voiceTone' ? 'animate-spin' : ''}`} />
-                      <span>{fieldFleshing === 'voiceTone' ? '...' : 'AI Fill'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartChatForSection('voice', `How does @${name || 'Character'} speak? What is their speech cadence and tone? Current note: "${voiceTone || 'Not set yet'}"`)}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="Chat with AI Co-Director about dialogue voice"
+                      >
+                        <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                        <span>Chat with AI</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'voiceTone', true)}
+                        disabled={fieldFleshing === 'voiceTone' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="Quick AI Fill"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'voiceTone' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'voiceTone' ? '...' : 'Quick Fill'}</span>
+                      </button>
+                    </div>
                   </div>
                   <input
                     type="text"
@@ -1814,16 +2137,27 @@ export function CharacterDossierModal({
                     <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
                       Signature Catchphrase or Motto
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'catchphrase', true)}
-                      disabled={fieldFleshing === 'catchphrase' || isExpanding || !name.trim()}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                      title="AI Draft catchphrase based on directive"
-                    >
-                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'catchphrase' ? 'animate-spin' : ''}`} />
-                      <span>{fieldFleshing === 'catchphrase' ? '...' : 'AI Fill'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleStartChatForSection('voice', `What is @${name || 'Character'}'s signature catchphrase, motto or recurring line? Current note: "${catchphrase || 'Not set yet'}"`)}
+                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                        title="Chat with AI Co-Director about catchphrase"
+                      >
+                        <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                        <span>Chat with AI</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'catchphrase', true)}
+                        disabled={fieldFleshing === 'catchphrase' || isExpanding || !name.trim()}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                        title="Quick AI Fill"
+                      >
+                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'catchphrase' ? 'animate-spin' : ''}`} />
+                        <span>{fieldFleshing === 'catchphrase' ? '...' : 'Quick Fill'}</span>
+                      </button>
+                    </div>
                   </div>
                   <input
                     type="text"
@@ -1840,16 +2174,27 @@ export function CharacterDossierModal({
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700">
                     Personality Summary
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => handleExecuteCoWriter(coWriterDirective, 'personality', true)}
-                    disabled={fieldFleshing === 'personality' || isExpanding || !name.trim()}
-                    className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                    title="AI Draft personality based on directive"
-                  >
-                    <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'personality' ? 'animate-spin' : ''}`} />
-                    <span>{fieldFleshing === 'personality' ? '...' : 'AI Fill'}</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleStartChatForSection('voice', `What is @${name || 'Character'}'s personality archetype and interpersonal style? Current note: "${personality || 'Not set yet'}"`)}
+                      className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      title="Chat with AI Co-Director about personality"
+                    >
+                      <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                      <span>Chat with AI</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteCoWriter(coWriterDirective, 'personality', true)}
+                      disabled={fieldFleshing === 'personality' || isExpanding || !name.trim()}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                      title="Quick AI Fill"
+                    >
+                      <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'personality' ? 'animate-spin' : ''}`} />
+                      <span>{fieldFleshing === 'personality' ? '...' : 'Quick Fill'}</span>
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   rows={3}
@@ -1948,16 +2293,27 @@ export function CharacterDossierModal({
                       <label className="block text-sm font-bold text-zinc-950">
                         {currentLens.skillLabel}
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'abilities', true)}
-                        disabled={fieldFleshing === 'abilities' || isExpanding || !name.trim()}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                        title="AI Draft skills based on directive"
-                      >
-                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'abilities' ? 'animate-spin' : ''}`} />
-                        <span>{fieldFleshing === 'abilities' ? '...' : 'AI Fill'}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartChatForSection('gear', `What are @${name || 'Character'}'s core skills, profession, and daily talents? Current note: "${abilities || 'Not set yet'}"`)}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title="Chat with AI Co-Director about skills"
+                        >
+                          <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                          <span>Chat with AI</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExecuteCoWriter(coWriterDirective, 'abilities', true)}
+                          disabled={fieldFleshing === 'abilities' || isExpanding || !name.trim()}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                          title="Quick AI Fill"
+                        >
+                          <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'abilities' ? 'animate-spin' : ''}`} />
+                          <span>{fieldFleshing === 'abilities' ? '...' : 'Quick Fill'}</span>
+                        </button>
+                      </div>
                     </div>
                     <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
                       {currentLens.skillHelper}
@@ -1998,16 +2354,27 @@ export function CharacterDossierModal({
                       <label className="block text-sm font-bold text-zinc-950">
                         {currentLens.itemLabel}
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => handleExecuteCoWriter(coWriterDirective, 'gear', true)}
-                        disabled={fieldFleshing === 'gear' || isExpanding || !name.trim()}
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
-                        title="AI Draft belongings based on directive"
-                      >
-                        <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'gear' ? 'animate-spin' : ''}`} />
-                        <span>{fieldFleshing === 'gear' ? '...' : 'AI Fill'}</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleStartChatForSection('gear', `What tools, personal items, or gear does @${name || 'Character'} carry? Current note: "${gear || 'Not set yet'}"`)}
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 border border-purple-300 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                          title="Chat with AI Co-Director about belongings"
+                        >
+                          <MessageSquare className="w-2.5 h-2.5 text-purple-600" />
+                          <span>Chat with AI</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExecuteCoWriter(coWriterDirective, 'gear', true)}
+                          disabled={fieldFleshing === 'gear' || isExpanding || !name.trim()}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-40"
+                          title="Quick AI Fill"
+                        >
+                          <Sparkles className={`w-2.5 h-2.5 ${fieldFleshing === 'gear' ? 'animate-spin' : ''}`} />
+                          <span>{fieldFleshing === 'gear' ? '...' : 'Quick Fill'}</span>
+                        </button>
+                      </div>
                     </div>
                     <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
                       {currentLens.itemHelper}
@@ -2166,25 +2533,25 @@ export function CharacterDossierModal({
         </form>
 
         {/* =========================================================================
-            AI CHARACTER CO-WRITER DECK (SIDE DIRECTIVE PANEL)
+            AI CHARACTER CO-DIRECTOR CHAT & DIRECTIVES STUDIO
         ========================================================================= */}
         {isCoWriterOpen && (
-          <aside className="w-full md:w-80 lg:w-96 border-t md:border-t-0 md:border-l border-black/[0.08] bg-zinc-50 flex flex-col shrink-0 overflow-y-auto max-h-[42vh] md:max-h-none">
+          <aside className="w-full md:w-80 lg:w-[420px] xl:w-[460px] border-t md:border-t-0 md:border-l border-black/[0.08] bg-zinc-50 flex flex-col shrink-0 overflow-hidden max-h-[50vh] md:max-h-none">
             {/* Header */}
-            <div className="p-4 bg-purple-50/90 border-b border-purple-200 text-purple-950 shrink-0 flex items-center justify-between shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-purple-100 border border-purple-300 flex items-center justify-center text-purple-700">
+            <div className="p-3 bg-purple-50/90 border-b border-purple-200 text-purple-950 shrink-0 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-xs">
                   <Bot className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-xs tracking-tight text-purple-950 flex items-center gap-1.5">
-                    <span>AI Co-Writer Deck</span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-200 text-purple-800 border border-purple-300">
-                      Meta AI
+                  <h4 className="font-bold text-xs text-purple-950 flex items-center gap-1.5">
+                    <span>AI Character Co-Director</span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-200 text-purple-800">
+                      Live
                     </span>
                   </h4>
                   <p className="text-[10px] text-purple-700">
-                    Direct character creation in plain English
+                    Interactive back-and-forth character interview
                   </p>
                 </div>
               </div>
@@ -2198,144 +2565,427 @@ export function CharacterDossierModal({
               </button>
             </div>
 
-            <div className="p-4 space-y-4 flex-1">
-              {/* Directive Text Area */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
-                    <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Character Vision / Directive</span>
-                  </label>
-                  <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                    Highest Priority
-                  </span>
-                </div>
-                <textarea
-                  rows={4}
-                  value={coWriterDirective}
-                  onChange={(e) => setCoWriterDirective(e.target.value)}
-                  placeholder="e.g. She is an office love of the hero nothing else, she is not a hero that saves earth. Works in marketing, warm, funny, keeps him grounded with filter coffee..."
-                  className="w-full p-3 bg-white border-2 border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-500/20 rounded-xl text-xs font-medium text-zinc-900 outline-none leading-relaxed shadow-2xs resize-y"
-                />
-                <p className="text-[10px] text-zinc-500 leading-tight">
-                  💡 Type plain instructions here: whether an office romance, schoolteacher, barista, or detective. Meta AI will strictly obey and avoid combat/superhero tropes!
-                </p>
-              </div>
-
-              {/* 1-Click Quick Archetype Presets */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block">
-                  Quick Story Archetypes:
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {[
-                    {
-                      label: '💕 Office Romance / Love Interest',
-                      roleId: 'love-interest',
-                      genderId: 'female',
-                      directive: 'She is an everyday office love interest of the protagonist at their company. A warm, perceptive marketing colleague who has zero superpowers and saves no worlds, but keeps the hero emotionally grounded through shared coffee breaks, witty banters, and genuine care.',
-                    },
-                    {
-                      label: '💼 Workplace Colleague / Teammate',
-                      roleId: 'colleague',
-                      genderId: 'female',
-                      directive: 'Ambitious, sharp-witted colleague at the company. Professional, pragmatic, works on tight deadlines, drinks espresso, carries a leather portfolio. Grounded everyday corporate reality.',
-                    },
-                    {
-                      label: '☕ Grounded Coffee Shop Confidante',
-                      roleId: 'supporting',
-                      genderId: 'female',
-                      directive: 'Warm neighborhood café owner who serves as a safe haven and emotional anchor away from the city chaos. Observant, witty, makes the best brew in town.',
-                    },
-                    {
-                      label: '🕵️ Tenacious City Reporter',
-                      roleId: 'sidekick',
-                      genderId: 'female',
-                      directive: 'Street-smart investigative journalist digging into municipal corruption. Armed with a pocket notebook, audio recorder, and an uncompromising drive for the truth.',
-                    },
-                    {
-                      label: '⚡ Heroic Tactical Companion',
-                      roleId: 'sidekick',
-                      genderId: 'female',
-                      directive: 'Disciplined tactical ally with martial arts expertise and high-tech combat equipment fighting alongside the protagonist.',
-                    },
-                  ].map((arch) => (
-                    <button
-                      key={arch.label}
-                      type="button"
-                      onClick={() => {
-                        setCoWriterDirective(arch.directive);
-                        setRole(arch.roleId);
-                        setGender(arch.genderId);
-                      }}
-                      className="px-2.5 py-1.5 text-left text-xs bg-white hover:bg-purple-50 border border-zinc-200 hover:border-purple-300 rounded-xl font-medium text-zinc-800 transition-all cursor-pointer flex items-center justify-between group"
-                    >
-                      <span>{arch.label}</span>
-                      <span className="text-[10px] text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold">Use →</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Main Execution Actions */}
-              <div className="pt-2 space-y-2 border-t border-zinc-200">
-                <button
-                  type="button"
-                  onClick={() => handleExecuteCoWriter(coWriterDirective, undefined, false)}
-                  disabled={!name.trim() || isExpanding}
-                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40"
-                >
-                  <Sparkles className={`w-3.5 h-3.5 ${isExpanding ? 'animate-spin' : ''}`} />
-                  <span>{isExpanding ? 'Meta AI Writing...' : '✨ Fill Empty Boxes with Meta AI'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm(`Rewrite all dossier boxes for @${name || 'this character'} using your current directive?`)) {
-                      handleExecuteCoWriter(coWriterDirective, undefined, true);
-                    }
-                  }}
-                  disabled={!name.trim() || isExpanding}
-                  className="w-full py-2 px-3 rounded-xl bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-700 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
-                >
-                  <RefreshCw className="w-3 h-3 text-zinc-500" />
-                  <span>🔄 Overwrite & Rewrite All Boxes</span>
-                </button>
-              </div>
-
-              {/* 1-Click Targeted Field Drafters */}
-              <div className="pt-2 space-y-2 border-t border-zinc-200">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block">
-                  Draft Individual Fields On-Demand:
-                </span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {[
-                    { id: 'backstory', label: '📖 Origin Lore' },
-                    { id: 'motivation', label: '🎯 Motivation' },
-                    { id: 'flaws', label: '⚠️ Fatal Flaw' },
-                    { id: 'secret', label: '🔒 Secret Truth' },
-                    { id: 'appearance', label: '🎨 Face & Body' },
-                    { id: 'wardrobe', label: '👔 Outfit / Style' },
-                    { id: 'voiceTone', label: '💬 Voice Cadence' },
-                    { id: 'personality', label: '🧠 Personality' },
-                    { id: 'abilities', label: '💼 Skills / Job' },
-                    { id: 'gear', label: '🎒 Belongings' },
-                  ].map((field) => (
-                    <button
-                      key={field.id}
-                      type="button"
-                      onClick={() => handleExecuteCoWriter(coWriterDirective, field.id, true)}
-                      disabled={fieldFleshing === field.id || isExpanding || !name.trim()}
-                      className="px-2 py-1.5 text-xs text-left bg-white hover:bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-700 font-medium transition-colors flex items-center justify-between cursor-pointer disabled:opacity-40"
-                    >
-                      <span className="truncate">{field.label}</span>
-                      <Sparkles className={`w-2.5 h-2.5 text-purple-600 shrink-0 ${fieldFleshing === field.id ? 'animate-spin' : ''}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Mode Toggle Bar: Co-Director Chat vs Quick Directives */}
+            <div className="flex items-center gap-1 p-1.5 bg-purple-100/60 border-b border-purple-200 shrink-0">
+              <button
+                type="button"
+                onClick={() => setCoWriterMode('chat')}
+                className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  coWriterMode === 'chat'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-purple-900 hover:bg-purple-200/50'
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Co-Director Interview</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCoWriterMode('quick')}
+                className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  coWriterMode === 'quick'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-purple-900 hover:bg-purple-200/50'
+                }`}
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                <span>Quick Batch Fill</span>
+              </button>
             </div>
+
+            {coWriterMode === 'chat' ? (
+              <div className="flex-1 flex flex-col min-h-0 bg-zinc-50/50">
+                {/* Focus Section Chips */}
+                <div className="px-3 py-2 border-b border-zinc-200 bg-white flex items-center gap-1 overflow-x-auto shrink-0 scrollbar-none">
+                  <span className="text-[10px] font-mono font-bold uppercase text-zinc-400 shrink-0 mr-1">Focus:</span>
+                  {[
+                    { id: 'visuals', label: '🎨 Visuals & Outfit' },
+                    { id: 'lore', label: '📖 Lore & Origin' },
+                    { id: 'voice', label: '💬 Voice & Tone' },
+                    { id: 'gear', label: '💼 Skills & Gear' },
+                    { id: 'full', label: '🌟 All' },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleStartChatForSection(s.id as any)}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        chatFocusSection === s.id
+                          ? 'bg-purple-600 text-white shadow-2xs'
+                          : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Chat Scroll Area */}
+                <div
+                  ref={chatScrollRef}
+                  className="flex-1 p-3.5 space-y-3.5 overflow-y-auto min-h-0"
+                >
+                  {chatMessages.length === 0 && !isChatSending && (
+                    <div className="p-6 text-center text-xs text-zinc-500 space-y-2">
+                      <span className="text-2xl">🎬</span>
+                      <p className="font-semibold text-zinc-700">Start brainstorming @{name || 'Character'} with the AI Co-Director!</p>
+                      <p className="text-[11px] text-zinc-400">Tell what you need or tap a focus section above to begin the interview.</p>
+                    </div>
+                  )}
+
+                  {chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col space-y-1.5 ${
+                        msg.role === 'user' ? 'items-end' : 'items-start'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 px-1">
+                        <span>{msg.role === 'user' ? '👤 You' : '🎬 AI Co-Director'}</span>
+                        <span>•</span>
+                        <span>{msg.timestamp}</span>
+                      </div>
+
+                      <div
+                        className={`p-3 rounded-2xl text-xs leading-relaxed max-w-[94%] ${
+                          msg.role === 'user'
+                            ? 'bg-purple-600 text-white rounded-tr-none shadow-xs font-medium'
+                            : 'bg-white border border-zinc-200 text-zinc-900 rounded-tl-none shadow-2xs'
+                        }`}
+                      >
+                        <p className="whitespace-pre-line">{msg.content}</p>
+
+                        {/* Co-Director Questions Box */}
+                        {msg.questions && msg.questions.length > 0 && (
+                          <div className="mt-2.5 p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 space-y-1">
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-purple-700 flex items-center gap-1">
+                              <span>❓</span>
+                              <span>Co-Director Questions:</span>
+                            </span>
+                            <ul className="space-y-1 text-[11px] font-medium">
+                              {msg.questions.map((q, qIdx) => (
+                                <li key={qIdx} className="flex items-start gap-1.5">
+                                  <span className="text-purple-600 font-bold">•</span>
+                                  <span>{q}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Clickable Quick Option Pills */}
+                        {msg.quickOptions && msg.quickOptions.length > 0 && (
+                          <div className="mt-2.5 pt-2 border-t border-zinc-100 space-y-1">
+                            <span className="text-[9px] font-mono font-bold uppercase text-zinc-400 block">
+                              Quick-Answer Shortcuts:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {msg.quickOptions.map((opt, optIdx) => (
+                                <button
+                                  key={optIdx}
+                                  type="button"
+                                  onClick={() => handleSendChatMessage(opt)}
+                                  className="text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-900 font-medium px-2.5 py-1 rounded-full border border-purple-200 transition-all cursor-pointer text-left shadow-2xs"
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Suggested Updates Card with 1-Click Apply */}
+                        {msg.suggestedUpdates && Object.keys(msg.suggestedUpdates).length > 0 && (
+                          <div className="mt-3 p-3 bg-gradient-to-b from-purple-50/50 to-indigo-50/50 border border-purple-200 rounded-xl space-y-2 text-zinc-800">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-800 flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-purple-600" />
+                                <span>Drafted Dossier Updates</span>
+                              </span>
+                              {msg.applied && (
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                  ✓ Applied
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-1 text-[11px]">
+                              {msg.suggestedUpdates.appearance && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Face & Build:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.appearance}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.wardrobe && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Wardrobe:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.wardrobe}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.iconicItem && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Signature Prop:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.iconicItem}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.backstory && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Backstory:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.backstory}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.motivation && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Motivation:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.motivation}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.flaws && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Fatal Flaw:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.flaws}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.secret && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Secret:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.secret}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.voiceTone && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Voice:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.voiceTone}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.catchphrase && (
+                                <div className="line-clamp-1">
+                                  <strong className="text-zinc-900">Catchphrase:</strong>{' '}
+                                  <span className="text-zinc-600">&ldquo;{msg.suggestedUpdates.catchphrase}&rdquo;</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.abilities && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Skills:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.abilities}</span>
+                                </div>
+                              )}
+                              {msg.suggestedUpdates.gear && (
+                                <div className="line-clamp-2">
+                                  <strong className="text-zinc-900">Belongings:</strong>{' '}
+                                  <span className="text-zinc-600">{msg.suggestedUpdates.gear}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleApplyChatUpdates(msg.id, msg.suggestedUpdates)}
+                              disabled={msg.applied}
+                              className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
+                                msg.applied
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+                              }`}
+                            >
+                              {msg.applied ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>✓ Synced to Character Dossier</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  <span>Apply These Updates to Dossier</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {isChatSending && (
+                    <div className="flex items-center gap-2 p-3 bg-white border border-zinc-200 rounded-2xl text-xs text-zinc-500 shadow-2xs">
+                      <Bot className="w-4 h-4 text-purple-600 animate-pulse" />
+                      <span>Co-Director is thinking & crafting questions...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Chat Input Bar */}
+                <div className="p-3 bg-white border-t border-zinc-200 shrink-0">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendChatMessage();
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder={`Tell the AI what you need for @${name || 'Character'}...`}
+                      disabled={isChatSending}
+                      className="flex-1 py-2 px-3 text-xs bg-zinc-50 border border-zinc-300 focus:border-purple-600 focus:bg-white rounded-xl outline-none transition-all text-zinc-900"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isChatSending || !chatInput.trim()}
+                      className="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl cursor-pointer disabled:opacity-40 transition-colors shrink-0"
+                      title="Send message to AI Co-Director"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                  <p className="text-[10px] text-zinc-400 mt-1 pl-1">
+                    💡 Ask questions or tell what you want (e.g. &ldquo;She wears red Louboutin stilettos and silk blazers&rdquo;)
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* Quick Directives View (Original batch flow) */
+              <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+                {/* Directive Text Area */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Character Vision / Directive</span>
+                    </label>
+                    <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                      Highest Priority
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={coWriterDirective}
+                    onChange={(e) => setCoWriterDirective(e.target.value)}
+                    placeholder="e.g. She is an office love of the hero nothing else, she is not a hero that saves earth. Works in marketing, warm, funny, keeps him grounded with filter coffee..."
+                    className="w-full p-3 bg-white border-2 border-purple-200 focus:border-purple-600 focus:ring-2 focus:ring-purple-500/20 rounded-xl text-xs font-medium text-zinc-900 outline-none leading-relaxed shadow-2xs resize-y"
+                  />
+                  <p className="text-[10px] text-zinc-500 leading-tight">
+                    💡 Type plain instructions here: whether an office romance, schoolteacher, barista, or detective. Meta AI will strictly obey and avoid combat/superhero tropes!
+                  </p>
+                </div>
+
+                {/* 1-Click Quick Archetype Presets */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block">
+                    Quick Story Archetypes:
+                  </span>
+                  <div className="flex flex-col gap-1.5">
+                    {[
+                      {
+                        label: '💕 Office Romance / Love Interest',
+                        roleId: 'love-interest',
+                        genderId: 'female',
+                        directive: 'She is an everyday office love interest of the protagonist at their company. A warm, perceptive marketing colleague who has zero superpowers and saves no worlds, but keeps the hero emotionally grounded through shared coffee breaks, witty banters, and genuine care.',
+                      },
+                      {
+                        label: '💼 Workplace Colleague / Teammate',
+                        roleId: 'colleague',
+                        genderId: 'female',
+                        directive: 'Ambitious, sharp-witted colleague at the company. Professional, pragmatic, works on tight deadlines, drinks espresso, carries a leather portfolio. Grounded everyday corporate reality.',
+                      },
+                      {
+                        label: '☕ Grounded Coffee Shop Confidante',
+                        roleId: 'supporting',
+                        genderId: 'female',
+                        directive: 'Warm neighborhood café owner who serves as a safe haven and emotional anchor away from the city chaos. Observant, witty, makes the best brew in town.',
+                      },
+                      {
+                        label: '🕵️ Tenacious City Reporter',
+                        roleId: 'sidekick',
+                        genderId: 'female',
+                        directive: 'Street-smart investigative journalist digging into municipal corruption. Armed with a pocket notebook, audio recorder, and an uncompromising drive for the truth.',
+                      },
+                      {
+                        label: '⚡ Heroic Tactical Companion',
+                        roleId: 'sidekick',
+                        genderId: 'female',
+                        directive: 'Disciplined tactical ally with martial arts expertise and high-tech combat equipment fighting alongside the protagonist.',
+                      },
+                    ].map((arch) => (
+                      <button
+                        key={arch.label}
+                        type="button"
+                        onClick={() => {
+                          setCoWriterDirective(arch.directive);
+                          setRole(arch.roleId);
+                          setGender(arch.genderId);
+                        }}
+                        className="px-2.5 py-1.5 text-left text-xs bg-white hover:bg-purple-50 border border-zinc-200 hover:border-purple-300 rounded-xl font-medium text-zinc-800 transition-all cursor-pointer flex items-center justify-between group"
+                      >
+                        <span>{arch.label}</span>
+                        <span className="text-[10px] text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity font-bold">Use →</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Main Execution Actions */}
+                <div className="pt-2 space-y-2 border-t border-zinc-200">
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteCoWriter(coWriterDirective, undefined, false)}
+                    disabled={!name.trim() || isExpanding}
+                    className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isExpanding ? 'animate-spin' : ''}`} />
+                    <span>{isExpanding ? 'Meta AI Writing...' : '✨ Fill Empty Boxes with Meta AI'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Rewrite all dossier boxes for @${name || 'this character'} using your current directive?`)) {
+                        handleExecuteCoWriter(coWriterDirective, undefined, true);
+                      }
+                    }}
+                    disabled={!name.trim() || isExpanding}
+                    className="w-full py-2 px-3 rounded-xl bg-white hover:bg-zinc-100 border border-zinc-300 text-zinc-700 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    <RefreshCw className="w-3 h-3 text-zinc-500" />
+                    <span>🔄 Overwrite & Rewrite All Boxes</span>
+                  </button>
+                </div>
+
+                {/* 1-Click Targeted Field Drafters */}
+                <div className="pt-2 space-y-2 border-t border-zinc-200">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block">
+                    Draft Individual Fields On-Demand:
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { id: 'backstory', label: '📖 Origin Lore' },
+                      { id: 'motivation', label: '🎯 Motivation' },
+                      { id: 'flaws', label: '⚠️ Fatal Flaw' },
+                      { id: 'secret', label: '🔒 Secret Truth' },
+                      { id: 'appearance', label: '🎨 Face & Body' },
+                      { id: 'wardrobe', label: '👔 Outfit / Style' },
+                      { id: 'voiceTone', label: '💬 Voice Cadence' },
+                      { id: 'personality', label: '🧠 Personality' },
+                      { id: 'abilities', label: '💼 Skills / Job' },
+                      { id: 'gear', label: '🎒 Belongings' },
+                    ].map((field) => (
+                      <button
+                        key={field.id}
+                        type="button"
+                        onClick={() => handleExecuteCoWriter(coWriterDirective, field.id, true)}
+                        disabled={fieldFleshing === field.id || isExpanding || !name.trim()}
+                        className="px-2 py-1.5 text-xs text-left bg-white hover:bg-zinc-100 border border-zinc-200 rounded-lg text-zinc-700 font-medium transition-colors flex items-center justify-between cursor-pointer disabled:opacity-40"
+                      >
+                        <span className="truncate">{field.label}</span>
+                        <Sparkles className={`w-2.5 h-2.5 text-purple-600 shrink-0 ${fieldFleshing === field.id ? 'animate-spin' : ''}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Footer status info */}
             <div className="p-3 bg-zinc-100 border-t border-zinc-200 text-[10px] text-zinc-500 flex items-center justify-between shrink-0 font-mono">
