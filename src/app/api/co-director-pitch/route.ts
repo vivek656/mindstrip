@@ -11,6 +11,7 @@ export interface CoDirectorQuestion {
   id: string;
   question: string;
   options: CoDirectorOption[];
+  defaultAssumption?: string;
 }
 
 export interface CoDirectorGuestCharacter {
@@ -99,7 +100,8 @@ export async function POST(req: NextRequest) {
               description: 'Commanding the room with magnetic confidence and asserting total authority',
               beatAddition: 'Meera takes total charge of the conference room with magnetic poise'
             }
-          ]
+          ],
+          defaultAssumption: `${focused[0] || 'Meera'} uses calculated psychological charm and disarming wit over dinner to lower his corporate defenses`
         },
         {
           id: 'q-climax',
@@ -115,7 +117,8 @@ export async function POST(req: NextRequest) {
               description: 'Right as the pen touches paper, an unexpected revelation or interruption occurs',
               beatAddition: 'Just as the pen touches paper, a secret clause creates unexpected tension'
             }
-          ]
+          ],
+          defaultAssumption: 'The client is thoroughly disarmed and slides the signed contract across the table with an intrigued smirk'
         }
       ];
 
@@ -135,6 +138,7 @@ You must:
 2. Identify characters from the World Bible who should be EXCLUDED from this page (do not force the whole cast!).
 3. Detect any NEW/TEMPORARY guest characters introduced in the premise (e.g. "a client", "the boss", "a date", "a rival bidder").
 4. Formulate 2-3 provocative directorial questions to clarify the dramatic tone, strategy, and ending before scripting.
+5. Provide a "defaultAssumption" for each question describing what you will assume if the creator selects "Let AI Assume" or skips ahead.
 
 Return ONLY valid JSON with this schema:
 {
@@ -165,7 +169,8 @@ Return ONLY valid JSON with this schema:
           "description": "Short explanation of the vibe",
           "beatAddition": "Exact descriptive beat phrase to inject into prompt"
         }
-      ]
+      ],
+      "defaultAssumption": "Smart narrative assumption AI will use if the creator chooses 'Let AI Assume' or skips"
     }
   ]
 }`;

@@ -440,17 +440,35 @@ export function ZenComicReader({
     }
   };
 
-  const handleDrawWithCoDirectorDirection = () => {
+  const handleAutoAssumeAndBuild = (overrideChoices?: { [qId: string]: string }) => {
     if (!prompt.trim() && !coDirectorPitch) return;
-    const chosenBeats = Object.values(selectedBeatForks).filter(Boolean);
-    let finalPremise = prompt.trim();
-    if (chosenBeats.length > 0) {
-      finalPremise += `\n\n[Director Direction & Beats]:\n${chosenBeats.map((b) => `• ${b}`).join('\n')}`;
+    const choices = overrideChoices || selectedBeatForks;
+
+    const compiledBeats: string[] = [];
+
+    if (coDirectorPitch?.directorialQuestions) {
+      for (const q of coDirectorPitch.directorialQuestions) {
+        if (choices[q.id]) {
+          compiledBeats.push(`• ${q.question}: ${choices[q.id]}`);
+        } else if (q.defaultAssumption) {
+          compiledBeats.push(`• ${q.question}: [AI Assumed] ${q.defaultAssumption}`);
+        }
+      }
     }
+
+    let finalPremise = prompt.trim();
+    if (compiledBeats.length > 0) {
+      finalPremise += `\n\n[Co-Director Scene Specifications & Assumptions]:\n${compiledBeats.join('\n')}`;
+    }
+
     onGenerateNextEpisode(finalPremise, selectedLayout, selectedLens);
     setPrompt('');
     setCoDirectorPitch(null);
     setSelectedBeatForks({});
+  };
+
+  const handleDrawWithCoDirectorDirection = () => {
+    handleAutoAssumeAndBuild();
   };
 
   const handleSaveNewCharacter = (e: React.FormEvent) => {
@@ -918,8 +936,11 @@ export function ZenComicReader({
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                     e.preventDefault();
                     if (prompt.trim() && !isLoading) {
-                      onGenerateNextEpisode(prompt.trim(), selectedLayout, selectedLens);
-                      setPrompt('');
+                      if (!coDirectorPitch) {
+                        handleFetchCoDirectorPitch();
+                      } else {
+                        handleAutoAssumeAndBuild();
+                      }
                     }
                   }
                 }}
@@ -1056,22 +1077,95 @@ export function ZenComicReader({
                               </button>
                             );
                           })}
+
+                          {/* Explicit "Let AI Assume" Option */}
+                          {q.defaultAssumption && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const isAssumed = selectedBeatForks[q.id] === q.defaultAssumption;
+                                setSelectedBeatForks((prev) => ({
+                                  ...prev,
+                                  [q.id]: isAssumed ? '' : q.defaultAssumption!,
+                                }));
+                              }}
+                              className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer border ${
+                                selectedBeatForks[q.id] === q.defaultAssumption
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                  : 'bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 border-indigo-200/60 dark:border-indigo-800/60 hover:bg-indigo-100/70'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between font-bold text-[11px]">
+                                <span className="flex items-center gap-1.5">
+                                  <span>🤖</span>
+                                  <span>Let AI Assume Answer</span>
+                                </span>
+                                {selectedBeatForks[q.id] === q.defaultAssumption && <Check className="w-3.5 h-3.5 text-white" />}
+                              </div>
+                              <div className={`text-[10px] mt-0.5 line-clamp-2 ${
+                                selectedBeatForks[q.id] === q.defaultAssumption ? 'text-indigo-100' : 'text-indigo-700/80 dark:text-indigo-300/80 italic'
+                              }`}>
+                                &ldquo;{q.defaultAssumption}&rdquo;
+                              </div>
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Primary Draw Page Button */}
-                <button
-                  type="button"
-                  onClick={handleDrawWithCoDirectorDirection}
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>🚀 Draw Page with Co-Director Direction</span>
-                </button>
+                {/* Primary Draw / Auto-Assume Action */}
+                {(() => {
+                  const totalQuestions = coDirectorPitch.directorialQuestions.length;
+                  const answeredCount = Object.values(selectedBeatForks).filter(Boolean).length;
+                  const unansweredCount = totalQuestions - answeredCount;
+
+                  return (
+                    <div className="space-y-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleAutoAssumeAndBuild()}
+                        disabled={isLoading}
+                        className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-purple-700 hover:bg-purple-600 text-white flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                        <span>
+                          {answeredCount === 0
+                            ? '⚡ Auto-Assume All & Build Page'
+                            : unansweredCount === 0
+                            ? '🚀 Draw Page with Selected Choices'
+                            : `⚡ Assume Rest (${unansweredCount} more) & Build Page`}
+                        </span>
+                      </button>
+
+                      <div className="flex items-center justify-between px-1 text-[11px] text-zinc-400">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
+                            setPrompt('');
+                            setCoDirectorPitch(null);
+                            setSelectedBeatForks({});
+                          }}
+                          className="hover:text-zinc-700 dark:hover:text-zinc-200 underline cursor-pointer"
+                        >
+                          Skip Questions & Draw Raw
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCoDirectorPitch(null);
+                            setSelectedBeatForks({});
+                          }}
+                          className="hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -1285,7 +1379,15 @@ export function ZenComicReader({
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() => onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens)}
+                onClick={() => {
+                  if (prompt.trim() && !coDirectorPitch) {
+                    handleFetchCoDirectorPitch();
+                  } else if (coDirectorPitch) {
+                    handleAutoAssumeAndBuild();
+                  } else {
+                    onGenerateNextEpisode(prompt.trim() || world.tagline, selectedLayout, selectedLens);
+                  }
+                }}
                 disabled={isLoading}
                 className={`w-full py-3.5 px-5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg ${
                   isLoading
@@ -1302,9 +1404,13 @@ export function ZenComicReader({
                   <>
                     <Sparkles className="w-4 h-4 text-amber-300" />
                     <span>
-                      {episode
-                        ? `Draw Episode #${(episode.episodeNumber || 1) + 1} →`
-                        : 'Draw Episode #1: Origin →'}
+                      {coDirectorPitch
+                        ? '⚡ Auto-Assume Remaining & Draw Page →'
+                        : isAligningPitch
+                        ? 'Analyzing Cast & Scene...'
+                        : episode
+                        ? `Direct Episode #${(episode.episodeNumber || 1) + 1} →`
+                        : 'Direct Episode #1: Origin →'}
                     </span>
                   </>
                 )}

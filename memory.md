@@ -857,3 +857,25 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - A 1-click `[ ⭐ Promote to Core Cast ]` button allows the creator to permanently add any guest character into `world.characters` in the World Bible, syncing immediately to MongoDB Atlas and localStorage!
   4. **Verification**:
      - Verified with `npm run build` (0 TypeScript / Turbopack errors across all 13 routes).
+
+
+### In-Pipeline Directorial Questioning & "Auto-Assume & Build" Dynamic Flow (2026-10-31)
+- **User Request**:
+  *"AI should ask question to add in pipeline, pipeline should be intelligent enough to know what character are in page, and when AI asking question I should provide option to answer, or let AI assume the answer itself, and in the end just assume everything else if there are more and start building."*
+- **Architecture & Implementation**:
+  1. **In-Pipeline Questioning Step**:
+     - When the creator clicks "Direct Episode" (or presses `Cmd/Ctrl + Enter`), the pipeline automatically initiates the AI Co-Director questioning step before drawing.
+     - The pipeline detects who is on the page (e.g. Spotlight: Meera, Guest: The New Client, Off-Scene: Simbo).
+  2. **Option to Answer OR "Let AI Assume" on Every Question**:
+     - Each question provides explicit strategic option pills (e.g. Calculated Charm vs Corporate Power Move).
+     - Each question includes a **`[ 🤖 Let AI Assume ]`** pill detailing the AI's default narrative assumption (`q.defaultAssumption`).
+  3. **"Auto-Assume Remaining & Build Page" Dynamic Execution**:
+     - The creator is never forced to answer all questions.
+     - The primary action button dynamically reflects status:
+       - 0 questions answered: `[ ⚡ Auto-Assume All & Build Page ]`
+       - Some answered: `[ ⚡ Assume Rest (X more) & Build Page ]`
+       - All answered: `[ 🚀 Draw Page with Selected Choices ]`
+     - Any unanswered question automatically falls back to `q.defaultAssumption`.
+     - Compiles into `[Co-Director Scene Specifications & Assumptions]` and immediately triggers `onGenerateNextEpisode(...)`.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across 13 routes).

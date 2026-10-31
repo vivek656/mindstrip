@@ -68,7 +68,8 @@ CRITICAL CASTING & EPISODE RULES:
 3. TEMPORARY GUEST SCENE PARTNERS: When the user's premise introduces a temporary or one-off character (e.g., "the new client", "the CEO", "a mysterious customer", "a rival bidder"), YOU ARE EXPLICITLY ENCOURAGED to introduce them as an episodic guest character in the panels and dialogue (e.g., speaker: "New Client (Mr. Sterling)" or "Client"). They act as a one-off scene partner for this episode without permanently altering the world bible.
 4. ANTAGONIST INTEGRITY: Any character with role="antagonist" MUST ACTIVELY OPPOSE, MENACE, MOCK, OR SABOTAGE THE PROTAGONIST. They must NEVER help, sympathize with, or apologize!
 5. MANDATORY CAST INTEGRITY: Never include deleted cast members from previous worlds.
-6. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
+6. CO-DIRECTOR SPECIFICATIONS & ASSUMPTIONS: If the prompt includes "[Co-Director Scene Specifications]" or "[Director Direction & Assumptions]", follow these directorial choices and story beats faithfully for character tactical maneuvers, dialogue tone, scene dynamics, and outcome!
+7. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
 ${critiquePrompt}
 ${layoutInstruction}
 
