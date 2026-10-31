@@ -699,6 +699,27 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Confirmed response: `{ connected: true, worlds: [...] }`.
      - Cross-device sync between Windows and Mobile is now fully live and operational!
 
+### Episode Cast Scoping, Hero Decoupling & Episodic Guest Characters (2026-10-31)
+- **User Feedback Diagnosed**:
+  1. *Rigid Cast Forcing*: Every generated page was forcing the entire World Bible cast (specifically the main protagonist/hero) into every single panel, even when the user wanted a spotlight episode focused on one specific character.
+  2. *Character Role Drift*: A character defined as an office worker / crush (e.g. Meera) kept getting turned into a superhero crime-fighting sidekick rather than staying grounded in workplace/romance drama.
+  3. *Inability to introduce temporary guest characters*: When the user wrote `@meera basically working in office, her job is to seduce the new client to get the contract`, the "new client" was either blocked by the Canon Auditor as an "unknown character", or the hero was shoehorned into the client's place.
+- **Root Causes Diagnosed**:
+  1. `art-director.ts` and `/api/generate-image/route.ts` concatenated ALL characters in the universe (`characters.map(...).join(' and ')`) into every prompt, forcing the hero into every image.
+  2. `canon-auditor.ts` flagged any speaker not in `world.characters` as `DELETED_OR_UNKNOWN_CHARACTER`, preventing episodic guest characters like "New Client". Showrunner self-correction then forcibly replaced the guest with the main protagonist.
+  3. `showrunner.ts` system prompt was biased towards superhero tropes (`ANTAGONIST MUST OPPOSE THE HERO`) and lacked explicit rules preventing main cast shoehorning into spotlight episodes.
+- **Architectural Solution Implemented**:
+  1. **Dynamic Episode Cast Isolation (`art-director.ts` & `generate-image/route.ts`)**:
+     - Image prompts now filter characters to ONLY those actually featured in `draft.panels` or mentioned in the user's premise.
+     - Unrelated main heroes are completely excluded from spotlight episodes.
+  2. **Episodic Guest Character Support (`canon-auditor.ts`)**:
+     - Updated auditor to allow guest/scene-partner roles (`client`, `guest`, `boss`, `ceo`, `investor`, etc.) or any character introduced in `context.rawDump`.
+  3. **Role & Genre Fidelity Enforcement (`showrunner.ts`)**:
+     - Showrunner system prompt strictly enforces that office workers, crushes, and civilians are NEVER superhero sidekicks.
+     - Mandates that spotlight episodes (e.g. `@Meera in the office`) focus strictly on that character's professional/romantic scenario without unwanted hero cameos.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
+
 ### Graphic Novel Art Integrity & Integrated Dialogue Deck (2026-10-30)
 - **User Feedback Diagnosed**:
   - The user commented: *"looks really bad"* when crude canvas speech bubbles were stamped across the comic page artwork.
@@ -728,6 +749,27 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Tested live against production at `https://mindstrip.vercel.app/api/worlds`.
      - Confirmed response: `{ connected: true, worlds: [...] }`.
      - Cross-device sync between Windows and Mobile is now fully live and operational!
+
+### Episode Cast Scoping, Hero Decoupling & Episodic Guest Characters (2026-10-31)
+- **User Feedback Diagnosed**:
+  1. *Rigid Cast Forcing*: Every generated page was forcing the entire World Bible cast (specifically the main protagonist/hero) into every single panel, even when the user wanted a spotlight episode focused on one specific character.
+  2. *Character Role Drift*: A character defined as an office worker / crush (e.g. Meera) kept getting turned into a superhero crime-fighting sidekick rather than staying grounded in workplace/romance drama.
+  3. *Inability to introduce temporary guest characters*: When the user wrote `@meera basically working in office, her job is to seduce the new client to get the contract`, the "new client" was either blocked by the Canon Auditor as an "unknown character", or the hero was shoehorned into the client's place.
+- **Root Causes Diagnosed**:
+  1. `art-director.ts` and `/api/generate-image/route.ts` concatenated ALL characters in the universe (`characters.map(...).join(' and ')`) into every prompt, forcing the hero into every image.
+  2. `canon-auditor.ts` flagged any speaker not in `world.characters` as `DELETED_OR_UNKNOWN_CHARACTER`, preventing episodic guest characters like "New Client". Showrunner self-correction then forcibly replaced the guest with the main protagonist.
+  3. `showrunner.ts` system prompt was biased towards superhero tropes (`ANTAGONIST MUST OPPOSE THE HERO`) and lacked explicit rules preventing main cast shoehorning into spotlight episodes.
+- **Architectural Solution Implemented**:
+  1. **Dynamic Episode Cast Isolation (`art-director.ts` & `generate-image/route.ts`)**:
+     - Image prompts now filter characters to ONLY those actually featured in `draft.panels` or mentioned in the user's premise.
+     - Unrelated main heroes are completely excluded from spotlight episodes.
+  2. **Episodic Guest Character Support (`canon-auditor.ts`)**:
+     - Updated auditor to allow guest/scene-partner roles (`client`, `guest`, `boss`, `ceo`, `investor`, etc.) or any character introduced in `context.rawDump`.
+  3. **Role & Genre Fidelity Enforcement (`showrunner.ts`)**:
+     - Showrunner system prompt strictly enforces that office workers, crushes, and civilians are NEVER superhero sidekicks.
+     - Mandates that spotlight episodes (e.g. `@Meera in the office`) focus strictly on that character's professional/romantic scenario without unwanted hero cameos.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
 ### RAG Dialogue Injection Pipeline (Native Comic Image Generation, Zero Overlays) (2026-10-31)
 - **User Insight**:
@@ -767,4 +809,25 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Tested live against production at `https://mindstrip.vercel.app/api/worlds`.
      - Confirmed response: `{ connected: true, worlds: [...] }`.
      - Cross-device sync between Windows and Mobile is now fully live and operational!
+
+### Episode Cast Scoping, Hero Decoupling & Episodic Guest Characters (2026-10-31)
+- **User Feedback Diagnosed**:
+  1. *Rigid Cast Forcing*: Every generated page was forcing the entire World Bible cast (specifically the main protagonist/hero) into every single panel, even when the user wanted a spotlight episode focused on one specific character.
+  2. *Character Role Drift*: A character defined as an office worker / crush (e.g. Meera) kept getting turned into a superhero crime-fighting sidekick rather than staying grounded in workplace/romance drama.
+  3. *Inability to introduce temporary guest characters*: When the user wrote `@meera basically working in office, her job is to seduce the new client to get the contract`, the "new client" was either blocked by the Canon Auditor as an "unknown character", or the hero was shoehorned into the client's place.
+- **Root Causes Diagnosed**:
+  1. `art-director.ts` and `/api/generate-image/route.ts` concatenated ALL characters in the universe (`characters.map(...).join(' and ')`) into every prompt, forcing the hero into every image.
+  2. `canon-auditor.ts` flagged any speaker not in `world.characters` as `DELETED_OR_UNKNOWN_CHARACTER`, preventing episodic guest characters like "New Client". Showrunner self-correction then forcibly replaced the guest with the main protagonist.
+  3. `showrunner.ts` system prompt was biased towards superhero tropes (`ANTAGONIST MUST OPPOSE THE HERO`) and lacked explicit rules preventing main cast shoehorning into spotlight episodes.
+- **Architectural Solution Implemented**:
+  1. **Dynamic Episode Cast Isolation (`art-director.ts` & `generate-image/route.ts`)**:
+     - Image prompts now filter characters to ONLY those actually featured in `draft.panels` or mentioned in the user's premise.
+     - Unrelated main heroes are completely excluded from spotlight episodes.
+  2. **Episodic Guest Character Support (`canon-auditor.ts`)**:
+     - Updated auditor to allow guest/scene-partner roles (`client`, `guest`, `boss`, `ceo`, `investor`, etc.) or any character introduced in `context.rawDump`.
+  3. **Role & Genre Fidelity Enforcement (`showrunner.ts`)**:
+     - Showrunner system prompt strictly enforces that office workers, crushes, and civilians are NEVER superhero sidekicks.
+     - Mandates that spotlight episodes (e.g. `@Meera in the office`) focus strictly on that character's professional/romantic scenario without unwanted hero cameos.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
