@@ -48,23 +48,23 @@ function generateHeuristicCharacterChat(
       let wardrobeDraft = '';
       if (mentionsSaree) {
         wardrobeDraft = `Traditional attire with refined textural detailing, structured draping, and elegant tonal accents.`;
-      } else if (mentionsWestern || isCorporateOrCeo) {
+      } else if (mentionsWestern) {
         wardrobeDraft = `High-end modern executive western attire: tailored structured blazer, crisp button-down shirt or blouse, high-waist tailored trousers or pencil skirt, and polished footwear.`;
       } else {
-        wardrobeDraft = `Signature styling based on creator vision: ${userMessage.slice(0, 120)}. Authentic textural details and crisp color contrast.`;
+        wardrobeDraft = `Signature styling based on creator vision: ${userMessage.trim()}. Authentic textural details and crisp color contrast.`;
       }
 
       // User responded with visual guidance
       const appearanceDraft = isCorporateOrCeo
-        ? `Polished executive presence with composed posture, observant eyes, and sharp, tailored styling suited for high-stakes corporate environments.`
-        : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}: ${userMessage.slice(0, 100)}.`;
+        ? `Polished executive presence with composed posture, observant eyes, and sharp, tailored styling suited for high-stakes corporate environments: ${userMessage.trim()}.`
+        : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}: ${userMessage.trim()}.`;
 
       const iconicItemDraft = isStilettoOrHeels || isCorporateOrCeo
         ? `Polished pointed-toe dress shoes or heels that project authority and poise across any executive floor.`
-        : `Signature accessory reflecting their personality: ${userMessage.slice(0, 80)}.`;
+        : `Signature accessory reflecting their personality: ${userMessage.trim()}.`;
 
       return {
-        reply: `Got it! Updating @${name}'s visual continuity anchors to reflect "${userMessage.trim().slice(0, 90)}". The attire and styling have been updated to your exact specification so all future comic panels will strictly render her in this look.
+        reply: `Got it! Updating @${name}'s visual continuity anchors to reflect "${userMessage.trim()}". The attire and styling have been updated to your exact specification so all future comic panels will strictly render her in this look.
 
 Here is her updated visual continuity package:`,
         questions: chatHistoryLength > 2 ? [] : [
@@ -117,7 +117,7 @@ To get her look exactly right, tell me:
         : (character?.backstory ? `${character.backstory}\n\nKey development: ${userMessage.trim()}` : `${name}'s journey in ${worldTitle}: ${userMessage.trim()}`);
 
       return {
-        reply: `Got it! Updating @${name}'s lore and formative history based on what you just shared: "${userMessage.trim().slice(0, 80)}".
+        reply: `Got it! Updating @${name}'s lore and formative history based on what you just shared: "${userMessage.trim()}".
 
 I have updated the drafted dossier fields below to incorporate your direction:`,
         questions: chatHistoryLength > 1 ? [] : [
@@ -303,8 +303,8 @@ Respond ONLY with a valid JSON object matching this exact schema:
   }
 }`;
 
-        // Format conversational messages cleanly without duplicate user turns
-        const sanitizedHistory = (chatHistory || []).slice(-8).map((m: any) => ({
+        // Format conversational messages cleanly without duplicate user turns (uncapped context)
+        const sanitizedHistory = (chatHistory || []).map((m: any) => ({
           role: m.role === 'assistant' ? 'assistant' : 'user',
           content: String(m.content || '')
         }));

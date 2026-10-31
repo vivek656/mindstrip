@@ -32,11 +32,18 @@ export async function draftEpisodeBeats(
   } = context;
 
   // Check if real Meta API or Partner inference is available
-  const hasApiKey = Boolean(apiKey || (provider === 'fireworks' && process.env.FIREWORKS_API_KEY) || (provider === 'groq' && process.env.GROQ_API_KEY) || process.env.META_MODEL_API_KEY);
+  let resolvedKey = apiKey || '';
+  if (!resolvedKey) {
+    if (provider === 'fireworks') resolvedKey = process.env.FIREWORKS_API_KEY || '';
+    else if (provider === 'groq') resolvedKey = process.env.GROQ_API_KEY || '';
+    else if (provider === 'baseten') resolvedKey = process.env.BASETEN_API_KEY || '';
+    else resolvedKey = process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
+  }
+  const hasApiKey = Boolean(resolvedKey);
 
   if (hasApiKey) {
     try {
-      const cleanBase = (baseUrl || 'https://api.meta.ai/v1').replace(/\/+$/, '');
+      const cleanBase = (baseUrl || (provider === 'fireworks' ? 'https://api.fireworks.ai/inference/v1' : provider === 'groq' ? 'https://api.groq.com/openai/v1' : 'https://api.meta.ai/v1')).replace(/\/+$/, '');
       const targetModel = modelName || (provider === 'fireworks' ? 'accounts/fireworks/models/llama-v3p3-70b-instruct' : provider === 'groq' ? 'llama-3.3-70b-versatile' : 'muse-spark-1.3');
 
       const layoutInstruction = layoutPreference === 'auto'
@@ -126,7 +133,7 @@ Episode Premise / Brain Dump: "${rawDump}"`;
       const res = await fetch(`${cleanBase}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey || process.env.META_MODEL_API_KEY || ''}`,
+          'Authorization': `Bearer ${resolvedKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -135,6 +142,8 @@ Episode Premise / Brain Dump: "${rawDump}"`;
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userContent }
           ],
+          temperature: 0.7,
+          max_tokens: 8192,
           response_format: { type: 'json_object' }
         })
       });
@@ -150,7 +159,7 @@ Episode Premise / Brain Dump: "${rawDump}"`;
             layoutStyle: parsed.layoutStyle || '4-panel',
             directorReasoning: parsed.directorReasoning || 'Selected optimal narrative pacing for this chapter.',
             coreTruth: parsed.coreTruth || 'Action breeds clarity.',
-            recap: parsed.recap || rawDump.slice(0, 80),
+            recap: parsed.recap || rawDump,
             newFacts: parsed.newFacts || [],
             openThreads: parsed.openThreads || [],
             nextSuggestions: parsed.nextSuggestions || [],
@@ -253,7 +262,7 @@ Episode Premise / Brain Dump: "${rawDump}"`;
     layoutStyle: chosenLayout,
     directorReasoning: `Showrunner Agent selected ${chosenLayout} to balance dramatic revelation and episodic momentum.`,
     coreTruth: fallbackStrip.cognitiveAnalysis.coreTruth,
-    recap: fallbackStrip.recap || rawDump.slice(0, 80),
+    recap: fallbackStrip.recap || rawDump,
     newFacts: fallbackStrip.newFacts || [],
     openThreads: fallbackStrip.openThreads || [],
     nextSuggestions: fallbackStrip.nextSuggestions || [],

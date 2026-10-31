@@ -9,6 +9,7 @@ export const INITIAL_WORLDS: ComicWorld[] = [
     tagline: 'Where one line of code turns into an architectural existential crisis',
     genre: 'Tech Comedy & Engineering',
     artStyle: 'minimalist',
+    imageModel: 'flux-1-schnell',
     characters: [
       {
         id: 'char-alex',
@@ -100,6 +101,7 @@ export const INITIAL_WORLDS: ComicWorld[] = [
     tagline: 'Navigating chronic care, treatment routines, and caregiver resilience with warmth',
     genre: 'Healthcare & Real-Life Drama',
     artStyle: 'newspaper',
+    imageModel: 'flux-1-schnell',
     characters: [
       {
         id: 'char-sam',
@@ -191,6 +193,7 @@ export const INITIAL_WORLDS: ComicWorld[] = [
     tagline: '48 hours before public launch, Stripe keys missing, imposter syndrome peaking',
     genre: 'Founder Satire & Indie Hacking',
     artStyle: 'webcomic',
+    imageModel: 'flux-1-schnell',
     characters: [
       {
         id: 'char-jordan',

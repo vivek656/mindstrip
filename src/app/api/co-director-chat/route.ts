@@ -62,7 +62,7 @@ function generateDynamicCoDirectorResponse(
   let quickStarters: string[] = [];
 
   if (isCorporateOffice || Boolean(guestMatch) || isSeductionOrCharm) {
-    const userTopic = lastUserMsg.trim().slice(0, 80) || 'the upcoming interaction';
+    const userTopic = lastUserMsg.trim() || 'the upcoming interaction';
     reply = `I like where you're taking this scene! Focusing specifically on **${leadName}** ${guestsStr ? `and **${guestsStr}**` : ''} keeps the spotlight razor-sharp without unnecessary cast clutter.
 
 Here is how we can pace this dramatic beat across the 4 panels:
@@ -204,7 +204,7 @@ UNIVERSE CONTEXT:
 - World: "${worldTitle}"
 - Genre: ${genre}
 ${worldTagline ? `- Tagline: "${worldTagline}"` : ''}
-${worldLore ? `- Lore: "${worldLore.slice(0, 300)}..."` : ''}
+${worldLore ? `- Lore: "${worldLore}"` : ''}
 - Active Universe Cast:
 ${castRosterStr || 'No predefined cast'}
 - Current Episode Number: #${(currentEpisode.episodeNumber || 1) + 1}
@@ -234,9 +234,10 @@ Return ONLY a valid JSON object matching this schema:
   "quickStarters": ["2-3 punchy short phrases user can tap to reply quickly"]
 }`;
 
+    // Full uncapped conversation context
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
-      ...messages.slice(-8).map((m: any) => ({
+      ...messages.map((m: any) => ({
         role: m.role,
         content: m.content,
       })),

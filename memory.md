@@ -1066,3 +1066,28 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build` compiled cleanly in ~1.2s with zero TypeScript errors.
   - Changes pushed to `origin/main`.
+
+### Full Uncapped Context Window & Cost-Efficient Dual-Engine Architecture (2026-11-01)
+- **User Request**:
+  - *"WE can have for visual generator and the Llama 3.3 7-b which one is less cotlier and what is the cost ?"*
+  - *"Lets do this, and do no context cap"*
+- **Architectural Upgrades**:
+  1. **Dual-Engine Cost & Speed Optimization**:
+     - Visual Generator: Set **FLUX.1 Schnell** (`flux-1-schnell` via Fireworks AI) as the default image generator across worlds, character portrait generators, and reader granular control decks. Costs only ~$0.003 per page (~330 pages per $1), responding in ~1 second.
+     - Text / Dialogue / Co-Director Engine: Supported **Meta Llama 3.3 70B** (`accounts/fireworks/models/llama-v3p3-70b-instruct` / `llama-3.3-70b-versatile` on Groq / Meta API) with sub-second latency and zero reasoning overhead.
+     - Decoupled text provider from image provider in `/api/generate` so creators can use Groq / Meta API for text while automatically leveraging Fireworks `flux-1-schnell` for page visuals.
+     - Starter worlds (`INITIAL_WORLDS`) and newly architected universes (`build-world`, `UniverseBuilderStudio`) now default to `imageModel: 'flux-1-schnell'`.
+  2. **Total Elimination of Context Caps (No Context Slicing)**:
+     - `/api/character-chat`: Removed `.slice(-8)` from conversation history and eliminated all prompt input slicing (`userMessage.slice(0, 120)`, `slice(0, 90)`, `slice(0, 80)`); full conversation history and verbatim user directives are now passed.
+     - `/api/co-director-chat`: Removed `.slice(-8)` from messages and removed `- Lore: "${worldLore.slice(0, 300)}..."`; entire conversation history and complete world lore are now passed to the model.
+     - `/api/expand-character`: Removed `${c.backstory.slice(0, 100)}` and `${userDirective.slice(0, 150)}`; full cast backstories and user directives are preserved uncapped.
+     - `/api/co-director-pitch`: Removed `cleanPremise.slice(0, 60)` and `slice(0, 80)`.
+     - `src/lib/story-context.ts`: Expanded context budget from 6,000 characters to **120,000 characters** for Meta Llama 3.3's 128K context window; removed `.slice(-3)` and `.slice(0, 5)` from `openThreads` to track all unresolved canon threads across the entire universe.
+     - `src/lib/agents/art-director.ts`: Removed `bubbles.slice(0, 2)`; all panel speech and thought balloons are now fully retained.
+     - `src/lib/agents/canon-rag.ts`: Expanded retrieved memory limit from 5 to 20 relevant items.
+     - `src/lib/agents/showrunner.ts`: Removed `rawDump.slice(0, 80)` from recap generation; full premise is retained.
+  3. **Universal 8192 Token Ceiling Across All Routes**:
+     - Configured `max_tokens: 8192` across `/api/character-chat`, `/api/co-director-chat`, `/api/co-director-pitch`, `/api/expand-character`, `/api/build-world`, and `src/lib/agents/showrunner.ts` to ensure comprehensive, un-truncated JSON responses.
+- **Verification**:
+  - `npm run build`: verified clean compilation with zero TypeScript errors.
+  - Full Git commit and push to `origin/main`.

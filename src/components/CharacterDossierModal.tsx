@@ -855,8 +855,8 @@ What would you like to discuss or refine first?`,
           artStyle: world.artStyle || 'webcomic',
           apiKey: apiConfig?.apiKey,
           baseUrl: apiConfig?.baseUrl,
-          provider: apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api',
-          imageModel: world.imageModel || (apiConfig?.provider === 'fireworks' ? 'flux-1-schnell' : 'muse-image-1.0'),
+          provider: world.imageModel === 'muse-image-1.0' ? 'meta-api' : 'fireworks',
+          imageModel: world.imageModel || 'flux-1-schnell',
         }),
       });
 
@@ -1047,8 +1047,8 @@ What would you like to discuss or refine first?`,
             artStyle: world.artStyle || 'webcomic',
             apiKey: apiConfig?.apiKey,
             baseUrl: apiConfig?.baseUrl,
-            provider: apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api',
-            imageModel: world.imageModel || (apiConfig?.provider === 'fireworks' ? 'flux-1-schnell' : 'muse-image-1.0'),
+            provider: world.imageModel === 'muse-image-1.0' ? 'meta-api' : 'fireworks',
+            imageModel: world.imageModel || 'flux-1-schnell',
           }),
         });
 

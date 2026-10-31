@@ -38,12 +38,12 @@ export const META_PRESETS: MetaPreset[] = [
   },
   {
     id: 'fireworks-llama',
-    name: 'Fireworks AI (Meta Llama 3.3)',
+    name: 'Fireworks AI (Meta Llama 3.3 70B)',
     provider: 'fireworks',
     baseUrl: 'https://api.fireworks.ai/inference/v1',
     modelName: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-    description: 'Official Meta Hackathon partner with ultra-low latency Llama 3.3 70B inference',
-    badge: 'Hackathon Partner',
+    description: 'Ultra-low latency Meta Llama 3.3 70B (128K uncapped context) + FLUX.1 Schnell visual artwork (~$0.003/page)',
+    badge: 'Recommended • Fast & Cost-Efficient',
     placeholderKey: 'Paste your Fireworks API Key (fw_...)'
   },
   {
@@ -52,8 +52,8 @@ export const META_PRESETS: MetaPreset[] = [
     provider: 'groq',
     baseUrl: 'https://api.groq.com/openai/v1',
     modelName: 'llama-3.3-70b-versatile',
-    description: 'Sub-second real-time inference on Meta Llama 3.3 70B',
-    badge: 'Ultra Fast',
+    description: 'Sub-second real-time inference on Meta Llama 3.3 70B with 128K uncapped context window',
+    badge: 'Ultra Fast • 128K Context',
     placeholderKey: 'Paste your Groq API Key (gsk_...)'
   },
   {
@@ -125,6 +125,7 @@ export async function generateMindStrip(
         layoutPreference,
         world,
         pastEpisodes: pastEpisodes || world?.episodes,
+        imageModel: world?.imageModel || 'flux-1-schnell',
         provider: config.provider || 'meta-api',
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,

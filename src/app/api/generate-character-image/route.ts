@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
       worldLore = '',
       viewType = 'model_sheet', // 'portrait' | 'full_body' | 'back_view' | 'model_sheet' | 'action_pose'
       customPrompt = '',
-      provider = 'meta-api',
+      provider = 'fireworks',
       apiKey = '',
       baseUrl = '',
-      imageModel = 'muse-image-1.0'
+      imageModel = 'flux-1-schnell'
     } = body;
 
     const charGender = gender && gender !== 'unspecified' ? `(${gender})` : '';
@@ -86,23 +86,21 @@ export async function POST(req: NextRequest) {
     const cleanBase = (baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1').replace(/\/+$/, '');
 
     // Determine effective provider:
-    // If fireworks requested and has fireworks key -> fireworks
-    // If targetMetaKey is present -> ALWAYS use official Meta Model API ('meta-api' / 'muse-image-1.0')
-    // If targetFireworksKey is present -> fireworks
+    // Prioritize Fireworks FLUX.1 Schnell for high-speed, cost-efficient character generation (~$0.003)
     let effectiveProvider = provider;
-    if (provider === 'fireworks' && targetFireworksKey) {
+    if ((provider === 'fireworks' || imageModel === 'flux-1-schnell') && targetFireworksKey) {
+      effectiveProvider = 'fireworks';
+    } else if (targetFireworksKey) {
       effectiveProvider = 'fireworks';
     } else if (targetMetaKey) {
       effectiveProvider = 'meta-api';
-    } else if (targetFireworksKey) {
-      effectiveProvider = 'fireworks';
     } else {
       effectiveProvider = 'none';
     }
 
     if (effectiveProvider === 'none') {
       return NextResponse.json({
-        error: 'Meta Model API Key not detected. Please ensure META_MODEL_API_KEY is set in .env.local to generate official character concept art with Meta Muse Image 1.0.'
+        error: 'Image API key not detected. Please ensure FIREWORKS_API_KEY or META_MODEL_API_KEY is configured in .env.local to generate character concept art.'
       }, { status: 401 });
     }
 

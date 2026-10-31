@@ -5,14 +5,16 @@ import { CreatorProfile } from '@/types/comic';
 export async function GET() {
   const hasMetaKey = Boolean(process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY);
   const hasFireworksKey = Boolean(process.env.FIREWORKS_API_KEY);
+  const hasGroqKey = Boolean(process.env.GROQ_API_KEY);
   const isMongo = isMongoConfigured();
 
   return NextResponse.json({
     hasMetaKey,
     hasFireworksKey,
+    hasGroqKey,
     isMongo,
-    defaultProvider: hasMetaKey ? 'meta-api' : (hasFireworksKey ? 'fireworks' : 'meta-api'),
-    defaultImageModel: hasMetaKey ? 'muse-image-1.0' : (hasFireworksKey ? 'flux-1-schnell' : 'muse-image-1.0'),
+    defaultProvider: hasFireworksKey ? 'fireworks' : (hasMetaKey ? 'meta-api' : (hasGroqKey ? 'groq' : 'meta-api')),
+    defaultImageModel: 'flux-1-schnell',
   });
 }
 

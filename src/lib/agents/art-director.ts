@@ -119,7 +119,7 @@ export function formatFrameWithRagDialogue(
 
   const speechParts: string[] = [];
   if (panel.bubbles && panel.bubbles.length > 0) {
-    panel.bubbles.slice(0, 2).forEach((b) => {
+    panel.bubbles.forEach((b) => {
       const cleanText = b.text.replace(/["“”]/g, '').trim();
       if (cleanText) {
         if (b.type === 'thought') {

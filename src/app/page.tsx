@@ -241,18 +241,31 @@ export default function Home() {
         });
       }
 
-      // Check if server-side environment has official Meta keys configured
+      // Check if server-side environment has official Meta or Partner keys configured
       fetch('/api/auth')
         .then((r) => r.json())
         .then((status) => {
-          if (status.hasMetaKey) {
-            setApiConfig((prev) => ({
-              ...prev,
-              mode: 'meta',
-              provider: prev.provider === 'simulation' ? 'meta-api' : prev.provider,
-              modelName: prev.modelName || 'muse-spark-1.3',
-            }));
-          }
+          setApiConfig((prev) => {
+            if (prev.apiKey) return prev;
+            if (status.hasFireworksKey) {
+              return {
+                ...prev,
+                mode: 'meta',
+                provider: 'fireworks',
+                baseUrl: 'https://api.fireworks.ai/inference/v1',
+                modelName: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+              };
+            }
+            if (status.hasMetaKey) {
+              return {
+                ...prev,
+                mode: 'meta',
+                provider: prev.provider === 'simulation' ? 'meta-api' : prev.provider,
+                modelName: prev.modelName || 'muse-spark-1.3',
+              };
+            }
+            return prev;
+          });
         })
         .catch(() => {});
     } catch (e) {
@@ -572,9 +585,9 @@ export default function Home() {
       const dynamicPanelLayout = activeEpisode.panels?.length === 1 ? '1-panel' : activeEpisode.panels?.length === 2 ? '2-panel' : activeEpisode.panels?.length === 3 ? '3-panel' : '4-panel';
       const targetLayoutStyle = options?.layoutStyle || activeEpisode.layoutStyle || dynamicPanelLayout;
       const targetArtStyle = options?.artStyle || activeWorld.artStyle || 'webcomic';
-      const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel;
+      const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel || 'flux-1-schnell';
       
-      const effectiveProvider = options?.provider || apiConfig?.provider || 'meta-api';
+      const effectiveProvider = options?.provider || (targetImageModel === 'flux-1-schnell' ? 'fireworks' : apiConfig?.provider) || 'fireworks';
 
       const response = await fetch('/api/generate-image', {
         method: 'POST',

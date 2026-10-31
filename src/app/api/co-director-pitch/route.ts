@@ -59,7 +59,7 @@ export function generateHeuristicPitch(
   const mockQuestions: CoDirectorQuestion[] = [
     {
       id: 'q-dynamic',
-      question: `How does ${primaryLead} confront the central dilemma in "${cleanPremise.slice(0, 60)}"?`,
+      question: `How does ${primaryLead} confront the central dilemma in "${cleanPremise}"?`,
       options: [
         {
           label: 'Direct Assertive Action',
@@ -92,7 +92,7 @@ export function generateHeuristicPitch(
   ];
 
   return {
-    premiseSummary: `Spotlight episode centered on ${focused.join(', ')}: "${cleanPremise.slice(0, 80)}"`,
+    premiseSummary: `Spotlight episode centered on ${focused.join(', ')}: "${cleanPremise}"`,
     focusedCharacters: focused,
     excludedCharacters: excluded,
     detectedGuestCharacters: guestList,
@@ -201,6 +201,7 @@ Proposed Premise: "${cleanPremise}"`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
+        max_tokens: 8192,
         response_format: { type: 'json_object' }
       })
     });

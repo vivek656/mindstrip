@@ -79,8 +79,8 @@ const LAYOUT_FORMATS: { id: 'auto' | '1-panel' | '2-panel' | '3-panel' | '4-pane
 ];
 
 const MODEL_ENGINES = [
-  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image', badge: 'Official Meta AI' },
-  { id: 'flux-1-schnell', provider: 'fireworks', name: 'FLUX.1 Schnell', badge: 'Fireworks AI • ~$0.003' },
+  { id: 'flux-1-schnell', provider: 'fireworks', name: 'FLUX.1 Schnell', badge: 'Ultra Fast • ~$0.003' },
+  { id: 'muse-image-1.0', provider: 'meta-api', name: 'Meta Muse Image', badge: 'Official Meta AI • ~$0.015' },
 ];
 
 const PROMPT_TAGS = [
@@ -132,8 +132,8 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   );
   const resolveInitialEngine = () => {
     if (episode.imageModel) return episode.imageModel;
-    if (apiConfig?.provider === 'fireworks') return 'flux-1-schnell';
-    return 'muse-image-1.0';
+    if (world.imageModel) return world.imageModel;
+    return 'flux-1-schnell';
   };
   const [selectedEngine, setSelectedEngine] = useState<string>(resolveInitialEngine);
   const [selectedAspect, setSelectedAspect] = useState<string>(

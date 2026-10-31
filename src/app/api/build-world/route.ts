@@ -91,6 +91,7 @@ Return ONLY valid JSON matching this exact schema:
                 content: `Build an original comic universe from this prompt: "${cleanPrompt}". Suggested genre: "${genre || 'Any'}", style: "${artStyle || 'webcomic'}"`
               }
             ],
+            max_tokens: 8192,
             response_format: { type: 'json_object' }
           })
         });
@@ -108,6 +109,7 @@ Return ONLY valid JSON matching this exact schema:
               tagline: parsed.tagline || 'A new serialized universe',
               genre: parsed.genre || genre || 'Modern Graphic Novel',
               artStyle: parsed.artStyle || artStyle || 'webcomic',
+              imageModel: 'flux-1-schnell',
               lore: parsed.lore,
               environmentRules: parsed.environmentRules || [],
               characters: parsed.characters.map((c: Record<string, unknown>, i: number) => ({
@@ -136,13 +138,14 @@ Return ONLY valid JSON matching this exact schema:
     }
 
     // Heuristic Fallback World Generator
-    const cleanTitle = cleanPrompt.length > 30 ? cleanPrompt.slice(0, 27) + '...' : cleanPrompt;
+    const cleanTitle = cleanPrompt.length > 50 ? cleanPrompt.slice(0, 47) + '...' : cleanPrompt;
     const fallbackWorld = {
       id: `world-${Date.now()}`,
       title: `${cleanTitle}: Chronicles`,
       tagline: `Where extraordinary decisions collide with everyday reality`,
       genre: genre || 'Urban Sci-Fi & Adventure',
       artStyle: artStyle || 'webcomic',
+      imageModel: 'flux-1-schnell',
       lore: `In a world where everyday routines hide extraordinary secrets, unlikely allies unite to maintain balance against rising friction.`,
       environmentRules: [
         'Actions have compounding narrative consequences',

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       return promptSnippet.includes(cName);
     });
 
-    const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : (characters || []).slice(0, 2);
+    const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : (characters || []);
 
     // Intelligent AI Layout Decision: Prioritize AI Showrunner's decision or analyze narrative pacing
     let effectiveLayout: '1-panel' | '2-panel' | '3-panel' | '4-panel' = '4-panel';
@@ -106,7 +106,8 @@ export async function POST(req: NextRequest) {
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
 
-    const isFireworks = provider === 'fireworks' || imageModel === 'flux-1-schnell';
+    const effectiveImageModel = imageModel || (process.env.FIREWORKS_API_KEY ? 'flux-1-schnell' : 'muse-image-1.0');
+    const isFireworks = provider === 'fireworks' || effectiveImageModel === 'flux-1-schnell';
 
     if (isFireworks) {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
         targetApiKey = process.env.FIREWORKS_API_KEY;
       } else {
         return NextResponse.json(
-          { error: `Meta Model API Key not detected. Please configure META_MODEL_API_KEY in .env.local to generate official comic page artwork.` },
+          { error: `Image API key not detected. Please configure FIREWORKS_API_KEY or META_MODEL_API_KEY in .env.local to generate comic page artwork.` },
           { status: 401 }
         );
       }

@@ -99,66 +99,74 @@ export async function POST(req: NextRequest) {
     let generatedPageImage: string | undefined = undefined;
     let imageGenerationNotice = 'Artwork generation not requested';
 
-    if (targetApiKey) {
+    const effectiveImageModel = imageModel || (process.env.FIREWORKS_API_KEY ? 'flux-1-schnell' : 'muse-image-1.0');
+    const fireworksKey = (provider === 'fireworks' ? targetApiKey : '') || process.env.FIREWORKS_API_KEY || '';
+    const metaImgKey = (provider === 'meta-api' ? targetApiKey : '') || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
+    const isFireworksImage = effectiveImageModel === 'flux-1-schnell' || (provider === 'fireworks' && Boolean(fireworksKey));
+
+    if (isFireworksImage && fireworksKey) {
       try {
-        const cleanBase = targetBaseUrl.replace(/\/+$/, '');
         const pagePrompt = productionResult.artDirectorPrompt;
+        const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${fireworksKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prompt: pagePrompt,
+            aspect_ratio: comicStrip.layoutStyle === '1-panel' ? '16:9' : '3:4',
+            output_format: 'jpeg'
+          })
+        });
 
-        if (provider === 'meta-api' || (!provider && targetApiKey) || targetBaseUrl.includes('api.meta.ai')) {
-          const imgRes = await fetch(`${cleanBase}/images/generations`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${targetApiKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0',
-              prompt: pagePrompt,
-              n: 1,
-              size: '1024x1024'
-            })
-          });
-
-          if (imgRes.ok) {
-            const imgData = await imgRes.json();
-            const rawImg = imgData.data?.[0]?.b64_json || imgData.data?.[0]?.url;
-            if (rawImg) {
-              generatedPageImage = rawImg.startsWith('http') || rawImg.startsWith('data:')
-                ? rawImg
-                : `data:image/webp;base64,${rawImg}`;
-              imageGenerationNotice = `Meta Muse Image 1.0 (${comicStrip.layoutStyle})`;
-            }
-          } else {
-            const errTxt = await imgRes.text();
-            console.warn('Meta image generation non-200:', imgRes.status, errTxt);
-            imageGenerationNotice = `Meta Muse Image error (${imgRes.status})`;
+        if (imgRes.ok) {
+          const imgData = await imgRes.json();
+          const rawImg = imgData.data?.[0]?.url || imgData.image_url;
+          if (rawImg) {
+            generatedPageImage = rawImg;
+            imageGenerationNotice = `Fireworks FLUX.1 Schnell (${comicStrip.layoutStyle})`;
           }
-        } else if (provider === 'fireworks') {
-          const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${targetApiKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              prompt: pagePrompt,
-              aspect_ratio: comicStrip.layoutStyle === '1-panel' ? '16:9' : '3:4',
-              output_format: 'jpeg'
-            })
-          });
+        } else {
+          const errTxt = await imgRes.text();
+          console.warn('Fireworks image generation non-200:', imgRes.status, errTxt);
+          imageGenerationNotice = `Fireworks FLUX error (${imgRes.status})`;
+        }
+      } catch (imgErr) {
+        console.warn('Fireworks image generation error:', imgErr);
+        imageGenerationNotice = 'Fireworks image generation service offline';
+      }
+    } else if (metaImgKey) {
+      try {
+        const cleanBase = targetBaseUrl.includes('api.meta.ai') ? targetBaseUrl.replace(/\/+$/, '') : 'https://api.meta.ai/v1';
+        const pagePrompt = productionResult.artDirectorPrompt;
+        const imgRes = await fetch(`${cleanBase}/images/generations`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${metaImgKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'muse-image-1.0',
+            prompt: pagePrompt,
+            n: 1,
+            size: '1024x1024'
+          })
+        });
 
-          if (imgRes.ok) {
-            const imgData = await imgRes.json();
-            const rawImg = imgData.data?.[0]?.url || imgData.image_url;
-            if (rawImg) {
-              generatedPageImage = rawImg;
-              imageGenerationNotice = `Fireworks FLUX.1 (${comicStrip.layoutStyle})`;
-            }
-          } else {
-            const errTxt = await imgRes.text();
-            console.warn('Fireworks image generation non-200:', imgRes.status, errTxt);
-            imageGenerationNotice = `Fireworks FLUX error (${imgRes.status})`;
+        if (imgRes.ok) {
+          const imgData = await imgRes.json();
+          const rawImg = imgData.data?.[0]?.b64_json || imgData.data?.[0]?.url;
+          if (rawImg) {
+            generatedPageImage = rawImg.startsWith('http') || rawImg.startsWith('data:')
+              ? rawImg
+              : `data:image/webp;base64,${rawImg}`;
+            imageGenerationNotice = `Meta Muse Image 1.0 (${comicStrip.layoutStyle})`;
           }
+        } else {
+          const errTxt = await imgRes.text();
+          console.warn('Meta image generation non-200:', imgRes.status, errTxt);
+          imageGenerationNotice = `Meta Muse Image error (${imgRes.status})`;
         }
       } catch (imgErr) {
         console.warn('Image generation error:', imgErr);

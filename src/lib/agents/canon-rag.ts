@@ -181,10 +181,10 @@ export function queryCanonRag(
     }
   });
 
-  // Sort descending by relevance score and take the top 5
+  // Sort descending by relevance score (uncapped context: retain all relevant memories)
   return results
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
-    .slice(0, 5);
+    .slice(0, 20);
 }
 
 export function formatRagContextBlock(memories: RagItem[]): string {

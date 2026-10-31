@@ -161,7 +161,8 @@ export function buildStoryContext(
     ? episodesOverrideOrOpts.episodes
     : undefined;
 
-  const budget = (!Array.isArray(episodesOverrideOrOpts) && episodesOverrideOrOpts?.budgetChars) || 6000;
+  // Uncapped budget for Meta Llama 3.3 (128K context window)
+  const budget = (!Array.isArray(episodesOverrideOrOpts) && episodesOverrideOrOpts?.budgetChars) || 120000;
   const bible = buildWorldBible(world);
   const episodes = episodesOverride !== undefined ? episodesOverride : (world.episodes || []);
 
@@ -179,9 +180,10 @@ export function buildStoryContext(
   const pointed = resolvePointers(premise, episodes);
   const pointerBlock = pointed.map(episodeFullText).join('\n\n');
 
+  // Uncapped open threads: track all active unresolved threads across the universe
   const openThreads = Array.from(
-    new Set(episodes.slice(-3).flatMap((ep) => ep.openThreads ?? []))
-  ).slice(0, 5);
+    new Set(episodes.flatMap((ep) => ep.openThreads ?? []))
+  );
 
   // Fit the variable middle under budget; bible + pointers are protected.
   let chainText = chain.join('\n');

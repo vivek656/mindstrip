@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       ? existingCharacters
           .map((c: any) => {
             if (typeof c === 'string') return c;
-            return `• ${c.name} (${c.role}${c.gender ? `, ${c.gender}` : ''}): ${c.personality ? `Personality: ${c.personality}. ` : ''}${c.backstory ? `Backstory: ${c.backstory.slice(0, 100)}...` : ''}`;
+            return `• ${c.name} (${c.role}${c.gender ? `, ${c.gender}` : ''}): ${c.personality ? `Personality: ${c.personality}. ` : ''}${c.backstory ? `Backstory: ${c.backstory}` : ''}`;
           })
           .join('\n')
       : 'None yet';
@@ -138,6 +138,7 @@ Current draft notes:
               { role: 'user', content: userPrompt }
             ],
             temperature: 0.75,
+            max_tokens: 8192,
             response_format: { type: 'json_object' }
           })
         });
@@ -168,7 +169,7 @@ Current draft notes:
       appearance: character.appearance || `${charName} possesses warm, perceptive eyes, styled hair, and a grounded, confident posture suited for professional and personal environments.`,
       wardrobe: character.wardrobe || `Clean modern attire: tailored blazer, crisp shirt or blouse, dark trousers, and comfortable leather shoes.`,
       iconicItem: character.iconicItem || `A personalized everyday accessory and sleek notebook.`,
-      backstory: character.backstory || (userDirective ? `${charName}'s background in ${worldTitle}: ${userDirective.slice(0, 150)}` : `${charName} has built a solid standing in ${worldTitle} through strategic preparation, sharp wit, and genuine interpersonal loyalty.`),
+      backstory: character.backstory || (userDirective ? `${charName}'s background in ${worldTitle}: ${userDirective.trim()}` : `${charName} has built a solid standing in ${worldTitle} through strategic preparation, sharp wit, and genuine interpersonal loyalty.`),
       motivation: character.motivation || `To succeed on their own terms in ${worldTitle} while staying true to those they care about.`,
       flaws: character.flaws || `Struggles to ask for support during overwhelming crises, preferring to bear pressure quietly.`,
       secret: character.secret || `Keeps a personal contingency plan that few in their circle know about.`,
