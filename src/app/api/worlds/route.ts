@@ -16,7 +16,19 @@ export async function GET(req: NextRequest) {
     }
 
     const worldsCollection = db.collection<ComicWorld>('worlds');
-    const query = userId ? { userId } : {};
+    const rawHandle = req.nextUrl.searchParams.get('handle') || (userId?.startsWith('usr_') ? userId.replace('usr_', '') : undefined);
+    let query: Record<string, unknown> = {};
+    if (userId) {
+      const matchCriteria: Record<string, unknown>[] = [{ userId }];
+      if (rawHandle) {
+        matchCriteria.push(
+          { userId: `usr_${rawHandle}` },
+          { userHandle: rawHandle },
+          { 'creator.handle': rawHandle }
+        );
+      }
+      query = { $or: matchCriteria };
+    }
 
     const worlds = await worldsCollection
       .find(query)
@@ -48,8 +60,15 @@ export async function POST(req: NextRequest) {
 
     const worldsCollection = db.collection<ComicWorld>('worlds');
 
+    const userHandle = body.handle || (userId?.startsWith('usr_') ? userId.replace('usr_', '') : undefined);
+
     if (world && world.id) {
-      const worldToSave = { ...world, userId: world.userId || userId };
+      // Prioritize the authenticated userId so pre-login/guest creations are adopted by the creator
+      const worldToSave = {
+        ...world,
+        userId: userId || world.userId,
+        userHandle: userHandle || world.userHandle
+      };
       await worldsCollection.replaceOne({ id: world.id }, worldToSave, { upsert: true });
       return NextResponse.json({ connected: true, saved: true, id: world.id });
     }
@@ -57,7 +76,11 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(worlds)) {
       for (const w of worlds) {
         if (w.id) {
-          const worldToSave = { ...w, userId: w.userId || userId };
+          const worldToSave = {
+            ...w,
+            userId: userId || w.userId,
+            userHandle: userHandle || w.userHandle
+          };
           await worldsCollection.replaceOne({ id: w.id }, worldToSave, { upsert: true });
         }
       }

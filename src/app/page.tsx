@@ -93,17 +93,19 @@ export default function Home() {
   const syncWorldToDb = (world: ComicWorld, profileOverride?: CreatorProfile | null) => {
     const prof = profileOverride !== undefined ? profileOverride : creatorProfile;
     const userId = prof?.id;
-    const worldToSync = { ...world, userId: world.userId || userId };
+    const userHandle = prof?.handle;
+    const worldToSync = { ...world, userId: userId || world.userId, userHandle: userHandle || world.userHandle };
     fetch('/api/worlds', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ world: worldToSync, userId })
+      body: JSON.stringify({ world: worldToSync, userId, handle: userHandle })
     }).catch((e) => console.warn('Cloud DB sync notice:', e));
   };
 
   // Load and isolate worlds belonging to a specific creator profile
   const loadWorldsForProfile = useCallback(async (profile: CreatorProfile) => {
     const userId = profile.id;
+    const userHandle = profile.handle;
     try {
       // 1. Try user-scoped localStorage first
       const userKey = `mindstrip_worlds_${userId}`;
@@ -116,8 +118,8 @@ export default function Home() {
         }
       }
 
-      // 2. Fetch from MongoDB Atlas scoped by userId
-      const res = await fetch(`/api/worlds?userId=${encodeURIComponent(userId)}`);
+      // 2. Fetch from MongoDB Atlas scoped by userId & handle
+      const res = await fetch(`/api/worlds?userId=${encodeURIComponent(userId)}&handle=${encodeURIComponent(userHandle)}`);
       const data = await res.json();
       if (data.connected) {
         setIsDbConnected(true);
@@ -126,13 +128,13 @@ export default function Home() {
           setWorlds(upgraded);
           saveWorldsLocally(upgraded, profile);
         } else {
-          // If first time this user connects and no worlds in DB, seed with initial or local
+          // If first time this user connects and no worlds in DB, seed with current local
           const currentLocal = localData ? JSON.parse(localData) : INITIAL_WORLDS;
-          const seeded = currentLocal.map((w: ComicWorld) => ({ ...w, userId }));
+          const seeded = currentLocal.map((w: ComicWorld) => ({ ...w, userId, userHandle }));
           fetch('/api/worlds', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ worlds: seeded, userId })
+            body: JSON.stringify({ worlds: seeded, userId, handle: userHandle })
           }).catch(() => {});
         }
       } else {
@@ -151,6 +153,23 @@ export default function Home() {
     } catch {
       // ignore
     }
+
+    // Automatically adopt existing in-memory created worlds to this logged-in profile so they sync to cloud!
+    setWorlds((prevWorlds) => {
+      const adopted = prevWorlds.map((w) => ({
+        ...w,
+        userId: newProfile.id,
+        userHandle: newProfile.handle
+      }));
+      saveWorldsLocally(adopted, newProfile);
+      fetch('/api/worlds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ worlds: adopted, userId: newProfile.id, handle: newProfile.handle })
+      }).catch(() => {});
+      return adopted;
+    });
+
     loadWorldsForProfile(newProfile);
   };
 

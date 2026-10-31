@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
           }
 
           const profile: CreatorProfile = {
-            id: existing.id || `usr_${cleanHandle}`,
+            id: `usr_${cleanHandle}`,
             handle: existing.handle,
             displayName: existing.displayName || cleanDisplayName,
             avatarEmoji: existing.avatarEmoji || cleanEmoji,
@@ -74,10 +74,10 @@ export async function POST(req: NextRequest) {
           };
           return NextResponse.json({ success: true, profile, isNew: false });
         } else {
-          // Create new creator document
-          const newId = `usr_${cleanHandle}_${Date.now().toString(36)}`;
+          // Create new creator document with deterministic user ID across all devices
+          const deterministicId = `usr_${cleanHandle}`;
           const newDoc = {
-            id: newId,
+            id: deterministicId,
             handle: cleanHandle,
             displayName: cleanDisplayName,
             avatarEmoji: cleanEmoji,
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
           await creators.insertOne(newDoc);
 
           const profile: CreatorProfile = {
-            id: newId,
+            id: deterministicId,
             handle: cleanHandle,
             displayName: cleanDisplayName,
             avatarEmoji: cleanEmoji,

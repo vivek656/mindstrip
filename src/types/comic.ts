@@ -197,6 +197,7 @@ export interface CustomWorldAttribute {
 export interface ComicWorld {
   id: string;
   userId?: string; // Creator profile ID owning this universe
+  userHandle?: string; // Creator @handle owning this universe
   title: string;
   tagline: string;
   genre: string;
