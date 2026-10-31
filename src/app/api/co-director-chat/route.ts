@@ -253,7 +253,7 @@ Return ONLY a valid JSON object matching this schema:
         model: targetModel,
         messages: formattedMessages,
         temperature: 0.7,
-        max_tokens: 4096,
+        max_tokens: 8192,
         response_format: { type: 'json_object' },
       }),
     });
