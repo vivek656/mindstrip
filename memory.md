@@ -679,6 +679,24 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   5. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
+### Cross-Device Sync & Deterministic Multi-Device Auth (2026-10-31)
+- **User Issue Diagnosed**:
+  - The user logged in as `@vivek656` on Windows and Mobile, but comics created on one device were not visible on the other.
+- **Root Causes Diagnosed**:
+  1. *MongoDB Atlas Network Whitelist (TLS Alert 80)*: The MongoDB Atlas cluster was rejecting TLS handshakes with `SSL alert number 80: tlsv1 alert internal error`. This happens when client IPs (or Vercel lambda IPs) are not in Atlas Network Access. As a result, the app gracefully fell back to `localStorage` (Private Browser Storage), which is isolated to the specific browser on that device.
+  2. *Non-Deterministic User IDs*: `src/app/api/auth/route.ts` was generating `newId` with a random timestamp (`usr_${cleanHandle}_${Date.now()}`), causing different devices to have mismatched `userId`s.
+  3. *Guest Creation Orphanage*: If a comic was drafted before logging in, its `userId` was `guest_...` and was not automatically adopted by `@vivek656` upon login.
+- **Architectural Solution Implemented**:
+  1. **Deterministic User ID & Handle Scoping (`auth/route.ts` & `types/comic.ts`)**:
+     - Standardized `profile.id` to strictly `usr_${cleanHandle}` across all devices, offline and online.
+     - Added `userHandle?: string` to `ComicWorld`.
+  2. **Auto-Adoption of Local Creations (`page.tsx`)**:
+     - When logging into `@vivek656`, `handleLoginProfile` immediately reassigns any existing in-memory/guest worlds to `userId: 'usr_vivek656'` and `userHandle: 'vivek656'` and syncs them to `/api/worlds`.
+  3. **Multi-Field Cloud Querying (`worlds/route.ts`)**:
+     - Updated `GET /api/worlds` to query by `$or: [{ userId }, { userHandle }, { 'creator.handle': handle }]`.
+  4. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
+
 ### Graphic Novel Art Integrity & Integrated Dialogue Deck (2026-10-30)
 - **User Feedback Diagnosed**:
   - The user commented: *"looks really bad"* when crude canvas speech bubbles were stamped across the comic page artwork.
@@ -724,5 +742,23 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Upgraded `directVisualArtwork` in `art-director.ts`, `/api/generate-image/route.ts`, and `ComicPageSpread.tsx` to automatically condition every sequential frame with its RAG dialogue.
      - Zero overlays or canvas stickers defacing the artwork.
   5. **Verification**:
+     - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
+
+### Cross-Device Sync & Deterministic Multi-Device Auth (2026-10-31)
+- **User Issue Diagnosed**:
+  - The user logged in as `@vivek656` on Windows and Mobile, but comics created on one device were not visible on the other.
+- **Root Causes Diagnosed**:
+  1. *MongoDB Atlas Network Whitelist (TLS Alert 80)*: The MongoDB Atlas cluster was rejecting TLS handshakes with `SSL alert number 80: tlsv1 alert internal error`. This happens when client IPs (or Vercel lambda IPs) are not in Atlas Network Access. As a result, the app gracefully fell back to `localStorage` (Private Browser Storage), which is isolated to the specific browser on that device.
+  2. *Non-Deterministic User IDs*: `src/app/api/auth/route.ts` was generating `newId` with a random timestamp (`usr_${cleanHandle}_${Date.now()}`), causing different devices to have mismatched `userId`s.
+  3. *Guest Creation Orphanage*: If a comic was drafted before logging in, its `userId` was `guest_...` and was not automatically adopted by `@vivek656` upon login.
+- **Architectural Solution Implemented**:
+  1. **Deterministic User ID & Handle Scoping (`auth/route.ts` & `types/comic.ts`)**:
+     - Standardized `profile.id` to strictly `usr_${cleanHandle}` across all devices, offline and online.
+     - Added `userHandle?: string` to `ComicWorld`.
+  2. **Auto-Adoption of Local Creations (`page.tsx`)**:
+     - When logging into `@vivek656`, `handleLoginProfile` immediately reassigns any existing in-memory/guest worlds to `userId: 'usr_vivek656'` and `userHandle: 'vivek656'` and syncs them to `/api/worlds`.
+  3. **Multi-Field Cloud Querying (`worlds/route.ts`)**:
+     - Updated `GET /api/worlds` to query by `$or: [{ userId }, { userHandle }, { 'creator.handle': handle }]`.
+  4. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 0 errors across all 12 routes).
 
