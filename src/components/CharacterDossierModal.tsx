@@ -412,7 +412,7 @@ What would you like to discuss or refine first?`,
               `What hidden emotional truth or ambition drives her in this story?`
             ],
             quickOptions: [
-              `👠 Luxury power attire with Louboutin stilettos`,
+              `👔 Tailored executive suit & polished footwear`,
               `💼 Modern western executive blazer & trousers`,
               `📖 Explore her origin backstory & motivation`,
               `💬 Dial in her speech cadence & catchphrase`
@@ -2841,7 +2841,7 @@ What would you like to discuss or refine first?`,
                     </button>
                   </form>
                   <p className="text-[10px] text-zinc-400 mt-1 pl-1">
-                    💡 Ask questions or tell what you want (e.g. &ldquo;She wears red Louboutin stilettos and silk blazers&rdquo;)
+                    💡 Ask questions or tell what you want (e.g. &ldquo;She wears a tailored navy blazer and pointed heels&rdquo;)
                   </p>
                 </div>
               </div>

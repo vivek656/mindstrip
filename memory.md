@@ -989,3 +989,33 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Updated `/api/character-chat/route.ts` and `CharacterDossierModal.tsx` to detect western/formal attire and default to modern western blazers, trousers, and skirts rather than hardcoded sarees.
   5. **Verification**:
      - Verified with `npm run build` (Next.js 16.4.3 Turbopack, 15 routes compiled cleanly with 0 TypeScript errors).
+
+### Complete Codebase Audit & Purge of Hardcoded Brands, Archetypes & Tropes (2026-10-31)
+- **User Feedback**:
+  *"and designer sarees in champagne gold and deep wine" whon added that and do we have more like these ???*
+- **Origin Traced**:
+  - Introduced in commit `578a732` ("feat: add conversational AI Character Co-Director chat interview and in-field Chat with AI triggers in Character Dossier") by an assistant attempting to create a rich heuristic fallback for corporate characters inspired by an Indian businesswoman / Namita Thapar archetype.
+- **Audit Findings**:
+  - Full codebase audit across `src/` revealed several lingering hardcoded stereotypes and real-world brand names:
+    - `src/app/api/character-chat/route.ts`:
+      - `rawInput.includes('namita')` in `isCorporateOrCeo` keyword check.
+      - `rawInput.includes('louboutin')` in footwear check.
+      - `Glossy black Christian Louboutin So Kate stilettos with blood-red soles...` in fallback item descriptions.
+      - `Designer silk sarees in champagne gold and deep wine...` in conditional fallback.
+      - `Resembles a commanding Indian businesswoman with radiant olive complexion...` in corporate appearance fallback.
+      - System prompt example referencing `"Namita Thapar, 45 yo hot mommy CEO, stilettos, high stakes"`.
+    - `src/components/CharacterDossierModal.tsx`:
+      - Quick options: `👠 Luxury power attire with Louboutin stilettos`.
+      - Input placeholder: `e.g. “She wears red Louboutin stilettos and silk blazers”`.
+    - `src/lib/agents/showrunner.ts`:
+      - Hardcoded name example in guest characters prompt: `speaker: "New Client (Mr. Sterling)"`.
+      - Hardcoded character name in spotlight rule: `(e.g., "@Meera" in an office setting)`.
+- **Changes Applied**:
+  - Purged all real-world brand names (`Christian Louboutin`, `So Kate`) and replaced with neutral, high-quality descriptive terms (`polished pointed-toe dress shoes or heels`).
+  - Purged all hardcoded demographic/ethnicity assumptions (`Indian businesswoman with radiant olive complexion`) and replaced with universal, role-focused aesthetics (`polished executive presence with composed posture and sharp, tailored styling`).
+  - Purged all hardcoded pop-culture persona references (`Namita Thapar`, `mommy CEO`, `Mr. Sterling`, `@Meera`) from system prompts, rule definitions, and UI placeholder texts.
+  - Neutralized all heuristic wardrobe drafts to be generic, professional, and directly responsive to creator input.
+- **Verification**:
+  - `git grep -inE "louboutin|namita|thapar|dominatrix|sterling|champagne|deep wine|so kate"`: 0 matches found in `src/`.
+  - `git grep -inE "Indian|olive complexion"`: 0 matches found in `src/`.
+  - `npm run build`: verified clean compilation with zero TypeScript errors.

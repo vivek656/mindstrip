@@ -34,9 +34,9 @@ function generateHeuristicCharacterChat(
   const rawInput = (userMessage || character?.appearance || character?.backstory || '').toLowerCase();
 
   // Detect specific themes
-  const isCorporateOrCeo = rawInput.includes('ceo') || rawInput.includes('office') || rawInput.includes('namita') || rawInput.includes('corporate') || rawInput.includes('contract') || rawInput.includes('client');
+  const isCorporateOrCeo = rawInput.includes('ceo') || rawInput.includes('office') || rawInput.includes('corporate') || rawInput.includes('contract') || rawInput.includes('client');
   const isRomanceOrCrush = rawInput.includes('crush') || rawInput.includes('romance') || rawInput.includes('love') || rawInput.includes('seduce') || rawInput.includes('flirt');
-  const isStilettoOrHeels = rawInput.includes('stiletto') || rawInput.includes('heel') || rawInput.includes('louboutin') || rawInput.includes('shoe');
+  const isStilettoOrHeels = rawInput.includes('stiletto') || rawInput.includes('heel') || rawInput.includes('shoe');
   const isActionOrHero = rawInput.includes('hero') || rawInput.includes('action') || rawInput.includes('fight') || rawInput.includes('tactical');
 
   if (focusSection === 'visuals') {
@@ -47,20 +47,20 @@ function generateHeuristicCharacterChat(
 
       let wardrobeDraft = '';
       if (mentionsSaree) {
-        wardrobeDraft = `Designer silk sarees in champagne gold and deep wine with structured cape blazers.`;
+        wardrobeDraft = `Traditional attire with refined textural detailing, structured draping, and elegant tonal accents.`;
       } else if (mentionsWestern || isCorporateOrCeo) {
-        wardrobeDraft = `High-end modern executive western attire: tailored structured cape blazer in deep black and navy over an ivory silk blouse, high-waist tailored trousers or pencil skirt, and pointed-toe heels.`;
+        wardrobeDraft = `High-end modern executive western attire: tailored structured blazer, crisp button-down shirt or blouse, high-waist tailored trousers or pencil skirt, and polished footwear.`;
       } else {
         wardrobeDraft = `Signature styling based on creator vision: ${userMessage.slice(0, 120)}. Authentic textural details and crisp color contrast.`;
       }
 
       // User responded with visual guidance
       const appearanceDraft = isCorporateOrCeo
-        ? `Resembles a commanding Indian businesswoman with radiant olive complexion, poised posture, shoulder-length glossy blow-dried dark hair, sharp expressive dark eyes, and a confident, magnetic executive presence.`
+        ? `Polished executive presence with composed posture, observant eyes, and sharp, tailored styling suited for high-stakes corporate environments.`
         : `Distinctive facial structure with observant eyes, tailored styling, and an immediately recognizable silhouette suited for ${genre}: ${userMessage.slice(0, 100)}.`;
 
       const iconicItemDraft = isStilettoOrHeels || isCorporateOrCeo
-        ? `Glossy black Christian Louboutin So Kate stilettos with blood-red soles — the sharp, rhythmic click on marble that commands instant silence and deference across the corporate floor.`
+        ? `Polished pointed-toe dress shoes or heels that project authority and poise across any executive floor.`
         : `Signature accessory reflecting their personality: ${userMessage.slice(0, 80)}.`;
 
       return {
@@ -71,10 +71,10 @@ Here is her updated visual continuity package:`,
           `Would you like to refine her color accents or keep her signature styling as is?`
         ],
         quickOptions: [
-          `👠 Modern tailored blazer, ivory silk blouse & fitted trousers`,
+          `👠 Modern tailored blazer, crisp blouse & fitted trousers`,
           `💼 Sharp double-breasted charcoal power suit & pointed heels`,
-          `💎 Diamond solitaire studs & gold executive fountain pen`,
-          `💄 Bold matte crimson lip & tailored midnight-black suit`
+          `💎 Minimalist luxury watch & executive fountain pen`,
+          `👔 Sleek monochromatic tailoring with clean architectural lines`
         ],
         suggestedUpdates: {
           appearance: character?.appearance || appearanceDraft,
@@ -90,21 +90,21 @@ Here is her updated visual continuity package:`,
 
 To get her look exactly right, tell me:
 1. What power silhouette or signature outfit immediately defines her?
-2. Does she have a trademark accessory or prop (like high-end stilettos, a statement blazer, or luxury jewelry)?
+2. Does she have a trademark accessory or prop (like high-end footwear, a statement jacket, or signature jewelry)?
 3. What hair, complexion, or facial feature gives her that unforgettable gaze?`,
       questions: [
         `What is her go-to daily outfit and color palette?`,
         `What signature item or footwear anchors her silhouette in wide shots?`
       ],
       quickOptions: [
-        `👠 Luxury modern western power suit with designer stilettos`,
-        `💼 Tailored cape blazer, ivory silk blouse & pencil skirt`,
-        `☕ Smart casual tailored trousers with silk blouse`,
-        `✨ Custom designer attire based on scene`
+        `💼 High-end tailored power suit with sharp clean lines`,
+        `🧥 Minimalist structured blazer & tailored trousers`,
+        `☕ Smart casual tailored trousers with clean shirt`,
+        `✨ Custom designer attire based on creator vision`
       ],
       suggestedUpdates: isCorporateOrCeo ? {
-        wardrobe: `High-end modern executive western attire: tailored structured cape blazer in deep black and navy over an ivory silk blouse, high-waist tailored trousers, and pointed-toe heels.`,
-        iconicItem: `Her glossy black Louboutin So Kate stilettos with blood-red soles — the sharp click on marble that silences the entire executive floor.`
+        wardrobe: `High-end modern executive western attire: tailored structured blazer over a crisp shirt or blouse, high-waist tailored trousers, and polished footwear.`,
+        iconicItem: `Polished pointed-toe heels or leather dress shoes with an authoritative, poised presence.`
       } : undefined
     };
   }
@@ -250,7 +250,7 @@ FOCUS SECTION: "${focusSection.toUpperCase()}" (e.g. VISUALS = face, hair, cloth
 
 ROLE INSTRUCTIONS:
 1. Act as a collaborative, highly perceptive comic co-director and creative partner (like ChatGPT).
-2. If the user tells you what they want (e.g. "She is based on Namita Thapar, 45 yo hot mommy CEO, stilettos, high stakes"), enthusiastically incorporate their exact vision into concrete character continuity anchors!
+2. If the user tells you what they want (e.g. "A sharp corporate executive in tailored suits with high-stakes ambitions"), enthusiastically incorporate their exact vision into concrete character continuity anchors!
 3. Answer their questions directly, offer visual or narrative suggestions, and build context across turns.
 4. DO NOT grill or interrogate the creator with endless questions. You may include 0 to 1 optional, thoughtful follow-up question ONLY IF it genuinely helps advance the character's development.
 5. Provide 2-4 punchy, clickable quick-choice options that the creator can tap as shortcuts.
