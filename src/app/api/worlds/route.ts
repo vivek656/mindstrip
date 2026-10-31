@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, isMongoConfigured } from '@/lib/mongodb';
+import { getDb, isMongoConfigured, getLastMongoError } from '@/lib/mongodb';
 import { ComicWorld } from '@/types/comic';
 
 export async function GET(req: NextRequest) {
@@ -7,12 +7,12 @@ export async function GET(req: NextRequest) {
     const userId = req.nextUrl.searchParams.get('userId') || req.headers.get('x-user-id');
 
     if (!isMongoConfigured()) {
-      return NextResponse.json({ connected: false, worlds: [] });
+      return NextResponse.json({ connected: false, worlds: [], error: 'MONGODB_URI not configured' });
     }
 
     const db = await getDb();
     if (!db) {
-      return NextResponse.json({ connected: false, worlds: [] });
+      return NextResponse.json({ connected: false, worlds: [], error: getLastMongoError() || 'Could not connect to MongoDB' });
     }
 
     const worldsCollection = db.collection<ComicWorld>('worlds');
