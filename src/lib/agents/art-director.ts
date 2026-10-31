@@ -99,15 +99,40 @@ export function directVisualArtwork(
   const artStyle: ArtStyle = context.artStyle || context.world?.artStyle || 'webcomic';
   const layout = draft.layoutStyle || '4-panel';
 
-  // 1. Compile Character Visual Anchors (with Character Visual RAG)
+  // 1. Determine which characters are ACTUALLY featured in this episode's script or premise
+  const featuredNames = new Set<string>();
+  draft.panels.forEach((p) => {
+    (p.characters || []).forEach((n) => featuredNames.add(n.toLowerCase().trim()));
+    (p.bubbles || []).forEach((b) => {
+      if (b.speaker.toLowerCase() !== 'narrator' && b.speaker.toLowerCase() !== 'caption') {
+        featuredNames.add(b.speaker.toLowerCase().trim());
+      }
+    });
+  });
+
+  const promptLower = (context.rawDump || '').toLowerCase();
+
+  // Filter World Bible characters: only include if present in panels or mentioned in prompt
+  const activeEpisodeCharacters = characters.filter((c) => {
+    const cName = c.name.toLowerCase();
+    if (featuredNames.size > 0) {
+      return Array.from(featuredNames).some((fn) => fn.includes(cName) || cName.includes(fn));
+    }
+    return promptLower.includes(cName);
+  });
+
+  // Fallback: If no character matched, take only the single primary character
+  const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : [characters[0]].filter(Boolean);
+
+  // Compile Character Visual Anchors (with Character Visual RAG) strictly for featured characters
   const visualAnchors: string[] = [];
-  const charDescriptions = characters.map((c) => {
+  const charDescriptions = targetCharacters.map((c) => {
     const role = (c.role || '').toLowerCase();
     const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
     const anchors: string[] = [];
     if (c.appearance) anchors.push(c.appearance);
     if (c.wardrobe) anchors.push(`wearing ${c.wardrobe}`);
-    if (isCivilian) anchors.push('civilian everyday citizen, regular clothing, non-combatant, NOT wearing tactical combat gear, NOT fighting');
+    if (isCivilian) anchors.push('civilian everyday citizen, regular modern office/casual clothing, non-combatant, NOT wearing tactical combat gear, NOT performing martial arts');
     if (c.iconicItem) anchors.push(`signature ${c.iconicItem}`);
     if (c.imageUrl) anchors.push(`canonical model sheet match: ${c.imageUrl}`);
     if (c.portraitRefUrl) anchors.push(`face & eyes anchor: ${c.portraitRefUrl}`);
@@ -117,6 +142,20 @@ export function directVisualArtwork(
     const anchorStr = anchors.length > 0 ? anchors.join(', ') : 'distinct expressive comic design';
     visualAnchors.push(`${c.name}${c.imageUrl ? ' (Model Sheet Locked)' : ''}: ${anchorStr}`);
     return `${c.name} (${anchorStr})`;
+  });
+
+  // Also include episodic guest scene partners from featuredNames (e.g. client, boss)
+  const guestNames = Array.from(featuredNames).filter(
+    (fn) => !characters.some((c) => c.name.toLowerCase().includes(fn) || fn.includes(c.name.toLowerCase()))
+  );
+  guestNames.forEach((g) => {
+    if (/client/.test(g)) {
+      charDescriptions.push(`${g} (wealthy high-profile corporate client in a sharp tailored business suit)`);
+    } else if (/boss|ceo|manager/.test(g)) {
+      charDescriptions.push(`${g} (demanding corporate executive in formal business attire)`);
+    } else {
+      charDescriptions.push(`${g} (scene partner in appropriate civilian attire)`);
+    }
   });
 
   // 2. Resolve Layout Composition Descriptor

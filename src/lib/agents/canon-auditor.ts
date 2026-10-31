@@ -97,23 +97,35 @@ export function auditEpisodeDraft(
     });
   });
 
-  // 2. Audit Cast Integrity: All speaking and active characters MUST exist in the active World Bible cast
+  // 2. Audit Cast Integrity: All speaking and active characters MUST exist in the active World Bible cast OR be episodic guest characters
   const validCastNames = characters.map((c) => c.name.toLowerCase().trim());
   const activeCastDisplay = characters.map((c) => c.name).join(', ') || 'Protagonist';
+  const promptText = (context.rawDump || '').toLowerCase();
+
+  const isGuestOrPromptCharacter = (name: string) => {
+    const n = name.toLowerCase().trim();
+    return (
+      n === 'narrator' ||
+      n === 'caption' ||
+      promptText.includes(n) ||
+      /client|guest|boss|ceo|coworker|colleague|customer|waiter|stranger|guard|officer|doctor|interviewer|date|crush|bidder|investor|partner/.test(n)
+    );
+  };
 
   draft.panels.forEach((panel) => {
     // Check speech bubble speakers
     panel.bubbles.forEach((b) => {
       const speaker = b.speaker.trim();
       const speakerLower = speaker.toLowerCase();
-      if (speakerLower !== 'narrator' && speakerLower !== 'caption' && !validCastNames.some((name) => speakerLower.includes(name) || name.includes(speakerLower))) {
+      const isKnown = validCastNames.some((name) => speakerLower.includes(name) || name.includes(speakerLower));
+      if (!isKnown && !isGuestOrPromptCharacter(speakerLower)) {
         violations.push({
           code: 'DELETED_OR_UNKNOWN_CHARACTER',
           severity: 'critical',
           panelNumber: panel.panelNumber,
           characterName: speaker,
           description: `Panel ${panel.panelNumber} features speaker "${speaker}" who is not in the active World Bible cast.`,
-          critique: `The character "${speaker}" was removed or does not exist in the World Bible. Only current active cast members [${activeCastDisplay}] may appear or speak.`,
+          critique: `The character "${speaker}" was removed or does not exist in the World Bible. Only current active cast members [${activeCastDisplay}] or prompt-introduced guest scene partners may appear or speak.`,
           suggestedFix: `Replace "${speaker}" with an active character (${activeCastDisplay}) or Narrator.`
         });
       }
@@ -122,7 +134,8 @@ export function auditEpisodeDraft(
     // Check panel.characters array
     (panel.characters || []).forEach((charName) => {
       const charLower = charName.toLowerCase().trim();
-      if (charLower !== 'narrator' && !validCastNames.some((name) => charLower.includes(name) || name.includes(charLower))) {
+      const isKnown = validCastNames.some((name) => charLower.includes(name) || name.includes(charLower));
+      if (!isKnown && !isGuestOrPromptCharacter(charLower)) {
         violations.push({
           code: 'DELETED_OR_UNKNOWN_CHARACTER',
           severity: 'critical',
@@ -130,7 +143,7 @@ export function auditEpisodeDraft(
           characterName: charName,
           description: `Panel ${panel.panelNumber} scripts character "${charName}" who was removed from the World Bible.`,
           critique: `"${charName}" is not an active character in this universe. Clean all references to deleted characters.`,
-          suggestedFix: `Purge "${charName}" from Panel ${panel.panelNumber} and replace with an active cast member.`
+          suggestedFix: `Purge "${charName}" from Panel ${panel.panelNumber} and replace with an active cast member or episodic guest.`
         });
       }
     });

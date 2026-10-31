@@ -103,18 +103,57 @@ export async function POST(req: NextRequest) {
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
     const validNames = (characters || []).map((c: { name: string }) => c.name.toLowerCase().trim());
 
-    // Enrich character descriptions so diffusion models accurately reflect character roles & clothing:
-    const charsList = (characters || []).map((c: { name: string; appearance?: string; role?: string; wardrobe?: string }) => {
+    // Extract characters ACTUALLY featured in this episode's panels or prompt
+    const featuredNames = new Set<string>();
+    if (Array.isArray(panels)) {
+      panels.forEach((p: { characters?: string[]; bubbles?: { speaker?: string }[] }) => {
+        (p.characters || []).forEach((n: string) => featuredNames.add(n.toLowerCase().trim()));
+        (p.bubbles || []).forEach((b: { speaker?: string }) => {
+          if (b.speaker && b.speaker.toLowerCase() !== 'narrator' && b.speaker.toLowerCase() !== 'caption') {
+            featuredNames.add(b.speaker.toLowerCase().trim());
+          }
+        });
+      });
+    }
+
+    const promptSnippet = (customPrompt || prompt || episodeTitle || '').toLowerCase();
+
+    // Filter characters to only those who actually appear in this episode!
+    const activeEpisodeCharacters = (characters || []).filter((c: { name: string }) => {
+      const cName = c.name.toLowerCase();
+      if (featuredNames.size > 0) {
+        return Array.from(featuredNames).some((fn) => fn.includes(cName) || cName.includes(fn));
+      }
+      return promptSnippet.includes(cName);
+    });
+
+    const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : (characters || []).slice(0, 2);
+
+    const charsListArray = targetCharacters.map((c: { name: string; appearance?: string; role?: string; wardrobe?: string }) => {
       const role = (c.role || '').toLowerCase();
       const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
       let desc = `${c.name} (${c.appearance || c.role || 'character'}`;
       if (c.wardrobe) desc += `, wearing ${c.wardrobe}`;
       if (isCivilian) {
-        desc += `, civilian everyday citizen, dressed in normal casual/work clothing, NOT a superhero, NOT wearing tactical battle armor, NOT performing martial arts`;
+        desc += `, civilian everyday citizen, dressed in normal modern office/casual clothing, NOT a superhero, NOT wearing tactical battle armor, NOT performing martial arts`;
       }
       desc += `)`;
       return desc;
-    }).join(' and ');
+    });
+
+    // Check if there are episodic guest characters (e.g. client, boss)
+    const guestNames = Array.from(featuredNames).filter(
+      (fn) => !(characters || []).some((c: { name: string }) => c.name.toLowerCase().includes(fn) || fn.includes(c.name.toLowerCase()))
+    );
+    guestNames.forEach((g) => {
+      if (/client/.test(g)) {
+        charsListArray.push(`${g} (wealthy corporate client in a sharp tailored business suit)`);
+      } else if (/boss|ceo|manager/.test(g)) {
+        charsListArray.push(`${g} (demanding corporate executive in formal business attire)`);
+      }
+    });
+
+    const charsList = charsListArray.join(' and ');
 
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
     let layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
