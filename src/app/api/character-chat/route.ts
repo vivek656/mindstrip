@@ -111,25 +111,28 @@ To get her look exactly right, tell me:
 
   if (focusSection === 'lore') {
     if (userMessage && userMessage.trim()) {
-      return {
-        reply: `This direction gives @${name} great dramatic depth for "${worldTitle}". Balancing their core conviction with personal vulnerability makes for a compelling comic lead!
+      const isOriginCorrection = /origin|born|wrong|childhood|father|mother|family|billionaire|daughter|son|rich|poor|started|founded|created/.test(userMessage.toLowerCase());
+      const updatedBackstory = isOriginCorrection
+        ? `${name}'s revised origin: ${userMessage.trim()}`
+        : (character?.backstory ? `${character.backstory}\n\nKey development: ${userMessage.trim()}` : `${name}'s journey in ${worldTitle}: ${userMessage.trim()}`);
 
-Here is how we can anchor their psychological profile:`,
-        questions: [
-          `What line would @${name} never cross, even to achieve their goal?`,
-          `Who or what represents their greatest vulnerability in this story?`
+      return {
+        reply: `Got it! Updating @${name}'s lore and formative history based on what you just shared: "${userMessage.trim().slice(0, 80)}".
+
+I have updated the drafted dossier fields below to incorporate your direction:`,
+        questions: chatHistoryLength > 1 ? [] : [
+          `What defining principle or ambition drives @${name} forward in "${worldTitle}"?`
         ],
         quickOptions: [
-          `🎯 Relentless determination to prove themselves on their own terms`,
-          `🔒 Guards a classified secret or personal artifact closely`,
-          `⚠️ Blindspot: Excessive self-reliance and reluctance to ask for help`,
-          `📖 Deeply loyal to their convictions, regardless of external pressure`
+          `🎯 Independent ambition: built her own empire from scratch`,
+          `👑 High-stakes legacy: proving she is more than family inheritance`,
+          `⚡ Ruthless perfectionism: never allowing anyone to dismiss her again`
         ],
         suggestedUpdates: {
-          backstory: character?.backstory || `${name} has navigated demanding trials to establish their position in ${worldTitle}. Their journey has forged an unwavering resolve: ${userMessage.trim().slice(0, 140)}.`,
-          motivation: `To achieve their defining purpose in ${worldTitle} and protect what they have built.`,
-          flaws: `A fierce independence that makes delegating trust difficult during crises.`,
-          secret: `Guards an unrevealed truth from their past that could shift the stakes if discovered.`
+          backstory: updatedBackstory,
+          motivation: `To prove their authority and build an unassailable position in ${worldTitle}.`,
+          flaws: `A fierce determination that makes it difficult to show vulnerability or accept compromises.`,
+          secret: `Guards an undisclosed personal strategy to protect what they have built.`
         }
       };
     }
@@ -281,17 +284,17 @@ Respond ONLY with a valid JSON object matching this exact schema:
   }
 }`;
 
-        // Format conversational messages
+        // Format conversational messages cleanly without duplicate user turns
+        const sanitizedHistory = (chatHistory || []).slice(-8).map((m: any) => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: String(m.content || '')
+        }));
+        const lastInHistory = sanitizedHistory[sanitizedHistory.length - 1];
+        const isDuplicateLast = lastInHistory && lastInHistory.role === 'user' && lastInHistory.content.trim() === userMessage?.trim();
+
         const formattedMessages = [
           { role: 'system', content: systemPrompt },
-          ...chatHistory.slice(-6).map((m: any) => ({
-            role: m.role,
-            content: m.content
-          })),
-          {
-            role: 'user',
-            content: userMessage || `Hello! Let's interview me about @${charName}'s ${focusSection}. Ask me the most critical questions to define her.`
-          }
+          ...(isDuplicateLast ? sanitizedHistory : [...sanitizedHistory, { role: 'user', content: userMessage || `Hello! Let's interview me about @${charName}'s ${focusSection}. Ask me the most critical questions to define her.` }])
         ];
 
         const aiRes = await fetch(`${cleanBase}/chat/completions`, {
@@ -304,23 +307,26 @@ Respond ONLY with a valid JSON object matching this exact schema:
             model,
             messages: formattedMessages,
             temperature: 0.7,
-            max_tokens: 1200,
+            max_tokens: 4096,
             response_format: { type: 'json_object' },
           }),
         });
 
         if (aiRes.ok) {
           const aiJson = await aiRes.json();
-          const rawContent = aiJson.choices?.[0]?.message?.content?.trim() || '';
-          const cleaned = rawContent.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
-          const parsed = JSON.parse(cleaned);
+          const choice = aiJson.choices?.[0];
+          const rawContent = choice?.message?.content?.trim() || '';
+          if (rawContent) {
+            const cleaned = rawContent.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
+            const parsed = JSON.parse(cleaned);
 
-          return NextResponse.json({
-            reply: parsed.reply || `Understood! Let's refine @${charName}'s profile.`,
-            questions: Array.isArray(parsed.questions) ? parsed.questions : [],
-            quickOptions: Array.isArray(parsed.quickOptions) ? parsed.quickOptions : [],
-            suggestedUpdates: parsed.suggestedUpdates || {},
-          });
+            return NextResponse.json({
+              reply: parsed.reply || `Understood! Let's refine @${charName}'s profile.`,
+              questions: Array.isArray(parsed.questions) ? parsed.questions : [],
+              quickOptions: Array.isArray(parsed.quickOptions) ? parsed.quickOptions : [],
+              suggestedUpdates: parsed.suggestedUpdates || {},
+            });
+          }
         }
       } catch (err) {
         console.warn('API call encountered error, falling back to heuristic engine:', err);

@@ -253,7 +253,7 @@ Return ONLY a valid JSON object matching this schema:
         model: targetModel,
         messages: formattedMessages,
         temperature: 0.7,
-        max_tokens: 1400,
+        max_tokens: 4096,
         response_format: { type: 'json_object' },
       }),
     });
@@ -267,7 +267,12 @@ Return ONLY a valid JSON object matching this schema:
     }
 
     const data = await res.json();
-    const rawContent = data.choices?.[0]?.message?.content || '{}';
+    const rawContent = data.choices?.[0]?.message?.content?.trim() || '';
+    if (!rawContent) {
+      return NextResponse.json(
+        generateDynamicCoDirectorResponse(messages, world, currentEpisode)
+      );
+    }
     const cleaned = rawContent.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
     const parsed: CoDirectorChatResponsePayload = JSON.parse(cleaned);
 

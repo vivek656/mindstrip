@@ -1043,3 +1043,26 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: verified clean compilation in ~1.2s across all 13 routes.
   - Commits verified and pushed to `main`.
+
+### Meta Muse Spark 1.3 Reasoning Token Budget Bug & Duplicate Chat Fix (2026-10-31)
+- **User Feedback**:
+  *User showed Character Dossier chat repeating the exact same response and re-returning the old backstory after typing: "first here origin is wring she is a duaghter of a rich billionare and create logan pharna erslef"*
+- **Root Cause Identified**:
+  - Meta's official model `muse-spark-1.3` is an **advanced chain-of-thought reasoning model** (similar to OpenAI o1/o3 or DeepSeek R1).
+  - Its `completion_tokens` count includes `reasoning_tokens` (internal chain of thought before emitting final content).
+  - In `/api/character-chat` and `/api/co-director-chat`, `max_tokens` was capped at `1200` and `1400`.
+  - When responding to complex system prompts and character profiles, `muse-spark-1.3` expended **1198 reasoning tokens**, immediately hitting the `max_tokens: 1200` ceiling!
+  - As a result, the API returned HTTP 200 with `"finish_reason": "length"` and `"content": null`!
+  - `JSON.parse` threw an error on empty/null content, silently dropping the call into the heuristic fallback engine.
+  - In `generateHeuristicCharacterChat`, `backstory` had `character?.backstory || ...`, which blindly re-returned the existing stale backstory note and output a static acknowledgement sentence, creating the illusion that the AI was copy-pasting its previous response!
+- **Fixes Applied**:
+  1. **Reasoning Token Ceiling Expansion**:
+     - Increased `max_tokens` from `1200` to `4096` in both `/api/character-chat` and `/api/co-director-chat`.
+     - Verified with live API call: with 4096 tokens, `muse-spark-1.3` produces a phenomenal, deeply perceptive response in ~6.5s (834 reasoning tokens + 383 content tokens), generating rich, dynamic backstory updates.
+  2. **Conversation History Deduplication**:
+     - Sanitized `formattedMessages` in `/api/character-chat` so user messages are not duplicated consecutively if already present in `chatHistory`.
+  3. **Heuristic Engine De-staling**:
+     - Fixed fallback logic so `suggestedUpdates.backstory` dynamically incorporates the user's latest revision rather than falling back to stale `character.backstory`.
+- **Verification**:
+  - `npm run build` compiled cleanly in ~1.2s with zero TypeScript errors.
+  - Changes pushed to `origin/main`.
