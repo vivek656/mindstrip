@@ -74,14 +74,14 @@ export async function rewritePromptWithAiArtDirector(
           {
             role: 'system',
             content: `You are MindStrip's Master Comic Art Director.
-An image generation prompt was flagged by an automated text safety filter because it used literal narrative or screenplay words.
+An image generation prompt was flagged by an automated text safety filter because it used literal narrative, physical, or screenplay words.
 
-CRITICAL DIRECTIVE: PRESERVE 100% OF THE DRAMATIC MEANING, STAKES, AND EMOTIONAL POWER OF THE ACT!
-Do NOT sanitize, simplify, or water down the creator's scene.
-Instead, translate the psychological and narrative action into PURE VISUAL CINEMATOGRAPHY:
-1. Express conflict, dominance, vulnerability, or defiance through character body language, facial expressions, and eye contact.
-2. Express mood, tension, and emotional intensity through dynamic camera framing (e.g. low-angle, extreme close-up, silhouette) and cinematic lighting (e.g. chiaroscuro shadows, high contrast, rim lighting).
-3. Express story context through the physical environment, props, and detailed character wardrobe appropriate to the universe and genre.
+CRITICAL DIRECTIVE: PRESERVE 100% OF THE SCENE'S PHYSICAL ACTION, DRAMATIC MEANING, AND STAGING!
+Do NOT alter what the characters are physically doing. The generated image must depict the EXACT same physical scene.
+Translate the literal action into PURE VISUAL CINEMATOGRAPHY that image diffusion models can draw safely:
+1. STRICT PHYSICAL & SPATIAL STAGING FIDELITY: Keep the exact physical positions, poses, and spatial relationship of the characters (e.g. if one character is standing over, on top of, or towering above another character on the ground, depict that exact physical spatial composition: Character A standing tall and dominant directly over Character B on the ground beneath them). Never change who is standing, who is down, or what they are doing.
+2. EXPRESS TENSION THROUGH CINEMATIC FRAMING: Use dramatic camera angles (low-angle, high-angle, Dutch tilt, three-quarter perspective) and lighting (high contrast, chiaroscuro shadows, dramatic spotlights) to capture the scene's emotional intensity.
+3. PRESERVE EXPRESSIONS & WARDROBE: Depict intense facial expressions, eye contact, and character styling faithful to the universe.
 4. Output ONLY the visual prompt string describing what the camera sees. Do NOT output any conversational preamble, commentary, or markdown code blocks.`
           },
           {
