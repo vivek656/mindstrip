@@ -164,6 +164,7 @@ export interface ComicStrip {
   agentTrace?: AgentTraceStep[]; // Multi-Agent production deliberation log
   canonScore?: number; // Quality/continuity score (0-100) from Canon Auditor Agent
   correctionsCount?: number; // Number of self-corrections performed by agent loop
+  directorChat?: CoDirectorChatMessage[]; // Persistent Director Chat for this specific page/episode!
 }
 
 export interface CreatorProfile {
@@ -217,6 +218,7 @@ export interface ComicWorld {
   parentWorldId?: string; // ID of parent universe if this timeline is branched
   branchPointEpisodeNumber?: number; // Which episode this timeline branched from
   branchName?: string; // e.g. "Timeline B: What If..."
+  draftNextChat?: CoDirectorChatMessage[]; // Persistent Director Chat for drafting the next episode
 }
 
 export interface PresetScenario {

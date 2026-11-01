@@ -17,6 +17,7 @@ import {
 import { ApiConfig } from '@/lib/meta-models';
 import { CoDirectorPitchResult } from '@/app/api/co-director-pitch/route';
 import { applyCanonicalCharacterAttire, stripSystemMetadataTags } from '@/lib/agents/art-director';
+import { buildStoryContext } from '@/lib/story-context';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
 import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
@@ -159,7 +160,8 @@ export function ZenComicReader({
 
   // Dedicated Desktop Right Studio Panel States
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
-  const [rightPanelTab, setRightPanelTab] = useState<'next' | 'current'>('next');
+  const [rightPanelTab, setRightPanelTab] = useState<'next' | 'current'>(episode ? 'current' : 'next');
+  const [currentPageViewMode, setCurrentPageViewMode] = useState<'chat' | 'controls'>('chat');
   const [mobileDrawerTab, setMobileDrawerTab] = useState<'sidebar' | 'studio'>('sidebar');
 
   // New character form state for Universe Hub
@@ -432,7 +434,7 @@ export function ZenComicReader({
   const [selectedBeatForks, setSelectedBeatForks] = useState<{ [questionId: string]: string }>({});
   const [isSidebarDialogueOpen, setIsSidebarDialogueOpen] = useState(false);
 
-  // ChatGPT-Style AI Co-Director Writers' Room Chat State
+  // ChatGPT-Style AI Co-Director Writers' Room Chat State (for Next Episode)
   const [coDirectorChatMessages, setCoDirectorChatMessages] = useState<CoDirectorChatMessage[]>([]);
   const [coDirectorInputText, setCoDirectorInputText] = useState('');
   const [isSendingCoDirectorChat, setIsSendingCoDirectorChat] = useState(false);
@@ -442,8 +444,46 @@ export function ZenComicReader({
   const [coDirectorMode, setCoDirectorMode] = useState<'chat' | 'quick'>('chat');
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
+  // Dedicated Persistent Director Chat State for the Current Page / Episode
+  const [currentEpChatMessages, setCurrentEpChatMessages] = useState<CoDirectorChatMessage[]>([]);
+  const [currentEpInputText, setCurrentEpInputText] = useState('');
+  const [isSendingCurrentEpChat, setIsSendingCurrentEpChat] = useState(false);
+  const currentEpChatScrollRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize Current Episode Persistent Director Chat whenever active page changes
   React.useEffect(() => {
-    if (coDirectorChatMessages.length === 0 && world) {
+    if (!episode) {
+      setCurrentEpChatMessages([]);
+      return;
+    }
+    if (episode.directorChat && episode.directorChat.length > 0) {
+      setCurrentEpChatMessages(episode.directorChat);
+    } else {
+      const epNum = episode.episodeNumber || 1;
+      const seedMsg: CoDirectorChatMessage = {
+        id: `seed-ep-${episode.id}`,
+        role: 'assistant',
+        content: `Welcome to the **Meta AI Director Studio for Issue #${epNum}: "${episode.title}"**!\n\nI have complete context of the universe canon, characters, and narrative events up to this page.\n\nWhat would you like to explore or direct on this page? You can ask me to:\n• **Punch up dialogue** or sharpen emotional subtext\n• **Re-direct this scene** if you want to take the confrontation in a different direction\n• **Refine visual compositions & camera angles** across the panels\n• **Re-draw page artwork** with specific dramatic lighting or staging`,
+        quickStarters: [
+          'Punch up character dialogue',
+          'Re-direct this scene with higher tension',
+          'Suggest cinematic framing for panel 2',
+          'What are the unresolved stakes here?',
+        ],
+      };
+      setCurrentEpChatMessages([seedMsg]);
+    }
+  }, [episode?.id]);
+
+  React.useEffect(() => {
+    currentEpChatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentEpChatMessages, isSendingCurrentEpChat]);
+
+  // Synchronize Next Episode draft chat
+  React.useEffect(() => {
+    if (world?.draftNextChat && world.draftNextChat.length > 0) {
+      setCoDirectorChatMessages(world.draftNextChat);
+    } else if (coDirectorChatMessages.length === 0 && world) {
       const lead = world.characters[0]?.name || 'the protagonist';
       setCoDirectorChatMessages([
         {
@@ -468,6 +508,108 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
     chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [coDirectorChatMessages, isSendingCoDirectorChat]);
 
+  // Handler for chatting with the dedicated AI Director for the CURRENT PAGE
+  const handleSendCurrentEpChatMessage = async (overrideText?: string) => {
+    if (!episode) return;
+    const text = (typeof overrideText === 'string' ? overrideText : currentEpInputText).trim();
+    if (!text || isSendingCurrentEpChat) return;
+
+    const userMsg: CoDirectorChatMessage = {
+      id: `usr-cur-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    const updatedHistory = [...currentEpChatMessages, userMsg];
+    setCurrentEpChatMessages(updatedHistory);
+    setCurrentEpInputText('');
+    setIsSendingCurrentEpChat(true);
+
+    // Immediately persist user message into episode.directorChat
+    if (onUpdateWorld) {
+      const updatedEpisodes = (world.episodes || []).map((ep) =>
+        ep.id === episode.id ? { ...ep, directorChat: updatedHistory } : ep
+      );
+      onUpdateWorld({ ...world, episodes: updatedEpisodes });
+    }
+
+    try {
+      const currentIdx = (world.episodes || []).findIndex((ep) => ep.id === episode.id);
+      const priorEpisodes = currentIdx > 0 ? (world.episodes || []).slice(0, currentIdx) : [];
+      const storyContext = buildStoryContext(
+        world,
+        episode.rawBrainDump || episode.title,
+        priorEpisodes
+      );
+
+      const res = await fetch('/api/co-director-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatMode: 'current',
+          storyContext,
+          messages: updatedHistory.map((m) => ({ role: m.role, content: m.content })),
+          world: {
+            title: world.title,
+            genre: world.genre,
+            tagline: world.tagline,
+            lore: world.lore,
+            characters: world.characters,
+          },
+          currentEpisode: {
+            id: episode.id,
+            episodeNumber: episode.episodeNumber || 1,
+            title: episode.title,
+            summary: episode.recap || episode.rawBrainDump,
+            rawBrainDump: episode.rawBrainDump,
+            directorReasoning: episode.directorReasoning,
+            coreTruth: episode.cognitiveAnalysis?.coreTruth,
+            layoutStyle: episode.layoutStyle,
+            panels: episode.panels,
+          },
+          apiKey: apiConfig?.apiKey,
+          baseUrl: apiConfig?.baseUrl,
+          provider: apiConfig?.provider,
+          modelName: apiConfig?.modelName,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Current Page Director Chat API error (${res.status})`);
+      }
+
+      const data = await res.json();
+      const assistantMsg: CoDirectorChatMessage = {
+        id: `asst-cur-${Date.now()}`,
+        role: 'assistant',
+        content: data.reply || 'Understood! Let us direct this page together.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        synthesizedPremise: data.synthesizedPremise,
+        castSpotlight: data.castSpotlight,
+        castExcluded: data.castExcluded,
+        suggestedPanels: data.suggestedPanels,
+        quickStarters: data.quickStarters,
+      };
+
+      const finalHistory = [...updatedHistory, assistantMsg];
+      setCurrentEpChatMessages(finalHistory);
+
+      // Persist full conversation history into episode.directorChat
+      if (onUpdateWorld) {
+        const updatedEpisodes = (world.episodes || []).map((ep) =>
+          ep.id === episode.id ? { ...ep, directorChat: finalHistory } : ep
+        );
+        onUpdateWorld({ ...world, episodes: updatedEpisodes });
+      }
+    } catch (err: any) {
+      console.error('Current page director chat failed:', err);
+    } finally {
+      setIsSendingCurrentEpChat(false);
+    }
+  };
+
+  // Handler for chatting with the Co-Director for the NEXT EPISODE
   const handleSendCoDirectorMessage = async (overrideText?: string) => {
     const text = (typeof overrideText === 'string' ? overrideText : coDirectorInputText).trim();
     if (!text || isSendingCoDirectorChat) return;
@@ -484,11 +626,24 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
     setCoDirectorInputText('');
     setIsSendingCoDirectorChat(true);
 
+    // Save draft history immediately
+    if (onUpdateWorld) {
+      onUpdateWorld({ ...world, draftNextChat: updatedHistory });
+    }
+
     try {
+      const storyContext = buildStoryContext(
+        world,
+        prompt || world.tagline,
+        world.episodes || []
+      );
+
       const res = await fetch('/api/co-director-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          chatMode: 'next',
+          storyContext,
           messages: updatedHistory.map((m) => ({ role: m.role, content: m.content })),
           world: {
             title: world.title,
@@ -498,7 +653,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
             characters: world.characters,
           },
           currentEpisode: {
-            episodeNumber: episode?.episodeNumber || 1,
+            episodeNumber: episode?.episodeNumber || (world.episodes?.length || 0) || 1,
             title: episode?.title,
             summary: episode?.recap || episode?.rawBrainDump,
           },
@@ -526,7 +681,12 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
         quickStarters: data.quickStarters,
       };
 
-      setCoDirectorChatMessages((prev) => [...prev, assistantMsg]);
+      const finalHistory = [...updatedHistory, assistantMsg];
+      setCoDirectorChatMessages(finalHistory);
+      if (onUpdateWorld) {
+        onUpdateWorld({ ...world, draftNextChat: finalHistory });
+      }
+
       if (data.synthesizedPremise) {
         setActiveStoryContext(data.synthesizedPremise);
         setPrompt(data.synthesizedPremise);
@@ -594,10 +754,16 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
     const target = stripSystemMetadataTags(raw);
     if (!target.trim()) return;
     setPrompt(target);
-    setRightPanelTab('next');
-    setCoDirectorMode('chat');
     setIsRightPanelOpen(true);
-    handleSendCoDirectorMessage(`Let's re-direct this episode: ${target}`);
+    if (episode) {
+      setRightPanelTab('current');
+      setCurrentPageViewMode('chat');
+      handleSendCurrentEpChatMessage(`Let's re-direct this episode: ${target}`);
+    } else {
+      setRightPanelTab('next');
+      setCoDirectorMode('chat');
+      handleSendCoDirectorMessage(`Let's re-direct this episode: ${target}`);
+    }
   };
 
   const handleAutoFillAllAiAssumptions = () => {
@@ -1608,23 +1774,254 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
           ========================================================= */
           <div className="select-text">
             {episode ? (
-              <div className="space-y-5">
-                {/* Current Episode Header */}
-                <div className="pb-3 border-b border-black/[0.06] dark:border-white/10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase">
-                      Issue #{episode.episodeNumber || 1}
-                    </span>
-                    <span className="text-xs text-zinc-400 font-mono capitalize">
-                      {world.artStyle} style
-                    </span>
+              <div className="space-y-4">
+                {/* Mode Switcher: AI Director Chat vs Page Controls */}
+                <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/10">
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg border bg-zinc-100 dark:bg-zinc-800 border-black/5 dark:border-white/10 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPageViewMode('chat')}
+                      className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                        currentPageViewMode === 'chat'
+                          ? 'bg-purple-600 text-white shadow-2xs'
+                          : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>💬 AI Director Chat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPageViewMode('controls')}
+                      className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                        currentPageViewMode === 'controls'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-950'
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>⚙️ Page Controls</span>
+                    </button>
                   </div>
-                  <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
-                    {episode.title}
-                  </h3>
+
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-purple-500/10 text-purple-500 border border-purple-500/20 font-bold">
+                    Issue #{episode.episodeNumber || 1}
+                  </span>
                 </div>
 
-                {/* Primary Episode Action Buttons */}
+                {currentPageViewMode === 'chat' ? (
+                  /* =========================================================
+                     CURRENT EPISODE CHATGPT-STYLE AI DIRECTOR CHAT
+                  ========================================================= */
+                  <div className="space-y-4">
+                    {/* Story Context & Continuity Pill */}
+                    <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-1 text-xs">
+                      <div className="flex items-center justify-between font-mono font-bold text-[10px] text-purple-700 dark:text-purple-300 uppercase">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>AI Episode Director Active</span>
+                        </span>
+                        <span className="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
+                          <span>✓ Story Context Loaded</span>
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-300 font-medium line-clamp-1">
+                        Directing Issue #{episode.episodeNumber || 1}: &ldquo;{episode.title}&rdquo; with full canon memory
+                      </p>
+                    </div>
+
+                    {/* ChatGPT Message Stream for Current Page */}
+                    <div className="space-y-3 min-h-[220px]">
+                      {currentEpChatMessages.map((msg) => {
+                        const isAssistant = msg.role === 'assistant';
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex flex-col ${isAssistant ? 'items-start' : 'items-end'} space-y-1.5`}
+                          >
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+                              <span>{isAssistant ? '🎬 AI Director' : 'You (Creator)'}</span>
+                              {msg.timestamp && <span>• {msg.timestamp}</span>}
+                            </div>
+
+                            <div
+                              className={`p-3 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed max-w-[92%] shadow-2xs whitespace-pre-line select-text ${
+                                isAssistant
+                                  ? readerTheme === 'cinema' && activeTab === 'comic'
+                                    ? 'bg-zinc-900 border border-white/10 text-zinc-200'
+                                    : 'bg-white border border-purple-200/80 text-zinc-900'
+                                  : 'bg-purple-600 text-white'
+                              }`}
+                            >
+                              {msg.content}
+
+                              {/* Director Suggested Premise & Action Buttons */}
+                              {isAssistant && msg.synthesizedPremise && (
+                                <div className="mt-2.5 pt-2 border-t border-purple-200/50 dark:border-white/10 space-y-2">
+                                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-900 dark:text-purple-200 font-serif italic">
+                                    &ldquo;{msg.synthesizedPremise}&rdquo;
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {onGenerateArtwork && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onGenerateArtwork({ customPrompt: msg.synthesizedPremise })}
+                                        disabled={isGeneratingArtwork}
+                                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                                      >
+                                        <RefreshCw className={`w-3 h-3 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
+                                        <span>Re-Draw with these Changes</span>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartCoDirectorRedirection(msg.synthesizedPremise)}
+                                      className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-purple-600 text-white flex items-center gap-1 shadow-xs cursor-pointer"
+                                    >
+                                      <Sparkles className="w-3 h-3 text-amber-300" />
+                                      <span>Apply Scene Beat</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Quick Reply Starters */}
+                              {isAssistant && msg.quickStarters && msg.quickStarters.length > 0 && (
+                                <div className="mt-2.5 pt-2 border-t border-black/5 dark:border-white/10 flex flex-wrap gap-1">
+                                  {msg.quickStarters.map((starter, sIdx) => (
+                                    <button
+                                      key={sIdx}
+                                      type="button"
+                                      onClick={() => handleSendCurrentEpChatMessage(starter)}
+                                      disabled={isSendingCurrentEpChat}
+                                      className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer text-left font-sans"
+                                    >
+                                      ↳ {starter}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {isSendingCurrentEpChat && (
+                        <div className="flex items-center gap-2 text-xs text-purple-500 animate-pulse p-2 font-mono">
+                          <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                          <span>Director is analyzing page context & composing...</span>
+                        </div>
+                      )}
+
+                      <div ref={currentEpChatScrollRef} />
+                    </div>
+
+                    {/* Chat Input Field for Current Page */}
+                    <div className="space-y-1.5 pt-2 border-t border-black/[0.06] dark:border-white/10">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={currentEpInputText}
+                          onChange={(e) => setCurrentEpInputText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendCurrentEpChatMessage();
+                            }
+                          }}
+                          placeholder="Ask AI Director about dialogue, staging, or re-draws..."
+                          className={`w-full py-2.5 pl-3.5 pr-10 rounded-xl text-xs sm:text-sm font-medium border outline-none transition-all focus:ring-2 focus:ring-purple-500 ${
+                            readerTheme === 'cinema' && activeTab === 'comic'
+                              ? 'bg-zinc-900 border-white/15 text-white placeholder:text-zinc-500'
+                              : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSendCurrentEpChatMessage()}
+                          disabled={!currentEpInputText.trim() || isSendingCurrentEpChat}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white cursor-pointer transition-all shadow-xs"
+                          title="Send message to Page Director (Enter)"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Quick Suggestion Prompts */}
+                      <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleSendCurrentEpChatMessage('Can you punch up the dialogue between the characters on this page?')}
+                            className="hover:text-purple-500 underline cursor-pointer shrink-0"
+                          >
+                            💬 Punch Dialogue
+                          </button>
+                          <span>•</span>
+                          <button
+                            type="button"
+                            onClick={() => handleSendCurrentEpChatMessage('Suggest more cinematic camera angles for these panels.')}
+                            className="hover:text-purple-500 underline cursor-pointer shrink-0"
+                          >
+                            🎬 Cinematography
+                          </button>
+                          <span>•</span>
+                          <button
+                            type="button"
+                            onClick={() => handleSendCurrentEpChatMessage('How can we make this scene more dramatic without changing what happens?')}
+                            className="hover:text-purple-500 underline cursor-pointer shrink-0"
+                          >
+                            ⚡ Amplify Tension
+                          </button>
+                        </div>
+                        <span className="shrink-0">Enter ↵</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Action Footer Bar */}
+                    <div className="pt-2 border-t border-black/[0.06] dark:border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                          Quick Actions:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPageViewMode('controls')}
+                          className="text-[10px] text-blue-500 hover:text-blue-600 font-mono font-bold cursor-pointer"
+                        >
+                          Page Controls & Script →
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {onGenerateArtwork && (
+                          <button
+                            type="button"
+                            onClick={() => onGenerateArtwork()}
+                            disabled={isGeneratingArtwork}
+                            className="p-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
+                            <span>{isGeneratingArtwork ? 'Drawing Art...' : '🎨 Clean Re-Draw'}</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleStartCoDirectorRedirection(episode?.rawBrainDump || episode?.title)}
+                          disabled={isLoading}
+                          className="p-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>🎬 Re-Direct Scene</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* =========================================================
+                     CURRENT EPISODE DETAILED CONTROLS & SCRIPT
+                  ========================================================= */
+                  <div className="space-y-5">
+                    {/* Primary Episode Action Buttons */}
                 <div className="space-y-2">
                   <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
                     Page Art & Story Actions
@@ -1877,6 +2274,8 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                       &ldquo;{episode.directorReasoning}&rdquo;
                     </p>
                   </details>
+                )}
+                  </div>
                 )}
               </div>
             ) : (
@@ -2295,6 +2694,11 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                     isCinemaTheme={readerTheme === 'cinema'}
                     directorReasoning={episode.directorReasoning}
                     onPromoteGuestCharacter={handlePromoteGuestCharacter}
+                    onOpenDirectorChat={() => {
+                      setIsRightPanelOpen(true);
+                      setRightPanelTab('current');
+                      setCurrentPageViewMode('chat');
+                    }}
                   />
 
                   {/* Minimal Core Truth Reflection Banner */}

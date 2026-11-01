@@ -59,6 +59,7 @@ interface ComicPageSpreadProps {
   isCinemaTheme?: boolean;
   directorReasoning?: string;
   onPromoteGuestCharacter?: (guest: ComicCharacter) => void;
+  onOpenDirectorChat?: () => void;
 }
 
 const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
@@ -113,6 +114,7 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     isCinemaTheme = false,
     directorReasoning = '',
     onPromoteGuestCharacter,
+    onOpenDirectorChat,
   },
   ref
 ) {
@@ -511,6 +513,23 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               <span>🎨</span>
               <span className="capitalize">{selectedArtStyle}</span>
             </button>
+
+            {/* AI Page Director Chat Trigger */}
+            {onOpenDirectorChat && (
+              <button
+                type="button"
+                onClick={onOpenDirectorChat}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
+                  isCinemaTheme
+                    ? 'bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 border-purple-500/30'
+                    : 'bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-300'
+                }`}
+                title="Chat with Meta AI Director for this page (Full story context loaded)"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>AI Director</span>
+              </button>
+            )}
 
             {/* Granular Control Deck Toggle */}
             <button

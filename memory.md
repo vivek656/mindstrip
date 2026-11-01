@@ -1187,3 +1187,31 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: 100% clean production build.
   - Committed (`81039a2`) and pushed to `main`.
+
+### Per-Page Persistent Director Chat with Full Story Context Up to Current Page (2026-11-01)
+- **User Directive**:
+  1. *"director chat for a page , now i am going to that poage the director chat is gone for each page we should persist the idrcetor chat"*
+  2. *"2nd if i say current page the chat option again not soming why the ai agent for the opage should always be rpesent , for that pagfe and hould have context upto thatpage we already didcussed that"*
+- **Architectural Implementation**:
+  1. **Per-Page Chat Persistence**:
+     - Added `directorChat?: CoDirectorChatMessage[];` to `ComicStrip` in `src/types/comic.ts`.
+     - Added `draftNextChat?: CoDirectorChatMessage[];` to `ComicWorld` in `src/types/comic.ts`.
+     - In `ZenComicReader.tsx`:
+       - `currentEpChatMessages` automatically loads and synchronizes with `episode.directorChat` on page transitions (`episode?.id` change), seeding with an issue-tailored greeting if empty.
+       - Any user or assistant message sent in the current page chat is immediately stored in `episode.directorChat` and saved via `onUpdateWorld`, persisting across local state, `localStorage`, and MongoDB Atlas.
+       - Navigating away from a page and returning preserves 100% of the conversation history.
+  2. **Dedicated Current Page AI Director Studio**:
+     - In the Right Studio Panel, under `Current Ep`:
+       - Replaced the previous controls-only view with a first-class `[💬 AI Director Chat]` vs `[⚙️ Page Controls]` sub-tab switcher, defaulting to `💬 AI Director Chat`.
+       - Renders an interactive ChatGPT-style chat stream directly for the current issue with status pill: `✓ Story Context Loaded`.
+       - Added quick action shortcuts directly below chat (`🎨 Clean Re-Draw`, `🎬 Re-Direct Scene`, `🌿 Branch Story`).
+       - If the Director proposes a scene change (`synthesizedPremise`), provided one-click buttons (`Re-Draw with these Changes`, `Apply Scene Beat`).
+  3. **Full Story Continuity Up to the Current Page**:
+     - Updated `/api/co-director-chat/route.ts` to support `chatMode: 'current' | 'next'`, `storyContext`, and detailed `currentEpisode` data (panels, speech bubbles, core truth, pacing reasoning).
+     - In `handleSendCurrentEpChatMessage`:
+       - Compiles story continuity for all prior episodes (Episode 1 to N-1) via `buildStoryContext`.
+       - Supplies the current page's full script breakdown so the AI Director has complete memory of the story arc leading up to and including this exact page.
+  4. **Direct Page Spread Integration**:
+     - Added a `💬 AI Director` button in the top toolbar of `ComicPageSpread.tsx`. Clicking it opens the studio panel and focuses directly on the current page's Director Chat.
+- **Verification**:
+  - `npm run build`: 100% clean production build (0 errors).
