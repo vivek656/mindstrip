@@ -324,6 +324,26 @@ export const TEXTLESS_ARTWORK_DIRECTIVE =
 export const COMIC_PAGE_PUBLICATION_DIRECTIVE =
   'authentic published graphic novel comic book page, clean white gutters separating sequential frames, expressive comic speech balloons with dialogue, comic sound effects, professional comic publication.';
 
+/**
+ * Authentic 4K photo directive: instructs diffusion models to generate pure camera photography
+ * and cinematic movie stills, strictly eliminating comic ink, cel-shading, and drawings.
+ */
+export const REALISTIC_PHOTO_DIRECTIVE =
+  'raw cinematic 35mm photography, Kodak Portra 400 film look, realistic human skin pores, optical lens bokeh, real life natural lighting, authentic documentary photo. Strictly zero drawings, zero cartoon cel-shading, zero comic ink, zero hand-drawn text, zero illustrations.';
+
+export function isPhotorealisticStyle(style: string): boolean {
+  if (!style) return false;
+  const s = style.toLowerCase();
+  return (
+    s.includes('realis') ||
+    s.includes('photo') ||
+    s.includes('editorial') ||
+    s.includes('camera') ||
+    s.includes('film still') ||
+    s.includes('cinema')
+  );
+}
+
 export function directVisualArtwork(
   draft: ShowrunnerDraft,
   context: AgentContext

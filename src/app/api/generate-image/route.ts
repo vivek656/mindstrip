@@ -10,7 +10,9 @@ import {
   createPolicySafePagePrompt,
   stripSystemMetadataTags,
   parseCustomPromptBeats,
-  COMIC_PAGE_PUBLICATION_DIRECTIVE
+  COMIC_PAGE_PUBLICATION_DIRECTIVE,
+  REALISTIC_PHOTO_DIRECTIVE,
+  isPhotorealisticStyle
 } from '@/lib/agents/art-director';
 
 export const maxDuration = 60;
@@ -202,26 +204,46 @@ export async function POST(req: NextRequest) {
       .map((c: any) => `${c.name} default attire: ${c.wardrobe.trim()}`)
       .join('; ');
 
+    const isPhoto = isPhotorealisticStyle(artStyle || '') || (customPrompt ? isPhotorealisticStyle(customPrompt) : false);
+
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
     let layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
     let calculatedAspect = userAspectRatio || '3:4';
 
-    if (effectiveLayout === '1-panel') {
-      layoutDescriptor = 'cinematic full-page dramatic graphic novel splash illustration, single panoramic widescreen composition, borderless dynamic frame, atmospheric lighting';
-      calculatedAspect = userAspectRatio || '16:9';
-    } else if (effectiveLayout === '2-panel') {
-      layoutDescriptor = 'two sequential graphic novel frames side by side, vertical white comic gutter, confrontation and reaction storytelling';
-      calculatedAspect = userAspectRatio || '3:4';
-    } else if (effectiveLayout === '3-panel') {
-      layoutDescriptor = 'three sequential vertical graphic novel frames, progressive visual action with clean white gutters';
-      calculatedAspect = userAspectRatio || '3:4';
+    if (isPhoto) {
+      if (effectiveLayout === '1-panel') {
+        layoutDescriptor = 'single raw 35mm candid color photograph, cinematic movie still, sharp optical focus, natural ambient indoor lighting, documentary photography';
+        calculatedAspect = userAspectRatio || '16:9';
+      } else if (effectiveLayout === '2-panel') {
+        layoutDescriptor = 'contact sheet of two sequential 35mm film stills from a dramatic movie scene, arranged side by side separated by clean thin white borders';
+        calculatedAspect = userAspectRatio || '3:4';
+      } else if (effectiveLayout === '3-panel') {
+        layoutDescriptor = 'contact sheet of three sequential 35mm film stills from a dramatic movie scene, arranged vertically separated by clean thin white borders';
+        calculatedAspect = userAspectRatio || '3:4';
+      } else {
+        layoutDescriptor = 'contact sheet of four sequential 35mm film stills from a dramatic movie scene, arranged in a 2x2 grid separated by clean thin white borders';
+        calculatedAspect = userAspectRatio || '3:4';
+      }
     } else {
-      layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
-      calculatedAspect = userAspectRatio || '3:4';
+      if (effectiveLayout === '1-panel') {
+        layoutDescriptor = 'cinematic full-page dramatic graphic novel splash illustration, single panoramic widescreen composition, borderless dynamic frame, atmospheric lighting';
+        calculatedAspect = userAspectRatio || '16:9';
+      } else if (effectiveLayout === '2-panel') {
+        layoutDescriptor = 'two sequential graphic novel frames side by side, vertical white comic gutter, confrontation and reaction storytelling';
+        calculatedAspect = userAspectRatio || '3:4';
+      } else if (effectiveLayout === '3-panel') {
+        layoutDescriptor = 'three sequential vertical graphic novel frames, progressive visual action with clean white gutters';
+        calculatedAspect = userAspectRatio || '3:4';
+      } else {
+        layoutDescriptor = 'comic book page layout structured as a 2x2 grid of four distinct sequential frames separated by crisp white comic gutters, four distinct sequential scene boxes arranged in two rows and two columns';
+        calculatedAspect = userAspectRatio || '3:4';
+      }
     }
 
-    const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
-    const rawPagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const publicationDirective = isPhoto ? REALISTIC_PHOTO_DIRECTIVE : COMIC_PAGE_PUBLICATION_DIRECTIVE;
+    const rawPagePrompt = isPhoto
+      ? `ultra-realistic 4K editorial photography, ${layoutDescriptor}, authentic live-action film photography depicting: ${charsList || 'people'}.${fallbackWardrobe ? ` [WARDROBE]: ${fallbackWardrobe}.` : ''} Scene: ${sanitizedPrompt}. ${publicationDirective} Hasselblad medium format portrait, natural skin textures, 8k resolution, photorealistic cinematic lighting.`
+      : `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
     const pagePrompt = sanitizeDiffusionSafetyTriggers(rawPagePrompt);
 
     if (isFireworks) {
