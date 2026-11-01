@@ -109,6 +109,7 @@ interface ZenComicReaderProps {
 
 const STUDIO_ART_STYLES: { id: ArtStyle; name: string; icon: string; desc: string }[] = [
   { id: 'webcomic', name: 'Webcomic', icon: '🎨', desc: 'Vibrant flat digital' },
+  { id: 'cinematic-realism', name: '4K Realism', icon: '📸', desc: 'Live-action 4K editorial' },
   { id: 'manga', name: 'Manga', icon: '⚡', desc: 'B&W dynamic screentone' },
   { id: 'noir', name: 'Noir', icon: '🕵️', desc: 'Moody deep shadows' },
   { id: 'cyberpunk', name: 'Cyberpunk', icon: '🤖', desc: 'Neon rain reflections' },

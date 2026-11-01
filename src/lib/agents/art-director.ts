@@ -408,6 +408,10 @@ export function directVisualArtwork(
   // 3. Resolve Art Style Prefix
   const getStyleDescriptor = (style: string): string => {
     switch (style) {
+      case 'cinematic-realism':
+      case 'photorealistic':
+      case 'editorial':
+        return 'ultra-realistic 4K editorial photography, live-action cinematic film still, sharp focus, 8k resolution, photorealistic cinematic lighting, Hasselblad medium format portrait, natural skin textures, hyper-detailed real-life cinematography';
       case 'webcomic':
         return 'high quality modern webcomic, vibrant colorful digital art, clean cel-shaded linework, dynamic lighting, webtoon style';
       case 'manga':

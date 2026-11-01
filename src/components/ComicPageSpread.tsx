@@ -64,6 +64,7 @@ interface ComicPageSpreadProps {
 
 const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
   { id: 'webcomic', name: 'Modern Webcomic', desc: 'Vibrant flat digital cel-shaded', icon: '🎨' },
+  { id: 'cinematic-realism', name: '4K Cinematic Realism', desc: 'Live-action 4K editorial photography', icon: '📸' },
   { id: 'manga', name: 'Dynamic Manga', desc: 'Dynamic B&W ink & screentones', icon: '⚡' },
   { id: 'noir', name: 'Noir Graphic Novel', desc: 'Deep shadows & dramatic rimlight', icon: '🕵️' },
   { id: 'cyberpunk', name: 'Cyberpunk Neon', desc: 'Glowing neon lights & rain reflections', icon: '🤖' },
@@ -85,6 +86,9 @@ const MODEL_ENGINES = [
 ];
 
 const PROMPT_TAGS = [
+  '📸 4K Editorial & Hasselblad',
+  '🎬 35mm Cinematic Film Still',
+  '✨ Natural Skin Texture & 8K',
   '🌧️ Cinematic Rain & Storm',
   '🌆 Neon Night Reflections',
   '☀️ Golden Sunset Rimlight',

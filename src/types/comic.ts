@@ -1,6 +1,7 @@
 export type ArtStyle = 
-  | 'webcomic'      // Modern flat digital webtoon
-  | 'manga'         // Dynamic black & white screentone
+  | 'webcomic'          // Modern flat digital webtoon
+  | 'cinematic-realism' // Ultra-realistic 4K editorial photography
+  | 'manga'             // Dynamic black & white screentone
   | 'newspaper'     // Classic warm vintage newspaper
   | 'noir'          // High contrast moody graphic novel
   | 'minimalist'    // Crisp editorial ink linework

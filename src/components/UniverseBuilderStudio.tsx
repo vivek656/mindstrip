@@ -46,6 +46,7 @@ const GENRE_OPTIONS = [
 
 const ART_STYLE_OPTIONS: { id: ArtStyle; name: string; desc: string; sample: string }[] = [
   { id: 'webcomic', name: 'Modern Webcomic', desc: 'Crisp flat vector linework & expressive palettes', sample: '🎨' },
+  { id: 'cinematic-realism', name: '4K Cinematic Realism', desc: 'Live-action 4K editorial photography & film stills', sample: '📸' },
   { id: 'minimalist', name: 'Minimalist Line Art', desc: 'Monochrome architectural ink & generous whitespace', sample: '✒️' },
   { id: 'manga', name: 'Classic Manga', desc: 'High-contrast ink, speedlines & screentone shading', sample: '⚡' },
   { id: 'newspaper', name: 'Vintage Newspaper', desc: 'Warm paper texture & nostalgic Sunday strip charm', sample: '📰' },
