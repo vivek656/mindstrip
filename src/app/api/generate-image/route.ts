@@ -5,6 +5,8 @@ import {
   formatFrameWithRagDialogue,
   applyCanonicalCharacterAttire,
   hasSceneSpecificAttire,
+  sanitizeForImageContentPolicy,
+  createPolicySafePagePrompt,
   stripSystemMetadataTags,
   COMIC_PAGE_PUBLICATION_DIRECTIVE
 } from '@/lib/agents/art-director';
@@ -179,7 +181,8 @@ export async function POST(req: NextRequest) {
     }
 
     const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
-    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const rawPagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const pagePrompt = sanitizeForImageContentPolicy(rawPagePrompt);
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
@@ -213,24 +216,59 @@ export async function POST(req: NextRequest) {
         isPermanent: blobResult.isPermanent
       });
     } else {
-      // Official Meta Model API (muse-image-1.0)
-      const imgRes = await fetch(`${cleanBase}/images/generations`, {
+      // Official Meta Model API (muse-image-1.0) with Automatic Content Policy Recovery
+      const modelToUse = imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0';
+
+      let imgRes = await fetch(`${cleanBase}/images/generations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${targetApiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0',
+          model: modelToUse,
           prompt: pagePrompt,
           n: 1,
           size: '1024x1024'
         })
       });
 
+      // If Meta's automated safety filter flags the prompt (content_policy_violation), attempt auto-recovery
       if (!imgRes.ok) {
         const errText = await imgRes.text();
-        return NextResponse.json({ error: `Meta Muse Image API error (${imgRes.status}): ${errText.slice(0, 180)}` }, { status: 502 });
+        if (imgRes.status === 400 && errText.includes('content_policy_violation')) {
+          console.warn('Meta Muse Image flagged content_policy_violation. Attempting auto-recovery with ultra-safe visual composition...');
+          const safePrompt = createPolicySafePagePrompt(
+            artStyle,
+            layoutDescriptor,
+            charsList,
+            `${worldTitle || 'Graphic novel'} sequential scene with dramatic staging, expressive interaction, and cinematic graphic novel lighting`
+          );
+
+          imgRes = await fetch(`${cleanBase}/images/generations`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${targetApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: modelToUse,
+              prompt: safePrompt,
+              n: 1,
+              size: '1024x1024'
+            })
+          });
+        }
+
+        if (!imgRes.ok) {
+          const finalErr = await imgRes.text();
+          if (finalErr.includes('content_policy_violation')) {
+            return NextResponse.json({
+              error: 'Meta AI content safety filter flagged this prompt (often triggered by words like "drugs", "weapons", or provocative phrasing). MindStrip attempted an automatic safe recovery, but Meta filter remained active. Please rephrase sensitive story words into neutral visual terms.'
+            }, { status: 400 });
+          }
+          return NextResponse.json({ error: `Meta Muse Image API error (${imgRes.status}): ${finalErr.slice(0, 180)}` }, { status: 502 });
+        }
       }
 
       const imgData = await imgRes.json();

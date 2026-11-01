@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runProductionRoom, buildComicStripFromProduction } from '@/lib/agents/orchestrator';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
+import { sanitizeForImageContentPolicy, createPolicySafePagePrompt } from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -139,8 +140,9 @@ export async function POST(req: NextRequest) {
     } else if (metaImgKey) {
       try {
         const cleanBase = targetBaseUrl.includes('api.meta.ai') ? targetBaseUrl.replace(/\/+$/, '') : 'https://api.meta.ai/v1';
-        const pagePrompt = productionResult.artDirectorPrompt;
-        const imgRes = await fetch(`${cleanBase}/images/generations`, {
+        const rawPagePrompt = productionResult.artDirectorPrompt || '';
+        const pagePrompt = sanitizeForImageContentPolicy(rawPagePrompt);
+        let imgRes = await fetch(`${cleanBase}/images/generations`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${metaImgKey}`,
@@ -153,6 +155,34 @@ export async function POST(req: NextRequest) {
             size: '1024x1024'
           })
         });
+
+        // Content policy auto-recovery
+        if (!imgRes.ok) {
+          const errTxt = await imgRes.text();
+          if (imgRes.status === 400 && errTxt.includes('content_policy_violation')) {
+            console.warn('Meta Muse Image flagged content policy in full orchestrator. Auto-retrying with safe prompt...');
+            const safePrompt = createPolicySafePagePrompt(
+              artStyle,
+              comicStrip.layoutStyle || '4-panel',
+              (characters || []).map((c: any) => c.name).join(' and '),
+              `${worldTitle || 'Comic'} graphic novel scene with dramatic visual storytelling and cinematic lighting`
+            );
+
+            imgRes = await fetch(`${cleanBase}/images/generations`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${metaImgKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'muse-image-1.0',
+                prompt: safePrompt,
+                n: 1,
+                size: '1024x1024'
+              })
+            });
+          }
+        }
 
         if (imgRes.ok) {
           const imgData = await imgRes.json();

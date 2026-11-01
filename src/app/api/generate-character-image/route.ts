@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
-import { TEXTLESS_ARTWORK_DIRECTIVE } from '@/lib/agents/art-director';
+import { TEXTLESS_ARTWORK_DIRECTIVE, sanitizeForImageContentPolicy } from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,9 +76,10 @@ export async function POST(req: NextRequest) {
 
     const textlessDirective = TEXTLESS_ARTWORK_DIRECTIVE;
     
-    const prompt = customPrompt
+    const rawPrompt = customPrompt
       ? `${artStyle} character art: ${customPrompt}. ${viewDescriptor}. ${textlessDirective}`
       : `${artStyle} character concept design of ${characterName} ${charGender} (${role}) for ${universeContext || 'comic universe'}. ${viewDescriptor}. ${anchorDetails}. ${textlessDirective} Masterpiece comic art, crisp lines, consistent character anatomy.`;
+    const prompt = sanitizeForImageContentPolicy(rawPrompt);
 
     // 2. Resolve Target Keys & Provider
     const targetMetaKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
@@ -145,20 +146,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 4. Meta Model API (muse-image-1.0)
+    // 4. Meta Model API (muse-image-1.0) with Content Policy Auto-Recovery
     const targetKey = targetMetaKey;
     if (!targetKey) {
       return NextResponse.json({ error: 'Meta Model API Key not configured' }, { status: 401 });
     }
 
-    const imgRes = await fetch(`${cleanBase}/images/generations`, {
+    const modelToUse = imageModel || 'muse-image-1.0';
+
+    let imgRes = await fetch(`${cleanBase}/images/generations`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${targetKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: imageModel || 'muse-image-1.0',
+        model: modelToUse,
         prompt,
         n: 1,
         size: '1024x1024'
@@ -167,7 +170,36 @@ export async function POST(req: NextRequest) {
 
     if (!imgRes.ok) {
       const errTxt = await imgRes.text();
-      return NextResponse.json({ error: `Meta Muse Image error (${imgRes.status}): ${errTxt.slice(0, 180)}` }, { status: 502 });
+      if (imgRes.status === 400 && errTxt.includes('content_policy_violation')) {
+        console.warn('Meta Muse Image flagged content_policy_violation for character portrait. Attempting safe retry...');
+        const safeCharPrompt = sanitizeForImageContentPolicy(
+          `${artStyle} character concept design of ${characterName} (${role || 'character'}), ${viewDescriptor}, poised commanding presence, clean studio lighting, pristine comic art, professional model sheet. ${TEXTLESS_ARTWORK_DIRECTIVE}`
+        );
+
+        imgRes = await fetch(`${cleanBase}/images/generations`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${targetKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: modelToUse,
+            prompt: safeCharPrompt,
+            n: 1,
+            size: '1024x1024'
+          })
+        });
+      }
+
+      if (!imgRes.ok) {
+        const finalErr = await imgRes.text();
+        if (finalErr.includes('content_policy_violation')) {
+          return NextResponse.json({
+            error: 'Meta AI content safety filter flagged this character prompt. Please check your character appearance or wardrobe for sensitive terms (e.g. provocative clothing, weapons, or drug references).'
+          }, { status: 400 });
+        }
+        return NextResponse.json({ error: `Meta Muse Image error (${imgRes.status}): ${finalErr.slice(0, 180)}` }, { status: 502 });
+      }
     }
 
     const imgData = await imgRes.json();

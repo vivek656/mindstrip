@@ -48,6 +48,72 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
 }
 
 /**
+ * Neutralizes sensitive, provocative, or regulated keywords (e.g. "drugs", "curves",
+ * "trophy wife", "coup", "slaughter", "bloody") that trigger automated safety filters
+ * on diffusion image models (like Meta Muse Image 1.0 or Llama Guard), translating them
+ * into elegant, policy-compliant visual storytelling terms.
+ */
+export function sanitizeForImageContentPolicy(raw: string): string {
+  if (!raw) return '';
+  return raw
+    // Medical / Pharma / Controlled Substances
+    .replace(/\bdrug\s+patents?\b/gi, 'pharmaceutical formulas')
+    .replace(/\bdrug\s+companies\b/gi, 'pharmaceutical firms')
+    .replace(/\bdrug\s+company\b/gi, 'pharmaceutical firm')
+    .replace(/\bdrugs?\b/gi, 'medicine')
+    .replace(/\bnarcotics?\b/gi, 'compounds')
+    .replace(/\bpills?\b/gi, 'capsules')
+    .replace(/\bweed|cocaine|heroin|meth|fentanyl\b/gi, 'contraband')
+    // Suggestive / Sensual / Body Terms
+    .replace(/\bcurves?\b/gi, 'poised stature')
+    .replace(/\bcurvy\b/gi, 'commanding presence')
+    .replace(/\btrophy\s+wife\b/gi, 'high-society spouse')
+    .replace(/\bcleavage\b/gi, 'neckline')
+    .replace(/\blingerie|underwear|panties|bra\b/gi, 'undergarments')
+    .replace(/\bsexy|sensual|seductive|erotic|lust\b/gi, 'poised and stylish')
+    .replace(/\bprostitute|hooker|escort\b/gi, 'companion')
+    .replace(/\bnaked|nude\b/gi, 'attired')
+    // Violence / Gore / Crime
+    .replace(/\bbloody?\b/gi, 'crimson')
+    .replace(/\bgore\b/gi, 'shadows')
+    .replace(/\bcorpses?|dead\s+bod(y|ies)\b/gi, 'fallen figures')
+    .replace(/\bdecapitat\w*\b/gi, 'defeat')
+    .replace(/\bmurder(ed|er|ing)?\b/gi, 'confront')
+    .replace(/\bassassinat\w*\b/gi, 'target')
+    .replace(/\bslaughter\w*\b/gi, 'battle')
+    .replace(/\bboardroom\s+coup\b/gi, 'boardroom takeover')
+    .replace(/\bcoup\b/gi, 'takeover')
+    .replace(/\bweaponiz\w*\b/gi, 'leveraged')
+    // Degradation / Religious / Extreme Dominance
+    .replace(/\bhumiliated\b/gi, 'underestimated')
+    .replace(/\bdegraded\b/gi, 'dismissed')
+    .replace(/\bsubjugat\w*\b/gi, 'commanded')
+    .replace(/\bworshipped\s+as\s+power\b/gi, 'respected as authority')
+    .replace(/\bworshipped\b/gi, 'respected')
+    // Trim and collapse whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Creates an ultra-safe, streamlined fallback prompt if an image generation model
+ * returns a 400 content_policy_violation, preserving the core visual composition,
+ * style, characters, and staging without any potentially flagged narrative text.
+ */
+export function createPolicySafePagePrompt(
+  artStyle: string,
+  layoutDescriptor: string,
+  charactersList: string,
+  sceneSummary: string
+): string {
+  const safeStyle = sanitizeForImageContentPolicy(artStyle || 'webcomic');
+  const safeLayout = layoutDescriptor || 'comic book page layout structured as four distinct sequential frames separated by white gutters';
+  const safeChars = sanitizeForImageContentPolicy(charactersList || 'characters');
+  const safeScene = sanitizeForImageContentPolicy(sceneSummary || 'dramatic comic interaction, dynamic framing, expressive character presence');
+  return `${safeStyle} ${safeLayout}, high resolution sequential artwork depicting: ${safeChars}. Visual scene: ${safeScene}. Professional graphic novel page, crisp white comic gutters, cinematic lighting, dynamic composition.`;
+}
+
+/**
  * Strips accumulated system metadata tags from premises, preventing director directives
  * and cast scoping locks from piling up or appending repeatedly across turns.
  */
@@ -315,7 +381,8 @@ export function directVisualArtwork(
     premiseSnippet = `Four sequential narrative frames in a 2x2 comic grid with white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
   }
 
-  const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${COMIC_PAGE_PUBLICATION_DIRECTIVE} Dynamic composition, cinematic lighting.`;
+  const rawPagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${COMIC_PAGE_PUBLICATION_DIRECTIVE} Dynamic composition, cinematic lighting.`;
+  const pagePrompt = sanitizeForImageContentPolicy(rawPagePrompt);
 
   return {
     sanitizedDraft,
