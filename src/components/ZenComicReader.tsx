@@ -92,7 +92,7 @@ interface ZenComicReaderProps {
   onOpenSettings: () => void;
   onSelectEpisode?: (episode: ComicStrip) => void;
   onUpdatePanelPrompt?: (panelNumber: number, newPrompt: string) => void;
-  onRegenerateEpisode?: () => void;
+  onRegenerateEpisode?: (overridePremise?: string) => void;
   onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
   isGeneratingArtwork?: boolean;
   artworkError?: string | null;
@@ -1501,7 +1501,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className={`grid ${episode && onRegenerateEpisode ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -1513,8 +1513,24 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                     className="py-2.5 px-3 rounded-xl text-xs font-bold border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                    <span>💬 Brainstorm in Chat</span>
+                    <span>💬 Chat</span>
                   </button>
+
+                  {episode && onRegenerateEpisode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRegenerateEpisode(prompt.trim() || undefined);
+                        setPrompt('');
+                      }}
+                      disabled={isLoading || isGeneratingArtwork}
+                      className="py-2.5 px-3 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                      title="Re-script and draw this exact page with your prompt"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>🔄 This Page</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
@@ -1524,9 +1540,9 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                     }}
                     disabled={isLoading}
                     className="py-2.5 px-3 rounded-xl text-xs font-bold bg-zinc-950 hover:bg-zinc-800 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                    title="Generate the next episode"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                    <span>⚡ Quick Draw</span>
+                    <span>⚡ Next Ep</span>
                   </button>
                 </div>
               </div>
@@ -1862,15 +1878,26 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                                     &ldquo;{msg.synthesizedPremise}&rdquo;
                                   </div>
                                   <div className="flex flex-wrap gap-1.5">
+                                    {onRegenerateEpisode && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onRegenerateEpisode(msg.synthesizedPremise)}
+                                        disabled={isLoading || isGeneratingArtwork}
+                                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                                      >
+                                        <Sparkles className="w-3 h-3 text-amber-300" />
+                                        <span>🎬 Re-Script & Draw Page</span>
+                                      </button>
+                                    )}
                                     {onGenerateArtwork && (
                                       <button
                                         type="button"
                                         onClick={() => onGenerateArtwork({ customPrompt: msg.synthesizedPremise })}
-                                        disabled={isGeneratingArtwork}
+                                        disabled={isGeneratingArtwork || isLoading}
                                         className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
                                       >
                                         <RefreshCw className={`w-3 h-3 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
-                                        <span>Re-Draw with these Changes</span>
+                                        <span>Re-Draw Artwork Only</span>
                                       </button>
                                     )}
                                     <button
@@ -1878,8 +1905,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                                       onClick={() => handleStartCoDirectorRedirection(msg.synthesizedPremise)}
                                       className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-purple-600 text-white flex items-center gap-1 shadow-xs cursor-pointer"
                                     >
-                                      <Sparkles className="w-3 h-3 text-amber-300" />
-                                      <span>Apply Scene Beat</span>
+                                      <span>💬 Discuss More</span>
                                     </button>
                                   </div>
                                 </div>

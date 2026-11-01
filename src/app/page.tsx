@@ -418,11 +418,48 @@ export default function Home() {
       );
 
       const nextNum = activeWorld.episodes.length + 1;
+
+      // Re-draw fresh artwork if missing from initial server orchestrator response
+      let freshImageUrl = generated.pageImageUrl;
+      if (!freshImageUrl) {
+        try {
+          const effectiveProvider = apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api';
+
+          const imgRes = await fetch('/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: cleanPremise,
+              artStyle: activeWorld.artStyle,
+              characters: activeWorld.characters,
+              worldTitle: activeWorld.title,
+              genre: activeWorld.genre,
+              episodeTitle: generated.title,
+              provider: effectiveProvider,
+              apiKey: apiConfig?.apiKey,
+              baseUrl: apiConfig?.baseUrl,
+              layoutStyle: generated.layoutStyle || (generated.panels?.length === 1 ? '1-panel' : generated.panels?.length === 2 ? '2-panel' : generated.panels?.length === 3 ? '3-panel' : '4-panel'),
+              panels: generated.panels,
+            })
+          });
+
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            if (imgData.pageImageUrl) {
+              freshImageUrl = imgData.pageImageUrl;
+            }
+          }
+        } catch (imgErr) {
+          console.warn('Next episode artwork fetch warning:', imgErr);
+        }
+      }
+
       const newEpisode: ComicStrip = {
         ...generated,
         ...writeRecap(generated),
         episodeNumber: nextNum,
         title: nextNum === 1 ? `${activeWorld.title}: Origin` : `Episode #${nextNum}: ${generated.title}`,
+        pageImageUrl: freshImageUrl || generated.pageImageUrl
       };
 
       const updatedWorld: ComicWorld = {
@@ -471,7 +508,7 @@ export default function Home() {
     }
   };
 
-  const handleRegenerateCurrentEpisode = async () => {
+  const handleRegenerateCurrentEpisode = async (overridePremise?: string) => {
     if (!activeWorld || !activeEpisode) return;
     setIsLoading(true);
     setIsGeneratingArtwork(true);
@@ -491,7 +528,7 @@ export default function Home() {
         p.bubbles?.some(b => b.speaker.toLowerCase() !== 'narrator' && !activeCastNames.some(acn => b.speaker.toLowerCase().includes(acn)))
       );
 
-      let effectivePremise = stripSystemMetadataTags(activeEpisode.rawBrainDump || activeWorld.tagline);
+      let effectivePremise = stripSystemMetadataTags(overridePremise || activeEpisode.rawBrainDump || activeWorld.tagline);
       if (hasObsoleteCast || !effectivePremise.trim()) {
         const castRoles = activeWorld.characters.map((c) => `${c.name} (${c.role})`).join(', ');
         effectivePremise = `${activeWorld.title}: ${activeWorld.tagline}. Featuring active cast: ${castRoles}.`;

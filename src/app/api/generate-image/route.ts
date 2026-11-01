@@ -8,8 +8,11 @@ import {
   rewritePromptWithAiArtDirector,
   createPolicySafePagePrompt,
   stripSystemMetadataTags,
+  parseCustomPromptBeats,
   COMIC_PAGE_PUBLICATION_DIRECTIVE
 } from '@/lib/agents/art-director';
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -84,30 +87,62 @@ export async function POST(req: NextRequest) {
     const rawClean = cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt || prompt || episodeTitle || 'dynamic comic scene'));
     let sanitizedPrompt = applyCanonicalCharacterAttire(rawClean, targetCharacters);
 
-    // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt with RAG dialogue
-    const hasPreformattedFrames = Boolean(customPrompt && (customPrompt.includes('sequential narrative frames') || customPrompt.includes('Top frame') || customPrompt.includes('Frame 1')));
-    const sceneContextPrefix = (customPrompt && customPrompt.trim().length > 0 && !hasPreformattedFrames)
-      ? `${cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt))}. `
-      : '';
+    // 1. Check if the user/director provided an explicit custom prompt
+    const hasCustomPrompt = Boolean(customPrompt && customPrompt.trim().length > 0);
+    const targetFrameCount = effectiveLayout === '1-panel' ? 1 : effectiveLayout === '2-panel' ? 2 : effectiveLayout === '3-panel' ? 3 : 4;
 
-    if (!hasPreformattedFrames && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
-      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-      sanitizedPrompt = `${sceneContextPrefix}Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
-    } else if (!hasPreformattedFrames && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
-      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-      const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
-      sanitizedPrompt = `${sceneContextPrefix}Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
-    } else if (!hasPreformattedFrames && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
-      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-      const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
-      const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
-      sanitizedPrompt = `${sceneContextPrefix}Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
-    } else if (!hasPreformattedFrames && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
-      const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-      const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
-      const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
-      const p4 = formatFrameWithRagDialogue(panels[3], targetCharacters);
-      sanitizedPrompt = `${sceneContextPrefix}Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+    if (hasCustomPrompt) {
+      // User or Director provided an explicit prompt. What the user wrote MUST take absolute precedence!
+      const parsedBeats = parseCustomPromptBeats(customPrompt!, targetFrameCount);
+
+      if (parsedBeats && parsedBeats.length >= 2) {
+        // Custom prompt contained explicit numbered beats (e.g. 1. THE SHRINE > ... 2. THE STEP > ...)
+        const b = parsedBeats.map(beat => cleanPromptForWordlessArtwork(beat));
+        if (effectiveLayout === '1-panel') {
+          sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${b[0]}. Panoramic dramatic composition.`;
+        } else if (effectiveLayout === '2-panel') {
+          sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${b[0]}. Right frame depicts ${b[1] || b[0]}.`;
+        } else if (effectiveLayout === '3-panel') {
+          sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${b[0]}. Middle frame depicts ${b[1] || b[0]}. Bottom frame depicts ${b[2] || b[1] || b[0]}.`;
+        } else {
+          sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${b[0]}. Top-right frame depicts ${b[1] || b[0]}. Bottom-left frame depicts ${b[2] || b[0]}. Bottom-right frame depicts ${b[3] || b[1] || b[0]}.`;
+        }
+      } else if (customPrompt!.includes('sequential narrative frames') || customPrompt!.includes('Top frame') || customPrompt!.includes('Frame 1')) {
+        // Custom prompt was already pre-formatted with frame descriptions
+        sanitizedPrompt = rawClean;
+      } else {
+        // Single descriptive prompt: frame the action across the layout
+        if (effectiveLayout === '1-panel') {
+          sanitizedPrompt = `Full-page cinematic graphic novel splash illustration depicting: ${rawClean}. Panoramic dramatic composition.`;
+        } else if (effectiveLayout === '2-panel') {
+          sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter depicting the progressive action and confrontation of: ${rawClean}. Left frame establishes the scene. Right frame depicts the decisive reaction.`;
+        } else if (effectiveLayout === '3-panel') {
+          sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters depicting the progressive escalation of: ${rawClean}. Top frame establishes the scene setup. Middle frame shows the central conflict. Bottom frame shows the decisive outcome.`;
+        } else {
+          sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters depicting the complete progression of: ${rawClean}. Frame 1 setup, Frame 2 escalation, Frame 3 turning point, Frame 4 resolution.`;
+        }
+      }
+    } else if (Array.isArray(panels) && panels.length > 0) {
+      // Standard drawing from scripted episode panels
+      if (effectiveLayout === '1-panel' && panels.length >= 1) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
+      } else if (effectiveLayout === '2-panel' && panels.length >= 2) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+        sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+      } else if (effectiveLayout === '3-panel' && panels.length >= 3) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+        const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
+        sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+      } else if (effectiveLayout === '4-panel' && panels.length >= 4) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+        const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
+        const p4 = formatFrameWithRagDialogue(panels[3], targetCharacters);
+        sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+      }
     }
 
     let targetBaseUrl = 'https://api.meta.ai/v1';

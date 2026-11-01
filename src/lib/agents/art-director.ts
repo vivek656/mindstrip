@@ -48,6 +48,37 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
 }
 
 /**
+ * Intelligently parses numbered scene beats or panel prompts from a custom director prompt
+ * (e.g. "1. THE SHRINE > ... 2. THE STEP > ... 3. THE PRESSURE > ... 4. THE ASCENSION > ...").
+ */
+export function parseCustomPromptBeats(raw: string, targetCount: number = 4): string[] | null {
+  if (!raw) return null;
+  const text = raw.trim();
+
+  // Pattern A: Split by numbered lines e.g. "1. " or "1) "
+  const lines = text.split(/(?:^|\n|\s+)(?=[1-4][\.\)]\s+)/);
+  const items = lines
+    .map((l) => l.replace(/^[1-4][\.\)]\s*/, '').replace(/^[>—–-]\s*/, '').trim())
+    .filter((l) => l.length > 5);
+
+  if (items.length >= 2) {
+    return items.slice(0, targetCount);
+  }
+
+  // Pattern B: Split by "Panel 1:" / "Frame 1:" / "Beat 1:"
+  const panelLines = text.split(/(?:^|\n|\s+)(?=(?:Panel|Frame|Beat)\s*#?\s*[1-4]\s*[:—–-])/i);
+  const panelItems = panelLines
+    .map((l) => l.replace(/^(?:Panel|Frame|Beat)\s*#?\s*[1-4]\s*[:—–-]\s*/i, '').trim())
+    .filter((l) => l.length > 5);
+
+  if (panelItems.length >= 2) {
+    return panelItems.slice(0, targetCount);
+  }
+
+  return null;
+}
+
+/**
  * Uses Meta AI (muse-spark-1.3) to dynamically re-express an image prompt that was flagged
  * by automated safety classifiers, preserving 100% of the dramatic meaning, power dynamics,
  * emotional stakes, and narrative intent of the act by translating it into high-impact

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ComicCharacter, CoDirectorChatMessage } from '@/types/comic';
 
+export const maxDuration = 60;
+
 interface CoDirectorChatResponsePayload {
   reply: string;
   synthesizedPremise: string;

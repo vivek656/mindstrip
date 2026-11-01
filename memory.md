@@ -1272,3 +1272,26 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - `muse-spark-1.3` successfully reformulated the flagged elevator scene into safe cinematic direction while preserving all 4 frames and dialogue.
     - `muse-image-1.0` accepted the prompt and returned **HTTP 200 OK**, generating `rendered_elevator_success.webp` with the golden `PRIVATE - NAMITA ONLY` plaque, prostrated attendants on the floor, Namita in scarlet suit walking forward on the phone, floor 100 lit up, and the exact panel dialogue speech balloons.
   - `npm run build`: 100% clean production build (0 errors).
+
+### Resolved "Whatever I write something else is shown" Prompt Override & Re-Script Pipeline (2026-11-01)
+- **User Problem**:
+  *"its simply not working whatever i am writing soimnething else is being shown"*
+- **Root Cause Discovered**:
+  1. In `/api/generate-image/route.ts`, when a user provided a new `customPrompt` (from Director Chat, Granular Controls, or prompt bar), the code was checking if `panels` existed from the *previous* episode draft and forced the old `formatFrameWithRagDialogue(panels[i])` onto the frames. The image model was literally instructed to draw the old panel scenes and old speech balloons, ignoring the user's new prompt.
+  2. In `ZenComicReader.tsx` Director Chat, clicking "Re-Draw with these Changes" only re-triggered image synthesis without re-scripting the episode's panels or transcript, leaving the story data desynchronized from the discussion.
+  3. Clicking "Apply Scene Beat" only sent another chat message rather than re-generating the episode.
+  4. In the Quick Prompt / Bottom Bar, entering a prompt always invoked `onGenerateNextEpisode`, creating new episodes in the background instead of updating the page on screen.
+  5. API routes lacked `export const maxDuration = 60;`, risking serverless execution timeouts during image generation.
+- **Architectural Solution (Zero Hardcoding)**:
+  1. **Strict User Custom Prompt Priority**:
+     - In `/api/generate-image/route.ts`, when `customPrompt` is provided, it is parsed via `parseCustomPromptBeats`. If numbered beats exist (e.g. `1. ... 2. ... 3. ...`), each frame depicts the exact beat written by the user. If a descriptive narrative prompt is provided, each frame depicts the progressive escalation of that custom prompt. Old stale episode panels NEVER override the user's new prompt.
+  2. **1-Click "🎬 Re-Script & Draw Page with this Direction"**:
+     - Added first-class `🎬 Re-Script & Draw Page` in Director Chat when a premise is locked, re-running Showrunner, Auditor, and Art Director so the script, panels, transcript, and comic artwork all update to the discussed scene.
+  3. **Explicit Page Targeting in Quick Prompt**:
+     - Added `🔄 This Page` (`onRegenerateEpisode(prompt)`) and `⚡ Next Ep` (`onGenerateNextEpisode(prompt)`) so creators can choose whether their prompt edits the current page or starts the next episode.
+  4. **Max Duration Timeout Safety**:
+     - Added `export const maxDuration = 60;` across all AI API endpoints (`generate`, `generate-image`, `co-director-chat`, `co-director-pitch`, `build-world`, `generate-character-image`).
+  5. **Auto-Artwork Fallback in `handleGenerateNextEpisode`**:
+     - If `/api/generate` completes without image data, `handleGenerateNextEpisode` calls `/api/generate-image` to guarantee that new episodes always render their official page artwork.
+- **Verification**:
+  - `npm run build`: 100% clean production build (0 errors).

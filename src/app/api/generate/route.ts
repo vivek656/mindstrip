@@ -3,6 +3,8 @@ import { runProductionRoom, buildComicStripFromProduction } from '@/lib/agents/o
 import { persistToPermanentBlob } from '@/lib/blob-storage';
 import { rewritePromptWithAiArtDirector, createPolicySafePagePrompt } from '@/lib/agents/art-director';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

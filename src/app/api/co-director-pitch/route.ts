@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ComicCharacter } from '@/types/comic';
 
+export const maxDuration = 60;
+
 export interface CoDirectorOption {
   label: string;
   description: string;
