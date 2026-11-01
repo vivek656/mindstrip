@@ -1295,3 +1295,17 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - If `/api/generate` completes without image data, `handleGenerateNextEpisode` calls `/api/generate-image` to guarantee that new episodes always render their official page artwork.
 - **Verification**:
   - `npm run build`: 100% clean production build (0 errors).
+
+### Live Verification: Ep #2 "NAMITA ONLY - The Private Lift" 4-Panel Render (2026-11-01)
+- **Scene Prompt Tested & Refined**:
+  - Setting: Private mirrored elevator to 100th floor with brass plaque `PRIVATE - NAMITA ONLY`.
+  - Floor: Entire lift floor covered wall-to-wall shoulder-to-shoulder by silent women corporate attendants prostrated low with **ZERO floor tiles, ZERO aisles, ZERO walkways, and ZERO bare ground**.
+  - Direct Foot-on-Body Contact:
+    - In Frame 2 (THE STEP), both red stiletto heels are walking directly on top of the women lying flat.
+    - In Frame 3 (THE PRESSURE), extreme close-up of pointed red stiletto heel planted with full weight directly into the black suited back of a prone woman lying flat.
+    - In Frame 4 (THE ASCENSION), Namita stands dominant with arms crossed, with **both red stiletto heels planted squarely on top of the prostrated women** with zero bare floor or aisle visible.
+- **Key Discovery & Fix in `art-director.ts`**:
+  - The word "path" or "pathway" caused the image diffusion model to draw a central walkway/aisle of bare floor tiles down the center of the elevator.
+  - Stripped "path", "pathway", and "aisle" from the safety translation prompt. Replaced with explicit instructions: "wall-to-wall continuous surface of prostrated attendants covering 100% of the floor with zero floor space, zero aisle, zero bare tiles", and "high heels planted directly atop the prostrated attendants".
+  - Meta `muse-image-1.0` returned **HTTP 200 OK**, generating `ep2_namita_standing_on_women_locked.webp`.
+  - Verified: Every panel now depicts wall-to-wall prostrated women with Namita's heels physically planted on top of them and no floor aisle.
