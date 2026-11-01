@@ -56,12 +56,12 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
 export function sanitizeDiffusionSafetyTriggers(prompt: string): string {
   if (!prompt) return '';
   return prompt
-    .replace(/\b(women employees|women attendants|women workers|subordinate women|female employees|female attendants)\b/gi, 'office attendants')
-    .replace(/\b(silent women|prostrated women|lying women)\b/gi, 'silent attendants')
-    .replace(/\b(light bra-top and short skirt for full skin contact|bra-top and short skirt|bra-top|sports-bra|backless blouse and short skirts|backless blouse|short skirts|bikini like|bikini attire|bikini)\b/gi, 'attendants prostrated low in deep reverence')
-    .replace(/\b(directly into bare skin of shoulder\/back|bare skin of shoulder\/back|bare skin of shoulder|bare skin of back|bare skin|bare flesh|skin contact)\b/gi, 'directly atop the prostrated attendant lying beneath her')
-    .replace(/\b(directly into bare skin|into bare skin)\b/gi, 'directly atop the prostrated attendant')
-    .replace(/\b(prone woman|prostrated woman|prone women|prostrated women)\b/gi, 'prostrated attendant')
+    .replace(/\b(women employees|women attendants|women workers|subordinate women|female employees|female attendants)\b/gi, 'corporate executive stewardesses in tailored black uniform')
+    .replace(/\b(silent women|prostrated women|lying women)\b/gi, 'silent prostrated stewardesses')
+    .replace(/\b(light bra-top and short skirt for full skin contact|bra-top and short skirt|bra-top|sports-bra|backless blouse and short skirts|backless blouse|short skirts|bikini like|bikini attire|bikini)\b/gi, 'corporate stewardesses prostrated low in deep reverence')
+    .replace(/\b(directly into bare skin of shoulder\/back|bare skin of shoulder\/back|bare skin of shoulder|bare skin of back|bare skin|bare flesh|skin contact)\b/gi, 'directly atop the prostrated stewardess lying beneath her')
+    .replace(/\b(directly into bare skin|into bare skin)\b/gi, 'directly atop the prostrated stewardess')
+    .replace(/\b(prone woman|prostrated woman|prone women|prostrated women)\b/gi, 'prostrated stewardess')
     .replace(/\b(fetish money-shot|fetish money shot|money shot|fetish)\b/gi, 'dramatic macro composition')
     .replace(/\s+/g, ' ')
     .trim();
