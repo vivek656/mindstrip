@@ -1414,3 +1414,13 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Panel 3: *"Good... show your respect."* (Macro shot of stiletto heel with subordinate bowing low)
     - Panel 4: *"From tomorrow, your department reports to me. Understood?"* (Namita applying red lipstick, looking away with cold bored eyes)
   - Synced to MongoDB Atlas for both `CEO NAMITA` universes. Clean production build verified.
+
+### Realistic Facial Likeness Continuity & Anti-Aging Calibration (2026-11-01)
+- **Problem**: When generating photorealistic images, combining numeric age labels (`"45-year-old"`) with `"natural skin texture & pores"` causes diffusion models to over-index on severe aging artifacts (gaunt hollow cheeks, deep crow's feet, crepey neck wrinkles, angular Mediterranean/Western features) completely losing Namita Thapar's likeness.
+- **Solution & Prompt Architecture**:
+  - Replaced raw age numbers and generic likeness references with explicit South Asian facial landmarks:
+    - `"gorgeous glamorous Indian businesswoman CEO Namita Thapar, warm golden honey Indian skin tone, smooth glowing radiant complexion, youthful soft facial contours, plump cheeks (strictly zero hollow gaunt cheeks, zero elderly wrinkles), large expressive dark brown almond eyes with kohl eyeliner, perfectly arched dark eyebrows, rich crimson red lipstick, voluminous glossy black wavy blow-dried hair cascading over shoulders."`
+  - Explicitly banned negative aging features (`strictly zero gaunt hollow cheeks, zero elderly wrinkles, zero harsh lines`).
+- **Result**:
+  - Re-rendered full 4-panel Episode 4 (`ep4_namita_office_ritual.webp`, Status 200 OK) featuring the authentic radiant Namita Thapar across all 4 panels with comic speech balloons intact.
+  - Synchronized in MongoDB Atlas for universes `world-1793423242997` and `world-fork-1793537920934`.
