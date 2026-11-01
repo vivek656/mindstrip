@@ -28,11 +28,21 @@ export interface MetaPreset {
 export const META_PRESETS: MetaPreset[] = [
   {
     id: 'meta-official',
-    name: 'Meta Model API',
+    name: 'Meta Model API (Muse Spark 1.3)',
     provider: 'meta-api',
     baseUrl: 'https://api.meta.ai/v1',
     modelName: 'muse-spark-1.3',
-    description: 'Official Meta AI Model API endpoint for Muse Spark 1.3 (Script) & Muse Image 1.0 (Artwork)',
+    description: 'Official Meta AI Model API for Muse Spark 1.3 (Reasoning & Scripting) and Muse Image 1.0 (Artwork)',
+    badge: 'Official Hackathon API',
+    placeholderKey: 'Paste your Meta Model API Key'
+  },
+  {
+    id: 'meta-wonder',
+    name: 'Meta Model API (Muse Wonder 1.0)',
+    provider: 'meta-api',
+    baseUrl: 'https://api.meta.ai/v1',
+    modelName: 'muse-wonder-1.0',
+    description: 'Official Meta AI Model API for Muse Wonder 1.0 (Creative Comic Narrative & Dialogue) and Muse Image 1.0',
     badge: 'Official Hackathon API',
     placeholderKey: 'Paste your Meta Model API Key'
   },
