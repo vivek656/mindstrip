@@ -5,7 +5,7 @@ import {
   formatFrameWithRagDialogue,
   applyCanonicalCharacterAttire,
   hasSceneSpecificAttire,
-  sanitizeForImageContentPolicy,
+  rewritePromptWithAiArtDirector,
   createPolicySafePagePrompt,
   stripSystemMetadataTags,
   COMIC_PAGE_PUBLICATION_DIRECTIVE
@@ -181,8 +181,7 @@ export async function POST(req: NextRequest) {
     }
 
     const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
-    const rawPagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
-    const pagePrompt = sanitizeForImageContentPolicy(rawPagePrompt);
+    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
@@ -216,7 +215,7 @@ export async function POST(req: NextRequest) {
         isPermanent: blobResult.isPermanent
       });
     } else {
-      // Official Meta Model API (muse-image-1.0) with Automatic Content Policy Recovery
+      // Official Meta Model API (muse-image-1.0) with AI Art Director Auto-Recovery (Zero hardcoding)
       const modelToUse = imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0';
 
       let imgRes = await fetch(`${cleanBase}/images/generations`, {
@@ -233,12 +232,21 @@ export async function POST(req: NextRequest) {
         })
       });
 
-      // If Meta's automated safety filter flags the prompt (content_policy_violation), attempt auto-recovery
+      // If Meta's automated safety filter flags the prompt (content_policy_violation),
+      // dynamically reformulate using Meta's reasoning AI (muse-spark-1.3)
       if (!imgRes.ok) {
         const errText = await imgRes.text();
         if (imgRes.status === 400 && errText.includes('content_policy_violation')) {
-          console.warn('Meta Muse Image flagged content_policy_violation. Attempting auto-recovery with ultra-safe visual composition...');
-          const safePrompt = createPolicySafePagePrompt(
+          console.warn('Meta Muse Image flagged content_policy_violation. Engaging AI Art Director to dynamically rephrase into visual direction...');
+          
+          const aiRewritten = await rewritePromptWithAiArtDirector(
+            pagePrompt,
+            targetApiKey,
+            cleanBase,
+            'muse-spark-1.3'
+          );
+
+          const safePrompt = aiRewritten || createPolicySafePagePrompt(
             artStyle,
             layoutDescriptor,
             charsList,

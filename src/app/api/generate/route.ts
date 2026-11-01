@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runProductionRoom, buildComicStripFromProduction } from '@/lib/agents/orchestrator';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
-import { sanitizeForImageContentPolicy, createPolicySafePagePrompt } from '@/lib/agents/art-director';
+import { rewritePromptWithAiArtDirector, createPolicySafePagePrompt } from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -140,8 +140,7 @@ export async function POST(req: NextRequest) {
     } else if (metaImgKey) {
       try {
         const cleanBase = targetBaseUrl.includes('api.meta.ai') ? targetBaseUrl.replace(/\/+$/, '') : 'https://api.meta.ai/v1';
-        const rawPagePrompt = productionResult.artDirectorPrompt || '';
-        const pagePrompt = sanitizeForImageContentPolicy(rawPagePrompt);
+        const pagePrompt = productionResult.artDirectorPrompt || '';
         let imgRes = await fetch(`${cleanBase}/images/generations`, {
           method: 'POST',
           headers: {
@@ -156,12 +155,19 @@ export async function POST(req: NextRequest) {
           })
         });
 
-        // Content policy auto-recovery
+        // AI Art Director content policy auto-recovery (Zero hardcoding)
         if (!imgRes.ok) {
           const errTxt = await imgRes.text();
           if (imgRes.status === 400 && errTxt.includes('content_policy_violation')) {
-            console.warn('Meta Muse Image flagged content policy in full orchestrator. Auto-retrying with safe prompt...');
-            const safePrompt = createPolicySafePagePrompt(
+            console.warn('Meta Muse Image flagged content policy in full orchestrator. Engaging AI Art Director to dynamically rephrase...');
+            const aiRewritten = await rewritePromptWithAiArtDirector(
+              pagePrompt,
+              metaImgKey,
+              cleanBase,
+              'muse-spark-1.3'
+            );
+
+            const safePrompt = aiRewritten || createPolicySafePagePrompt(
               artStyle,
               comicStrip.layoutStyle || '4-panel',
               (characters || []).map((c: any) => c.name).join(' and '),

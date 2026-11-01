@@ -48,57 +48,62 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
 }
 
 /**
- * Neutralizes sensitive, provocative, or regulated keywords (e.g. "drugs", "curves",
- * "trophy wife", "coup", "slaughter", "bloody") that trigger automated safety filters
- * on diffusion image models (like Meta Muse Image 1.0 or Llama Guard), translating them
- * into elegant, policy-compliant visual storytelling terms.
+ * Uses Meta AI (muse-spark-1.3) to dynamically rewrite an image prompt that was flagged
+ * by image generation content filters into clean visual art direction (framing, lighting,
+ * environment, posture, wardrobe) with ZERO hardcoded word dictionaries.
  */
-export function sanitizeForImageContentPolicy(raw: string): string {
-  if (!raw) return '';
-  return raw
-    // Medical / Pharma / Controlled Substances
-    .replace(/\bdrug\s+patents?\b/gi, 'pharmaceutical formulas')
-    .replace(/\bdrug\s+companies\b/gi, 'pharmaceutical firms')
-    .replace(/\bdrug\s+company\b/gi, 'pharmaceutical firm')
-    .replace(/\bdrugs?\b/gi, 'medicine')
-    .replace(/\bnarcotics?\b/gi, 'compounds')
-    .replace(/\bpills?\b/gi, 'capsules')
-    .replace(/\bweed|cocaine|heroin|meth|fentanyl\b/gi, 'contraband')
-    // Suggestive / Sensual / Body Terms
-    .replace(/\bcurves?\b/gi, 'poised stature')
-    .replace(/\bcurvy\b/gi, 'commanding presence')
-    .replace(/\btrophy\s+wife\b/gi, 'high-society spouse')
-    .replace(/\bcleavage\b/gi, 'neckline')
-    .replace(/\blingerie|underwear|panties|bra\b/gi, 'undergarments')
-    .replace(/\bsexy|sensual|seductive|erotic|lust\b/gi, 'poised and stylish')
-    .replace(/\bprostitute|hooker|escort\b/gi, 'companion')
-    .replace(/\bnaked|nude\b/gi, 'attired')
-    // Violence / Gore / Crime
-    .replace(/\bbloody?\b/gi, 'crimson')
-    .replace(/\bgore\b/gi, 'shadows')
-    .replace(/\bcorpses?|dead\s+bod(y|ies)\b/gi, 'fallen figures')
-    .replace(/\bdecapitat\w*\b/gi, 'defeat')
-    .replace(/\bmurder(ed|er|ing)?\b/gi, 'confront')
-    .replace(/\bassassinat\w*\b/gi, 'target')
-    .replace(/\bslaughter\w*\b/gi, 'battle')
-    .replace(/\bboardroom\s+coup\b/gi, 'boardroom takeover')
-    .replace(/\bcoup\b/gi, 'takeover')
-    .replace(/\bweaponiz\w*\b/gi, 'leveraged')
-    // Degradation / Religious / Extreme Dominance
-    .replace(/\bhumiliated\b/gi, 'underestimated')
-    .replace(/\bdegraded\b/gi, 'dismissed')
-    .replace(/\bsubjugat\w*\b/gi, 'commanded')
-    .replace(/\bworshipped\s+as\s+power\b/gi, 'respected as authority')
-    .replace(/\bworshipped\b/gi, 'respected')
-    // Trim and collapse whitespace
-    .replace(/\s+/g, ' ')
-    .trim();
+export async function rewritePromptWithAiArtDirector(
+  originalPrompt: string,
+  targetApiKey: string,
+  cleanBase: string,
+  modelName: string = 'muse-spark-1.3'
+): Promise<string | null> {
+  if (!targetApiKey) return null;
+  try {
+    const res = await fetch(`${cleanBase}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${targetApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          {
+            role: 'system',
+            content: `You are MindStrip's AI Art Director. An image generation prompt for a comic page or character was flagged by an automated content management filter.
+Your task: Rephrase the prompt into pure visual comic art direction (focusing purely on lighting, camera angle, character wardrobe, posture, environment, and composition) that is completely safe and policy-compliant, preserving the creator's visual aesthetic without any sensitive or policy-triggering keywords.
+Rules:
+1. Do NOT include sensitive, provocative, or violent terms.
+2. Focus strictly on what the camera sees (lighting, color palette, attire, composition).
+3. Return ONLY the rewritten visual prompt string. Do NOT add preamble, quotes, or markdown.`
+          },
+          {
+            role: 'user',
+            content: `Flagged prompt to reformulate into safe visual comic artwork: "${originalPrompt}"`
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 1024
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content?.trim();
+      if (content && content.length > 20) {
+        return content.replace(/^["'`]|["'`]$/g, '').trim();
+      }
+    }
+  } catch (err) {
+    console.warn('AI Art Director prompt reformulation skipped:', err);
+  }
+  return null;
 }
 
 /**
- * Creates an ultra-safe, streamlined fallback prompt if an image generation model
- * returns a 400 content_policy_violation, preserving the core visual composition,
- * style, characters, and staging without any potentially flagged narrative text.
+ * Creates a clean, visual-only fallback prompt focusing purely on character visual anchors,
+ * comic style, layout gutters, and dramatic lighting without carrying over unvetted narrative text.
  */
 export function createPolicySafePagePrompt(
   artStyle: string,
@@ -106,11 +111,11 @@ export function createPolicySafePagePrompt(
   charactersList: string,
   sceneSummary: string
 ): string {
-  const safeStyle = sanitizeForImageContentPolicy(artStyle || 'webcomic');
-  const safeLayout = layoutDescriptor || 'comic book page layout structured as four distinct sequential frames separated by white gutters';
-  const safeChars = sanitizeForImageContentPolicy(charactersList || 'characters');
-  const safeScene = sanitizeForImageContentPolicy(sceneSummary || 'dramatic comic interaction, dynamic framing, expressive character presence');
-  return `${safeStyle} ${safeLayout}, high resolution sequential artwork depicting: ${safeChars}. Visual scene: ${safeScene}. Professional graphic novel page, crisp white comic gutters, cinematic lighting, dynamic composition.`;
+  const style = artStyle || 'webcomic';
+  const layout = layoutDescriptor || 'comic book page layout structured as four distinct sequential frames separated by white gutters';
+  const chars = charactersList || 'comic heroes';
+  const scene = sceneSummary || 'dramatic scene interaction with expressive character presence';
+  return `${style} ${layout}, high resolution sequential graphic novel artwork depicting: ${chars}. Narrative scene: ${scene}. Professional graphic novel page, crisp white comic gutters, cinematic lighting, dynamic composition.`;
 }
 
 /**
@@ -381,8 +386,7 @@ export function directVisualArtwork(
     premiseSnippet = `Four sequential narrative frames in a 2x2 comic grid with white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
   }
 
-  const rawPagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${COMIC_PAGE_PUBLICATION_DIRECTIVE} Dynamic composition, cinematic lighting.`;
-  const pagePrompt = sanitizeForImageContentPolicy(rawPagePrompt);
+  const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsSummary}. Narrative scene: ${premiseSnippet}. ${COMIC_PAGE_PUBLICATION_DIRECTIVE} Dynamic composition, cinematic lighting.`;
 
   return {
     sanitizedDraft,

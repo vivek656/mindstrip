@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
-import { TEXTLESS_ARTWORK_DIRECTIVE, sanitizeForImageContentPolicy } from '@/lib/agents/art-director';
+import { TEXTLESS_ARTWORK_DIRECTIVE, rewritePromptWithAiArtDirector } from '@/lib/agents/art-director';
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,10 +76,9 @@ export async function POST(req: NextRequest) {
 
     const textlessDirective = TEXTLESS_ARTWORK_DIRECTIVE;
     
-    const rawPrompt = customPrompt
+    const prompt = customPrompt
       ? `${artStyle} character art: ${customPrompt}. ${viewDescriptor}. ${textlessDirective}`
       : `${artStyle} character concept design of ${characterName} ${charGender} (${role}) for ${universeContext || 'comic universe'}. ${viewDescriptor}. ${anchorDetails}. ${textlessDirective} Masterpiece comic art, crisp lines, consistent character anatomy.`;
-    const prompt = sanitizeForImageContentPolicy(rawPrompt);
 
     // 2. Resolve Target Keys & Provider
     const targetMetaKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
@@ -171,10 +170,15 @@ export async function POST(req: NextRequest) {
     if (!imgRes.ok) {
       const errTxt = await imgRes.text();
       if (imgRes.status === 400 && errTxt.includes('content_policy_violation')) {
-        console.warn('Meta Muse Image flagged content_policy_violation for character portrait. Attempting safe retry...');
-        const safeCharPrompt = sanitizeForImageContentPolicy(
-          `${artStyle} character concept design of ${characterName} (${role || 'character'}), ${viewDescriptor}, poised commanding presence, clean studio lighting, pristine comic art, professional model sheet. ${TEXTLESS_ARTWORK_DIRECTIVE}`
+        console.warn('Meta Muse Image flagged content_policy_violation for character portrait. Engaging AI Art Director to dynamically rephrase...');
+        const aiRewritten = await rewritePromptWithAiArtDirector(
+          prompt,
+          targetKey,
+          cleanBase,
+          'muse-spark-1.3'
         );
+
+        const safeCharPrompt = aiRewritten || `${artStyle} character concept design of ${characterName} (${role || 'character'}), ${viewDescriptor}, poised commanding presence, clean studio lighting, pristine comic art, professional model sheet. ${TEXTLESS_ARTWORK_DIRECTIVE}`;
 
         imgRes = await fetch(`${cleanBase}/images/generations`, {
           method: 'POST',
