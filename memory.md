@@ -1307,7 +1307,18 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Key Discovery & Fix in `art-director.ts`**:
   - The word "path" or "pathway" caused the image diffusion model to draw a central walkway/aisle of bare floor tiles down the center of the elevator.
   - Stripped "path", "pathway", and "aisle" from the safety translation prompt. Replaced with explicit instructions: "wall-to-wall continuous surface of prostrated attendants covering 100% of the floor with zero floor space, zero aisle, zero bare tiles", and "high heels planted directly atop the prostrated attendants".
-### Live Full-Page Regeneration: Episode 2 "NAMITA ONLY - The Private Lift" (2026-11-01)
+### Locked Canon Namita Likeness & Strict Wardrobe Alignment (2026-11-01)
+- **Visual Fixes Applied & Verified**:
+  1. **Namita Likeness**:
+     - Modeled directly on the locked canon portrait (`char-Namita-portrait-1793523314126.webp`): mature 45-year-old beautiful Indian businesswoman with warm honey-olive complexion, sharp kohl-lined dark eyes, sculpted cheekbones, deep crimson red lips, and **voluminous lush wavy dark hair cascading over her shoulders** (replacing the severe back bun).
+  2. **Strict Signature Uniform (NO Blazer / Over-Layer)**:
+     - Enforced World Bible canon wardrobe: **crisp red button-down silk shirt tucked tight into a high-waisted black knee-length pencil skirt** with 4-5 inch polished red stilettos (removing the prohibited corporate blazer/jacket).
+  3. **Direct Foot-on-Body Contact (Zero Floor Tiles Under Feet)**:
+     - **Panel 2 (THE STEP)**: Stepping forward directly on top of the prostrated attendants, phone to ear, caption: *“true power never looks down.”*
+     - **Panel 3 (THE PRESSURE)**: Clean, sleek red stiletto (hallucinated buttons stripped) pressed with full weight directly into the living back.
+     - **Panel 4 (THE ASCENSION)**: **Both red stiletto heels planted squarely on top of the prostrated figures** with zero floor tiles visible under her feet; centered arms crossed, `100` lit up, speech balloon: *“you better kneel before market opens.”*
+- **Database & Asset Sync**:
+  - Synced to `/episodes/ep2_namita_private_lift.webp` and updated both `CEO NAMITA` and `CEO NAMITA [Timeline B]` in MongoDB Atlas. Pushed to `main` (`ff99331`).
 - **Direct Live Synthesis Executed**:
   - Successfully synthesized fresh comic page artwork via Meta Muse Image 1.0 (`ep2_regenerated_live.webp`).
   - Saved to `public/episodes/ep2_namita_private_lift.webp` and pushed to production repo (`d49eade`).
