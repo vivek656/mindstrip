@@ -1132,3 +1132,20 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: clean production build with zero errors.
   - Committed and pushed to `main`.
+
+### Page-Specific Attire Precedence & Prompt Sanitization Explanation (2026-11-01)
+- **User Query**:
+  *"wait why are you sanitizing prompt 2nd tell for an partiucyular page i can have a diff attire as wll right ?"*
+- **Problem Diagnosed**:
+  1. **Prompt Sanitization Purpose**: Diffusion models (such as `muse-image-1.0`) lack understanding of screenplay metadata. If a raw prompt like `"Panel 1: 09:00 AM [DIRECTORIAL CAST LOCK] Namita in the boardroom"` was passed, diffusion models would literally draw giant text banners like "PANEL 1" or "09:00 AM" stamped across the artwork. Prompt sanitization cleans out structural frame labels, numbering, and timestamps while **preserving 100% of narrative descriptions, character actions, emotions, and outfits**.
+  2. **Page-Specific Attire Override Bug**: Previously, `applyCanonicalCharacterAttire` in `art-director.ts` used a rigid regex `/(?:wearing|in|clad in|draped in)\s+[^,.;]*/gi` to overwrite scene attire with `c.wardrobe`, and `generate-image/route.ts` prepended `[MANDATORY ATTIRE]`. If a creator wrote a page where a character wore an evening gala gown, athletic wear, hospital scrubs, or traditional attire, the system was overriding it with the character's default dossier suit!
+- **Fix Implemented**:
+  1. Introduced `hasSceneSpecificAttire(sceneText, characterName)` in `src/lib/agents/art-director.ts`: detects if a page prompt or panel description already specifies attire for that character or scene.
+  2. **Page-Specific Attire Takes Absolute Precedence**:
+     - `applyCanonicalCharacterAttire`: If the scene already specifies attire (e.g. "Namita wearing an evening gown", "in athletic gear", "dressed in a saree"), the scene's attire is **100% preserved**. The character's dossier signature wardrobe is **ONLY** appended as a fallback default when no clothing is mentioned on that page.
+     - `generate-image/route.ts`: Only injects `[DEFAULT ATTIRE]` for characters who have no clothing specified in the scene prompt.
+     - `ComicPageSpread.tsx`: Uses `hasSceneSpecificAttire` and completely removed legacy negative phrases like `(DO NOT render in saree or battle armor)` and `NOT in tactical armor`.
+     - `comic-generator.ts` and `story-context.ts`: Updated to treat dossier wardrobe as default fallback attire rather than mandatory locks.
+- **Verification**:
+  - `npm run build`: 100% clean production build.
+  - Committed (`4519a33`) and pushed to `main`.
