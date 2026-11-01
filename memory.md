@@ -1379,3 +1379,18 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Updated `sanitizeDiffusionSafetyTriggers` in `src/lib/agents/art-director.ts` to map women employee triggers to `corporate executive stewardesses in tailored black uniform`.
   - Generated and locked `ep2_women_stewardesses_call.webp` to `public/episodes/ep2_namita_private_lift.webp`.
   - Synced MongoDB collections for both `CEO NAMITA` worlds. Clean production build verified.
+
+### Episode 3: The Price of Forgiveness (2026-11-01)
+- **Premise & Staging**:
+  - Setting: 100th-floor corner executive penthouse suite at Logan Pharma, floor-to-ceiling glass windows overlooking panoramic skyline.
+  - Namita: Seated in her high-backed executive leather chair behind a marble desk, legs crossed in sharp red stilettos, tucked red silk button-down and black pencil skirt, voluminous wavy dark hair.
+  - Subordinate: Senior Director Priya kneeling on the polished marble floor with hands clasped, pleading for forgiveness over a 2-hour delay on the Singapore filing.
+- **Story Beats & Dialogue**:
+  - Beat 1 (THE AUDIENCE): *"Why are you wasting my morning, Priya?"* | Caption: *"100th Floor. Logan Pharma Executive Suite."*
+  - Beat 2 (THE COLD RECKONING): Priya: *"Namita ma'am... please forgive me... it will never happen again!"* | Caption: *"power does not debate."*
+  - Beat 3 (THE SUPPLICATION): Macro shot of Priya kneeling in front of Namita's red stiletto heel: Namita: *"In my company, two minutes costs fifty crores."*
+  - Beat 4 (THE DISMISSAL): Namita swiveling her chair toward the panoramic skyline window, phone to ear, waving a dismissive hand: *"Cancel her bonus. Next."* | Caption: *"forgiveness was never an option."*
+- **Synthesis & Persistence**:
+  - Generated with Meta Muse Image 1.0 (`ep3_forgiveness_rendered.webp`, Status 200 OK).
+  - Saved to `public/episodes/ep3_namita_forgiveness.webp`.
+  - Synced to MongoDB Atlas for `CEO NAMITA` (`world-1793423242997`) and `CEO NAMITA [Timeline B]` (`world-fork-1793537920934`). Production build verified clean.
