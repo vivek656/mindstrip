@@ -129,16 +129,19 @@ function generateHeuristicCharacterChat(
   }
 
   // Full / General Section
+  const posPronoun = character?.gender === 'female' ? 'her' : character?.gender === 'male' ? 'his' : 'their';
+  const objPronoun = character?.gender === 'female' ? 'her' : character?.gender === 'male' ? 'him' : 'them';
+
   return {
-    reply: `I'm your AI Character Co-Director for @${name} in "${worldTitle}". Let's develop her together! Tell me what you envision for her role, personality, or look, and I will tailor specific questions and suggest updates for your dossier.`,
+    reply: `I'm your AI Character Co-Director for @${name} in "${worldTitle}". Let's develop ${objPronoun} together! Tell me what you envision for ${posPronoun} role, personality, or look, and I will tailor specific suggestions for your dossier.`,
     questions: [
-      `What is her primary role and conflict in the upcoming episodes?`,
-      `Should we focus on her Visual Anchors (outfit/accessories) or Lore & Backstory first?`
+      `What is ${posPronoun} primary role and conflict in the upcoming episodes?`,
+      `Should we focus on Visual Anchors (wardrobe/accessories) or Lore & Backstory first?`
     ],
     quickOptions: [
-      `🎨 Refine her physical look & signature wardrobe`,
-      `📖 Deepen her origin story & core motivation`,
-      `💬 Dial in her dialogue voice & catchphrases`,
+      `🎨 Refine ${posPronoun} physical look & signature wardrobe`,
+      `📖 Deepen ${posPronoun} origin story & core motivation`,
+      `💬 Dial in ${posPronoun} dialogue voice & catchphrases`,
       `✨ Build a complete multi-dimensional character profile`
     ]
   };

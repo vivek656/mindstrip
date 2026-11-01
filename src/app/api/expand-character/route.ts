@@ -115,8 +115,8 @@ Current character draft notes:
 - Gear / Belongings: "${character?.gear || ''}"
 
 CRITICAL INSTRUCTIONS:
-1. STRICTLY OBEY the creator's explicit vision above! If the creator states this character is an everyday office worker, love interest, coworker, or normal person and NOT a hero saving earth, DO NOT give her superpowers, combat styles, or tactical weapons!
-2. Fill out realistic, emotionally resonant details that match her role as ${charRole} in this universe.
+1. STRICTLY OBEY the creator's explicit vision and direction above! Respect their tone, genre, and character concept faithfully.
+2. Fill out rich, nuanced, and emotionally resonant details that match their defined role as ${charRole} in "${worldTitle}".
 3. If targetField is specified ("${targetField}"), ensure that field is particularly deep and polished.`
           : `Develop full deep-dive profile for @${charName} (${charRole}, ${charGender}) in "${worldTitle}" (${genre}).
 Current draft notes:

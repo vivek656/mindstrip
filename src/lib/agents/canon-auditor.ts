@@ -30,77 +30,41 @@ export function auditEpisodeDraft(
   });
   const protagonistName = protagonists[0]?.name || 'Protagonist';
 
-  // 1. Audit Antagonist Opposition & Behavior
-  antagonists.forEach((antagonist) => {
-    draft.panels.forEach((panel) => {
-      // Check dialogue bubbles spoken by the antagonist
-      panel.bubbles.forEach((b) => {
-        if (b.speaker.toLowerCase().includes(antagonist.name.toLowerCase())) {
-          const text = b.text.toLowerCase();
-          // Friendly or cooperative phrases that betray antagonist integrity
-          const friendlyPhrases = [
-            'let me help',
-            'i can help',
-            'here is the solution',
-            'i apologize',
-            'sorry about earlier',
-            'good job',
-            'proud of you',
-            'we are a team',
-            'let us work together',
-            'take my hand',
-            'trust me',
-            'you are right',
-            'i agree with you',
-            'we should cooperate'
-          ];
+  const promptText = (context.rawDump || '').toLowerCase();
+  const guestCharacterNames = (draft.guestCharacters || []).map((g) => g.name.toLowerCase().trim());
 
-          for (const phrase of friendlyPhrases) {
-            if (text.includes(phrase)) {
-              violations.push({
-                code: 'ANTAGONIST_OPPOSITION_FAILED',
-                severity: 'critical',
-                panelNumber: panel.panelNumber,
-                characterName: antagonist.name,
-                description: `Antagonist "${antagonist.name}" speaks cooperatively ("${phrase}") in Panel ${panel.panelNumber}.`,
-                critique: `The antagonist must never assist, comfort, or cooperate with ${protagonistName}. Antagonists must menace, challenge, mock, sabotage, or set traps.`,
-                suggestedFix: `Rewrite ${antagonist.name}'s line in Panel ${panel.panelNumber} into an adversarial taunt, ultimatum, or sabotage threat.`
-              });
-              break;
+  // 1. Audit Antagonist Opposition & Behavior (Warning only if not aligned)
+  const isCooperativePremise = /cooperat|truce|team\s*up|alliance|friend|peace|reconcil/.test(promptText);
+  if (!isCooperativePremise) {
+    antagonists.forEach((antagonist) => {
+      draft.panels.forEach((panel) => {
+        panel.bubbles.forEach((b) => {
+          if (b.speaker.toLowerCase().includes(antagonist.name.toLowerCase())) {
+            const text = b.text.toLowerCase();
+            const overlyFriendly = ['we are a team', 'let us work together', 'i want to help you', 'take my hand'];
+            for (const phrase of overlyFriendly) {
+              if (text.includes(phrase)) {
+                violations.push({
+                  code: 'ANTAGONIST_OPPOSITION_FAILED',
+                  severity: 'warning',
+                  panelNumber: panel.panelNumber,
+                  characterName: antagonist.name,
+                  description: `Antagonist "${antagonist.name}" speaks cooperatively ("${phrase}") in Panel ${panel.panelNumber}.`,
+                  critique: `Antagonists typically challenge or oppose ${protagonistName} unless a truce or redemption arc was requested.`,
+                  suggestedFix: `Ensure ${antagonist.name}'s dynamic fits the intended dramatic stakes.`
+                });
+                break;
+              }
             }
           }
-        }
+        });
       });
-
-      // Check scene description for antagonist acting as an ally
-      const scene = panel.sceneDescription.toLowerCase();
-      if (scene.includes(antagonist.name.toLowerCase())) {
-        if (
-          scene.includes('helps') ||
-          scene.includes('saves') ||
-          scene.includes('assists') ||
-          scene.includes('rescues') ||
-          scene.includes('comforts') ||
-          scene.includes('allies with')
-        ) {
-          violations.push({
-            code: 'ANTAGONIST_OPPOSITION_FAILED',
-            severity: 'critical',
-            panelNumber: panel.panelNumber,
-            characterName: antagonist.name,
-            description: `Scene description shows antagonist "${antagonist.name}" aiding or saving the protagonist in Panel ${panel.panelNumber}.`,
-            critique: `Antagonists must maintain conflict and opposition. They must not save or support the hero unless the user explicitly requested a redemption arc.`,
-            suggestedFix: `Change Panel ${panel.panelNumber} so that ${antagonist.name} ambushes, obstructs, or takes advantage of the crisis instead.`
-          });
-        }
-      }
     });
-  });
+  }
 
   // 2. Audit Cast Integrity: All speaking and active characters MUST exist in the active World Bible cast OR be episodic guest characters
   const validCastNames = characters.map((c) => c.name.toLowerCase().trim());
   const activeCastDisplay = characters.map((c) => c.name).join(', ') || 'Protagonist';
-  const promptText = (context.rawDump || '').toLowerCase();
 
   const isGuestOrPromptCharacter = (name: string) => {
     const n = name.toLowerCase().trim();
@@ -108,7 +72,9 @@ export function auditEpisodeDraft(
       n === 'narrator' ||
       n === 'caption' ||
       promptText.includes(n) ||
-      /client|guest|boss|ceo|coworker|colleague|customer|waiter|stranger|guard|officer|doctor|interviewer|date|crush|bidder|investor|partner/.test(n)
+      guestCharacterNames.some((gn) => gn.includes(n) || n.includes(gn)) ||
+      n.startsWith('the ') ||
+      n.startsWith('a ')
     );
   };
 
@@ -125,7 +91,7 @@ export function auditEpisodeDraft(
           panelNumber: panel.panelNumber,
           characterName: speaker,
           description: `Panel ${panel.panelNumber} features speaker "${speaker}" who is not in the active World Bible cast.`,
-          critique: `The character "${speaker}" was removed or does not exist in the World Bible. Only current active cast members [${activeCastDisplay}] or prompt-introduced guest scene partners may appear or speak.`,
+          critique: `The character "${speaker}" does not exist in the World Bible. Only current active cast members [${activeCastDisplay}] or prompt-introduced guest scene partners may appear or speak.`,
           suggestedFix: `Replace "${speaker}" with an active character (${activeCastDisplay}) or Narrator.`
         });
       }
@@ -145,54 +111,6 @@ export function auditEpisodeDraft(
           critique: `"${charName}" is not an active character in this universe. Clean all references to deleted characters.`,
           suggestedFix: `Purge "${charName}" from Panel ${panel.panelNumber} and replace with an active cast member or episodic guest.`
         });
-      }
-    });
-  });
-
-  // 3. Audit Civilian Non-Combatant Consistency: Civilian characters must NOT perform superhero combat
-  const civilians = characters.filter((c) => {
-    const role = (c.role || '').toLowerCase();
-    return !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
-  });
-
-  civilians.forEach((civilian) => {
-    draft.panels.forEach((panel) => {
-      const scene = panel.sceneDescription.toLowerCase();
-      const bubbles = panel.bubbles.map((b) => b.text.toLowerCase()).join(' ');
-      const combined = `${scene} ${bubbles}`;
-
-      if (combined.includes(civilian.name.toLowerCase())) {
-        const combatWords = [
-          'mid-kick',
-          'roundhouse',
-          'karate',
-          'martial arts',
-          'smashes drone',
-          'destroying a drone',
-          'flying kick',
-          'ninja',
-          'superhuman',
-          'swings sword',
-          'laser blast',
-          'tactical combat',
-          'night shift is mine',
-          'fights at night'
-        ];
-
-        for (const word of combatWords) {
-          if (combined.includes(word)) {
-            violations.push({
-              code: 'CIVILIAN_COMBAT_VIOLATION',
-              severity: 'critical',
-              panelNumber: panel.panelNumber,
-              characterName: civilian.name,
-              description: `Civilian character "${civilian.name}" (${civilian.role}) is performing superhero combat actions ("${word}") in Panel ${panel.panelNumber}.`,
-              critique: `"${civilian.name}" is defined as a civilian ${civilian.role}, NOT a superhero or night-shift fighter. They must not fight villains, do martial arts, or wield combat weapons.`,
-              suggestedFix: `Re-script "${civilian.name}" in Panel ${panel.panelNumber} to behave according to their actual civilian profession (${civilian.role}), reacting realistically without combat powers.`
-            });
-            break;
-          }
-        }
       }
     });
   });

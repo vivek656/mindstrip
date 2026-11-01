@@ -399,23 +399,25 @@ export function CharacterDossierModal({
 
       // Seed initial character co-director conversation
       if (character.name) {
+        const posPronoun = character.gender === 'female' ? 'her' : character.gender === 'male' ? 'his' : 'their';
+        const subjPronoun = character.gender === 'female' ? 'she' : character.gender === 'male' ? 'he' : 'they';
+        const objPronoun = character.gender === 'female' ? 'her' : character.gender === 'male' ? 'him' : 'them';
+
         setChatMessages([
           {
             id: `seed-${Date.now()}`,
             role: 'assistant',
-            content: `Hello! I'm your AI Character Co-Director for @${character.name}. Let's make sure her visual style, wardrobe, and backstory are 100% dialled in for "${world.title}".
-
-What would you like to discuss or refine first?`,
+            content: `Hello! I'm your AI Character Co-Director for @${character.name}. Let's make sure ${posPronoun} visual style, wardrobe, and backstory are 100% dialed in for "${world.title}".\n\nWhat would you like to discuss or refine first?`,
             questions: [
-              `What is her signature daily power wardrobe and footwear?`,
-              `Does she carry an iconic accessory or silhouette prop?`,
-              `What hidden emotional truth or ambition drives her in this story?`
+              `What is ${posPronoun} signature everyday wardrobe and look?`,
+              `Does ${subjPronoun} carry an iconic accessory, tool, or silhouette prop?`,
+              `What core motivation or ambition drives ${objPronoun} in this story?`
             ],
             quickOptions: [
-              `👔 Tailored executive suit & polished footwear`,
-              `💼 Modern western executive blazer & trousers`,
-              `📖 Explore her origin backstory & motivation`,
-              `💬 Dial in her speech cadence & catchphrase`
+              `🎨 Refine ${posPronoun} visual look & wardrobe`,
+              `📖 Deepen ${posPronoun} origin backstory & motivation`,
+              `💬 Dial in ${posPronoun} speech cadence & catchphrase`,
+              `✨ Build a complete multi-dimensional character profile`
             ],
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           }
@@ -2843,7 +2845,7 @@ What would you like to discuss or refine first?`,
                     </button>
                   </form>
                   <p className="text-[10px] text-zinc-400 mt-1 pl-1">
-                    💡 Ask questions or tell what you want (e.g. &ldquo;She wears a tailored navy blazer and pointed heels&rdquo;)
+                    💡 Ask questions or describe your vision (e.g. &ldquo;Wears a rugged trench coat with silver buckles&rdquo; or &ldquo;Streetwear jacket with high-top sneakers&rdquo;)
                   </p>
                 </div>
               </div>

@@ -70,11 +70,11 @@ You MUST revise the episode to strictly satisfy the Canon Auditor. Never repeat 
 You script serialized comic episodes with intelligent narrative pacing, character continuity, and dynamic page layouts.
 
 CRITICAL CASTING & EPISODE RULES:
-1. EPISODE SPOTLIGHT & ZERO UNWANTED HERO CAMEO: If the episode prompt focuses on a specific character (e.g., a specific character in an office or civilian setting), DO NOT force the main hero, protagonist, or other world characters into the scene! Script ONLY the requested character and their relevant scene partners. Give the spotlighted character their own standalone episode arc!
-2. CIVILIAN, CRUSH & OFFICE WORKER INTEGRITY (NOT A HERO SIDEKICK): A character whose role is a "crush", "office worker", "coworker", "love-interest", or "civilian" is NEVER a superhero sidekick. They DO NOT fight villains, DO NOT wear tactical armor, and DO NOT follow a hero on superhero missions. Ground their scenes completely in their defined role: personal drama, professional stakes, interpersonal friction, everyday humor, and authentic relationships!
-3. TEMPORARY GUEST SCENE PARTNERS: When the user's premise introduces a temporary or one-off character (e.g., "the client", "the CEO", "a mysterious visitor", "a rival"), YOU ARE EXPLICITLY ENCOURAGED to introduce them as an episodic guest character in the panels and dialogue (e.g., speaker: "The Client" or "The Guest"). They act as a one-off scene partner for this episode without permanently altering the world bible.
-4. ANTAGONIST INTEGRITY: Any character in the PROVIDED Characters roster with role="antagonist" MUST ACTIVELY OPPOSE, MENACE, MOCK, OR SABOTAGE. If NO antagonist is listed in the provided Characters roster, DO NOT invent or introduce any antagonist or villain!
-5. STRICT ROSTER ENFORCEMENT & ZERO HALLUCINATED HEROES: You may ONLY write panels, dialogue, or descriptions for characters explicitly listed in the provided Characters roster or requested as an episodic guest scene partner. You are STRICTLY FORBIDDEN from including, referencing, or inventing lines for any unlisted universe hero, protagonist, or villain!
+1. EPISODE SPOTLIGHT & ZERO UNWANTED HERO CAMEO: If the episode prompt focuses on a specific character, DO NOT force other universe characters into the scene. Script ONLY the requested character and their relevant scene partners. Give the spotlighted character their own standalone episode arc!
+2. CHARACTER ROLE & PREMISE FIDELITY: Faithfully honor each character's defined role, personality, and the creator's premise without forcing superhero tropes into grounded stories or unprompted genre shifts.
+3. TEMPORARY GUEST SCENE PARTNERS: When the user's premise introduces a temporary or one-off character (e.g. a client, visitor, guest, or counterpart), YOU ARE EXPLICITLY ENCOURAGED to introduce them as an episodic guest character in the panels and dialogue.
+4. ANTAGONIST INTEGRITY: Any character in the PROVIDED Characters roster with role="antagonist" should create dramatic friction, opposition, or rivalry aligned with the universe tone. If NO antagonist is in the roster, do not invent one.
+5. STRICT ROSTER ENFORCEMENT: You may ONLY write panels, dialogue, or descriptions for characters explicitly listed in the provided Characters roster or requested in the premise.
 6. MANDATORY CAST INTEGRITY: Never include deleted cast members from previous worlds.
 7. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
 ${critiquePrompt}
@@ -213,30 +213,14 @@ Episode Premise / Brain Dump: "${rawDump}"`;
         const isUnknown = b.speaker.toLowerCase() !== 'narrator' && !Array.from(validNames).some((n) => b.speaker.toLowerCase().includes(n));
         const effectiveSpeaker = isUnknown ? (primaryCivilian?.name || protagonist?.name || 'Narrator') : b.speaker;
 
-        if (antagonist && effectiveSpeaker.toLowerCase().includes(antagonist.name.toLowerCase())) {
-          return {
-            ...b,
-            speaker: effectiveSpeaker,
-            text: `Did you honestly think I would let you succeed, ${protagonist?.name || 'hero'}? You've stepped right into my trap.`,
-            type: 'shout' as const
-          };
-        }
         return {
           ...b,
           speaker: effectiveSpeaker
         };
       });
 
-      // 2. Fix scene description to ensure antagonist opposes and civilians don't do superhero combat
+      // 2. Clean narrative description
       let scene = p.sceneDescription;
-      if (antagonist && scene.includes(antagonist.name)) {
-        scene = `${antagonist.name} ambushes the perimeter, deploying countermeasures to sabotage ${protagonist?.name || 'the protagonist'}.`;
-      }
-
-      // Check civilian combat violations
-      if (primaryCivilian && (scene.toLowerCase().includes('mid-kick') || scene.toLowerCase().includes('martial arts') || scene.toLowerCase().includes('night shift is mine'))) {
-        scene = `${primaryCivilian.name} watches with nervous anxiety from the terminal, holding a notepad and alerting ${protagonist?.name || 'the team'} to the surging voltage.`;
-      }
 
       // 3. Fix visual prompt labels
       const cleanedPrompt = p.imagePrompt
