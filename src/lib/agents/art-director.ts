@@ -240,7 +240,7 @@ export function hasSceneSpecificAttire(sceneText: string, characterName?: string
  * Applies character visual continuity to a frame description.
  * CRITICAL RULE: Page-specific attire takes absolute precedence!
  * If the scene description already specifies what a character is wearing on this page
- * (e.g. "Namita wearing an evening gown", "dressed in lab scrubs", "in athletic gear"),
+ * (e.g. "Character wearing an evening gown", "dressed in lab scrubs", "in athletic gear"),
  * that page attire is 100% PRESERVED and NOT overwritten.
  * The character's signature dossier wardrobe is ONLY appended as a fallback default
  * when no clothing is specified for that character on that page.

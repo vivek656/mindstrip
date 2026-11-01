@@ -1928,7 +1928,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                                                 } else if (part.trim()) {
                                                   bubbles.push({
                                                     id: `b${p.panelNumber}-${bIdx + 1}`,
-                                                    speaker: world.characters[0]?.name || 'Namita',
+                                                    speaker: world.characters[0]?.name || 'Protagonist',
                                                     text: part.trim().replace(/^["']|["']$/g, ''),
                                                     type: 'speech',
                                                     position: 'top-right'
@@ -1941,7 +1941,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                                               panelNumber: p.panelNumber || (idx + 1),
                                               title: `Beat ${p.panelNumber || (idx + 1)}`,
                                               sceneDescription: p.description,
-                                              characters: [world.characters[0]?.name || 'Namita'],
+                                              characters: [world.characters[0]?.name || 'Protagonist'],
                                               bubbles,
                                               soundEffect: sfxMatch ? sfxMatch[1].trim() : '',
                                               soundEffectPosition: { x: 70, y: 30 },
