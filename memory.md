@@ -1380,7 +1380,12 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Generated and locked `ep2_women_stewardesses_call.webp` to `public/episodes/ep2_namita_private_lift.webp`.
   - Synced MongoDB collections for both `CEO NAMITA` worlds. Clean production build verified.
 
-### Episode 3: The Price of Forgiveness (2026-11-01)
+### Built-in 4K Cinematic Realism & Editorial Photography (2026-11-01)
+- **Feature Overview**:
+  - Added native first-class support for `cinematic-realism` across `ComicPageSpread.tsx` (Granular Art Director), `UniverseBuilderStudio.tsx`, `ZenComicReader.tsx`, `art-director.ts`, and `comic.ts`.
+  - Maps to prompt descriptor: `"ultra-realistic 4K editorial photography, live-action cinematic film still, sharp focus, 8k resolution, photorealistic cinematic lighting, Hasselblad medium format portrait, natural skin textures, hyper-detailed real-life cinematography"`.
+  - Added 1-click aesthetic injector tags in the Granular Studio: `📸 4K Editorial & Hasselblad`, `🎬 35mm Cinematic Film Still`, and `✨ Natural Skin Texture & 8K`.
+  - Verified live render with Meta Muse Image 1.0 (`test_cinematic_4k_realism.webp` / `public/episodes/ep3_namita_forgiveness_4k_editorial.webp`). Clean production build verified.
 - **Premise & Staging**:
   - Setting: 100th-floor corner executive penthouse suite at Logan Pharma, floor-to-ceiling glass windows overlooking panoramic skyline.
   - Namita: Seated in her high-backed executive leather chair behind a marble desk, legs crossed in sharp red stilettos, tucked red silk button-down and black pencil skirt, voluminous wavy dark hair.
