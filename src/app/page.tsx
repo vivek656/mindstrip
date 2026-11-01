@@ -512,6 +512,7 @@ export default function Home() {
     if (!activeWorld || !activeEpisode) return;
     setIsLoading(true);
     setIsGeneratingArtwork(true);
+    setArtworkError(null);
     try {
       let effectivePremise = stripSystemMetadataTags(overridePremise || activeEpisode.rawBrainDump || activeWorld.tagline);
       const activeCastNames = activeWorld.characters.map((c) => c.name.toLowerCase());
@@ -559,10 +560,18 @@ export default function Home() {
             const imgData = await imgRes.json();
             if (imgData.pageImageUrl) {
               freshImageUrl = imgData.pageImageUrl;
+              setArtworkError(null);
             }
+          } else {
+            const errData = await imgRes.json().catch(() => ({}));
+            const errMsg = errData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
+            console.error('Direct panels artwork fetch failed:', errMsg);
+            setArtworkError(errMsg);
           }
         } catch (imgErr) {
-          console.warn('Direct panels artwork fetch warning:', imgErr);
+          const msg = imgErr instanceof Error ? imgErr.message : String(imgErr);
+          console.warn('Direct panels artwork fetch warning:', msg);
+          setArtworkError(msg);
         }
       } else {
         // 1. Only include episodes strictly PRIOR to the current episode being regenerated
@@ -618,10 +627,18 @@ export default function Home() {
               const imgData = await imgRes.json();
               if (imgData.pageImageUrl) {
                 freshImageUrl = imgData.pageImageUrl;
+                setArtworkError(null);
               }
+            } else {
+              const errData = await imgRes.json().catch(() => ({}));
+              const errMsg = errData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
+              console.error('Re-draw artwork fetch failed:', errMsg);
+              setArtworkError(errMsg);
             }
           } catch (imgErr) {
-            console.warn('Re-draw artwork fetch warning:', imgErr);
+            const msg = imgErr instanceof Error ? imgErr.message : String(imgErr);
+            console.warn('Re-draw artwork fetch warning:', msg);
+            setArtworkError(msg);
           }
         }
       }

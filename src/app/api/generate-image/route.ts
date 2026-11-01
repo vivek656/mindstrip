@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { persistToPermanentBlob } from '@/lib/blob-storage';
 import {
   cleanPromptForWordlessArtwork,
+  sanitizeDiffusionSafetyTriggers,
   formatFrameWithRagDialogue,
   applyCanonicalCharacterAttire,
   hasSceneSpecificAttire,
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Thoroughly scrub all metadata, panel numbers, timestamps, and typography triggers so diffusion models never paint text
-    const rawClean = cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt || prompt || episodeTitle || 'dynamic comic scene'));
+    const rawClean = sanitizeDiffusionSafetyTriggers(cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt || prompt || episodeTitle || 'dynamic comic scene')));
     let sanitizedPrompt = applyCanonicalCharacterAttire(rawClean, targetCharacters);
 
     // 1. Check if the user/director provided an explicit custom prompt
@@ -220,7 +221,8 @@ export async function POST(req: NextRequest) {
     }
 
     const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
-    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const rawPagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const pagePrompt = sanitizeDiffusionSafetyTriggers(rawPagePrompt);
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {

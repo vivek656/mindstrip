@@ -2025,6 +2025,15 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
 
                     {/* Chat Input Field for Current Page */}
                     <div className="space-y-1.5 pt-2 border-t border-black/[0.06] dark:border-white/10">
+                      {artworkError && (
+                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-500" />
+                          <div className="flex-1">
+                            <span className="font-semibold block">Artwork Synthesis Alert:</span>
+                            <span className="text-[11px] leading-tight block">{artworkError}</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="relative">
                         <input
                           type="text"
