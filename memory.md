@@ -1257,8 +1257,9 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   3. **Custom Prompt Panel Drop**:
      - In `/api/generate-image/route.ts`, `hasExplicitCustom` bypassed the panel formatting and dialogue injection when `customPrompt` was present, dropping the speech balloons from `panels`.
 - **Architectural Solution (Zero Hardcoding)**:
-  1. **Expanded Token Budget in `rewritePromptWithAiArtDirector`**:
-     - Raised `max_tokens` from 1024 to 4096. Now `muse-spark-1.3` has full token headroom for both its internal reasoning chain and the complete visual cinematography prompt.
+  1. **Complete Removal of Token Budgets (`max_tokens`)**:
+     - Stripped `max_tokens` completely from all Meta Model API and partner agent calls (`art-director.ts`, `showrunner.ts`, `co-director-chat`, `co-director-pitch`, `build-world`, `character-chat`, `expand-character`).
+     - Models (especially reasoning models like `muse-spark-1.3`) now use their full native context and output freely with zero artificial token budget truncation or cutoff.
   2. **Diffusion Safety Vocabulary Guidance**:
      - Updated AI Art Director system prompt to guide the model on diffusion model safety boundaries: translate literal anatomical terms ("bare skin", "flesh", "fetish") into high-status cinematic comic staging ("attendants kneeling or prostrated low across the floor in deep reverence/submission", "striding forward in sharp high heels directly atop the prostrated path", "low-angle dramatic framing", "mirrored private elevator with brass plaque", "floor 100 lit up").
      - Enforced mandatory preservation of 100% of physical and spatial staging fidelity, exact settings, character attire, and **all speech balloons and sound effects**.

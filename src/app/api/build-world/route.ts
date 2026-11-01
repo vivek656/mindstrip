@@ -91,7 +91,6 @@ Return ONLY valid JSON matching this exact schema:
                 content: `Build an original comic universe from this prompt: "${cleanPrompt}". Suggested genre: "${genre || 'Any'}", style: "${artStyle || 'webcomic'}"`
               }
             ],
-            max_tokens: 8192,
             response_format: { type: 'json_object' }
           })
         });

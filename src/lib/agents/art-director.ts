@@ -89,8 +89,7 @@ Translate the literal action into PURE VISUAL CINEMATOGRAPHY that image diffusio
             content: `Flagged prompt to translate into safe, high-impact cinematic visual artwork without reducing the meaning of the act: "${originalPrompt}"`
           }
         ],
-        temperature: 0.6,
-        max_tokens: 4096
+        temperature: 0.6
       })
     });
 

@@ -201,7 +201,6 @@ Proposed Premise: "${cleanPremise}"`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
-        max_tokens: 8192,
         response_format: { type: 'json_object' }
       })
     });

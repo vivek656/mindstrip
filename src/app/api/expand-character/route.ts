@@ -138,7 +138,6 @@ Current draft notes:
               { role: 'user', content: userPrompt }
             ],
             temperature: 0.75,
-            max_tokens: 8192,
             response_format: { type: 'json_object' }
           })
         });

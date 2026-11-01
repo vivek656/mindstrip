@@ -277,7 +277,6 @@ Respond ONLY with a valid JSON object matching this exact schema:
             model,
             messages: formattedMessages,
             temperature: 0.7,
-            max_tokens: 8192,
             response_format: { type: 'json_object' },
           }),
         });
