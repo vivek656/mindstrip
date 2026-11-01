@@ -1307,7 +1307,16 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Key Discovery & Fix in `art-director.ts`**:
   - The word "path" or "pathway" caused the image diffusion model to draw a central walkway/aisle of bare floor tiles down the center of the elevator.
   - Stripped "path", "pathway", and "aisle" from the safety translation prompt. Replaced with explicit instructions: "wall-to-wall continuous surface of prostrated attendants covering 100% of the floor with zero floor space, zero aisle, zero bare tiles", and "high heels planted directly atop the prostrated attendants".
-### Database Inspection & Director Chat Desynchronization Fix (2026-11-01)
+### Live Full-Page Regeneration: Episode 2 "NAMITA ONLY - The Private Lift" (2026-11-01)
+- **Direct Live Synthesis Executed**:
+  - Successfully synthesized fresh comic page artwork via Meta Muse Image 1.0 (`ep2_regenerated_live.webp`).
+  - Saved to `public/episodes/ep2_namita_private_lift.webp` and pushed to production repo (`d49eade`).
+  - Synced MongoDB database for both `CEO NAMITA` (`world-1793423242997`) and `CEO NAMITA [Timeline B • from Ep #2]` (`world-fork-1793537920934`).
+  - Visual Breakdown of the new live render:
+    - **Panel 1 (THE SHRINE)**: `PRIVATE - NAMITA ONLY` brass plaque, infinity mirrors, floor 100% carpeted wall-to-wall by prostrated attendants with zero floor tiles visible. Caption: *"The elevator awaits. Empty... except for worship."*
+    - **Panel 2 (THE STEP)**: Namita in scarlet suit with phone to ear striding forward, red stiletto heel planted squarely on top of the back of a woman lying flat on the floor. Caption: *"true power never looks down."*
+    - **Panel 3 (THE PRESSURE)**: Macro close-up of pointed red stiletto heel pressing down with full committed weight into the back of a prone woman whose face, ear, and hair are in frame directly under the heel. Caption: *"The weight of expectation. Absolute. Unmoving."*
+    - **Panel 4 (THE ASCENSION)**: Centered tableau, floor 100 indicator in glowing red, infinite mirrors multiplying her reflection, speech balloon: *"you better kneel before market opens."*
 - **Problem Investigated in MongoDB**:
   - Queried `worlds` collection in MongoDB for `CEO NAMITA` (`world-1793423242997`) and `CEO NAMITA [Timeline B • from Ep #2]` (`world-fork-1793537920934`).
   - Found that Episode 2 had generic fallback panels (*"The Situation Unfolds"*, *"Rising Tension"*, *"The Turning Point"*, *"The Outcome"*) and an outdated image URL, while the Director Chat transcript in Timeline B already contained the agreed 4-panel storyboard.
