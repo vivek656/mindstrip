@@ -52,7 +52,7 @@ export function cleanPromptForWordlessArtwork(raw: string): string {
  * by automated safety classifiers, preserving 100% of the dramatic meaning, power dynamics,
  * emotional stakes, and narrative intent of the act by translating it into high-impact
  * cinematic visual staging (lighting, body language, facial expressions, camera angles, and atmosphere).
- * ZERO hardcoded word dictionaries.
+ * ZERO hardcoded word dictionaries or genre assumptions.
  */
 export async function rewritePromptWithAiArtDirector(
   originalPrompt: string,
@@ -73,20 +73,16 @@ export async function rewritePromptWithAiArtDirector(
         messages: [
           {
             role: 'system',
-            content: `You are MindStrip's Master Comic Art Director & Visual Storyteller.
-An image generation prompt for a graphic novel comic page or character portrait was flagged by an automated text safety filter because it used literal, sensitive screenplay/narrative words (e.g. corporate coup, drugs/pharma, weapons, betrayal, or sensual/provocative phrasing).
+            content: `You are MindStrip's Master Comic Art Director.
+An image generation prompt was flagged by an automated text safety filter because it used literal narrative or screenplay words.
 
-CRITICAL DIRECTIVE: DO NOT REDUCE, WATER DOWN, OR DILUTE THE DRAMATIC MEANING OF THE ACT!
-Your goal is to preserve 100% of the emotional intensity, character stakes, tension, and power dynamics of the creator's vision.
-Instead of using literal flagged words that trip text filters, translate the act into CINEMATIC VISUAL DRAMA and ARTISTIC STAGING:
-1. TRANSLATE POWER & CONFLICT INTO BODY LANGUAGE: Show dominating posture, intense eye contact, piercing gazes, clenched fists, triumphant stances, or defeated expressions.
-2. TRANSLATE INTENSITY INTO CINEMATIC LIGHTING & FRAMING: Use high-contrast chiaroscuro shadows, dramatic rim lighting, low-angle perspective, or sharp theatrical spotlights.
-3. TRANSLATE SENSITIVE THEMES INTO POWERFUL VISUAL METAPHORS:
-   - Corporate coups, takeovers, or rivalry -> Intense boardroom confrontation, documents slammed onto mahogany, shocked executives shrinking into chairs, commanding figure standing at the head of the table.
-   - Pharmaceutical or chemical stakes -> High-tech laboratory glassware, glowing molecular holographic displays, blueprints, high-rise corporate research headquarters.
-   - Allure, power, or weaponized charm -> Haute couture tailored elegance, magnetic presence, regal poised posture, sharp luxury styling, confident charisma.
-   - Danger, underworld, or hostility -> Heavy noir shadows, neon-lit rainy alleys, stark silhouettes, tense standoff angles.
-4. Output ONLY the rewritten visual prompt string (comic art style, camera angles, lighting, character positions, expressions, and wardrobe). Do NOT add preamble, conversational remarks, or markdown code fences.`
+CRITICAL DIRECTIVE: PRESERVE 100% OF THE DRAMATIC MEANING, STAKES, AND EMOTIONAL POWER OF THE ACT!
+Do NOT sanitize, simplify, or water down the creator's scene.
+Instead, translate the psychological and narrative action into PURE VISUAL CINEMATOGRAPHY:
+1. Express conflict, dominance, vulnerability, or defiance through character body language, facial expressions, and eye contact.
+2. Express mood, tension, and emotional intensity through dynamic camera framing (e.g. low-angle, extreme close-up, silhouette) and cinematic lighting (e.g. chiaroscuro shadows, high contrast, rim lighting).
+3. Express story context through the physical environment, props, and detailed character wardrobe appropriate to the universe and genre.
+4. Output ONLY the visual prompt string describing what the camera sees. Do NOT output any conversational preamble, commentary, or markdown code blocks.`
           },
           {
             role: 'user',
