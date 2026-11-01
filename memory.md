@@ -1149,3 +1149,28 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: 100% clean production build.
   - Committed (`4519a33`) and pushed to `main`.
+
+### Total Eradication of Remaining Hardcoded Debris, Canned Dialogue & Role Bans (2026-11-01)
+- **User Query**:
+  *"again you encountered harcoded things ??"*
+- **Comprehensive Audit Results**:
+  An exhaustive audit of the entire codebase uncovered several legacy hardcoded strings left behind from earlier hackathon test cycles:
+  1. `src/components/CharacterDossierModal.tsx`:
+     - Initial chat seed lines 406-419: Hardcoded to `"her"` and `"What is her signature daily power wardrobe and footwear?"`, `"Tailored executive suit & polished footwear"`, and `"Modern western executive blazer & trousers"`.
+     - Fixed: Dynamically resolves pronouns (`his`/`her`/`their`) and provides neutral, genre-agnostic visual styling and lore questions.
+     - Line 2848: Hardcoded example placeholder `"She wears a tailored navy blazer and pointed heels"`. Replaced with generic examples.
+  2. `src/app/api/character-chat/route.ts`:
+     - Default greeting in line 133 used `"Let's develop her together!"` unconditionally.
+     - Fixed: Dynamically resolves pronouns based on character profile.
+  3. `src/lib/agents/showrunner.ts`:
+     - Rule 2 had hardcoded prohibition: `"is NEVER a superhero sidekick. They DO NOT fight villains, DO NOT wear tactical armor"`. Replaced with general role fidelity rule.
+     - Lines 220, 233, 237-239: Hardcoded canned test strings: `"night shift is mine"`, `"Did you honestly think I would let you succeed, hero? You've stepped right into my trap."`, `"ambushes the perimeter, deploying countermeasures"`, and `"holding a notepad and alerting the team to the surging voltage"`. Completely removed.
+  4. `src/lib/agents/canon-auditor.ts`:
+     - Lines 165-180: Hardcoded array of combat words (`'mid-kick'`, `'roundhouse'`, `'karate'`, `'martial arts'`, `'smashes drone'`, `'destroying a drone'`, `'swings sword'`, `'night shift is mine'`) that caused critical failures for civilian roles. Removed entirely.
+     - Line 111: Rigid job-title regex `/client|guest|boss|ceo|coworker|colleague|customer|waiter|stranger|guard|officer|doctor.../`. Replaced with dynamic guest character matching against `draft.guestCharacters`, premise text, and `"The [Role]"` naming.
+     - Lines 41-56: Rigid `friendlyPhrases` array softened to warnings and ignored when the premise requests cooperation/alliances.
+  5. `src/app/api/expand-character/route.ts`:
+     - Cleaned up prompt instruction that specifically forbade superpowers or weapons on female characters.
+- **Verification**:
+  - `npm run build`: 100% clean production build (0 errors).
+  - Committed (`96e0b9a`) and pushed to `main`.
