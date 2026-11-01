@@ -6,7 +6,7 @@ import { ZenComicReader } from '@/components/ZenComicReader';
 import { UniverseBuilderStudio } from '@/components/UniverseBuilderStudio';
 import { SettingsModal } from '@/components/SettingsModal';
 import { AuthModal } from '@/components/AuthModal';
-import { ComicWorld, ComicStrip, SpeechBubble, ArtStyle, PerspectiveLens, CreatorProfile } from '@/types/comic';
+import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, PerspectiveLens, CreatorProfile } from '@/types/comic';
 import { GranularArtworkOptions } from '@/components/ComicPageSpread';
 import { INITIAL_WORLDS } from '@/lib/worlds';
 import { generateMindStrip, ApiConfig } from '@/lib/meta-models';
@@ -508,72 +508,50 @@ export default function Home() {
     }
   };
 
-  const handleRegenerateCurrentEpisode = async (overridePremise?: string) => {
+  const handleRegenerateCurrentEpisode = async (overridePremise?: string, directPanels?: ComicPanel[]) => {
     if (!activeWorld || !activeEpisode) return;
     setIsLoading(true);
     setIsGeneratingArtwork(true);
     try {
-      // 1. Only include episodes strictly PRIOR to the current episode being regenerated
-      // This prevents the old draft of the episode being regenerated from contaminating its own RAG continuity!
-      const priorEpisodes = activeWorld.episodes.filter(
-        (ep) => ep.id !== activeEpisode.id && (ep.episodeNumber ?? 0) < (activeEpisode.episodeNumber ?? 1)
-      );
-
-      // 2. Sanitize premise against active cast
-      // If the old rawBrainDump contains characters who were removed from activeWorld.characters,
-      // purge the obsolete premise and ground in the current World Bible and current cast
+      let effectivePremise = stripSystemMetadataTags(overridePremise || activeEpisode.rawBrainDump || activeWorld.tagline);
       const activeCastNames = activeWorld.characters.map((c) => c.name.toLowerCase());
       const hasObsoleteCast = activeEpisode.panels?.some(p =>
         p.characters?.some(name => !activeCastNames.some(acn => name.toLowerCase().includes(acn))) ||
         p.bubbles?.some(b => b.speaker.toLowerCase() !== 'narrator' && !activeCastNames.some(acn => b.speaker.toLowerCase().includes(acn)))
       );
 
-      let effectivePremise = stripSystemMetadataTags(overridePremise || activeEpisode.rawBrainDump || activeWorld.tagline);
       if (hasObsoleteCast || !effectivePremise.trim()) {
         const castRoles = activeWorld.characters.map((c) => `${c.name} (${c.role})`).join(', ');
         effectivePremise = `${activeWorld.title}: ${activeWorld.tagline}. Featuring active cast: ${castRoles}.`;
       }
 
-      const regenContext = buildStoryContext(
-        activeWorld,
-        effectivePremise,
-        priorEpisodes
-      );
-      const generated = await generateMindStrip(
-        effectivePremise,
-        activeWorld.artStyle,
-        'candid',
-        apiConfig,
-        activeWorld.characters,
-        activeWorld.title,
-        activeWorld.genre,
-        regenContext,
-        'auto', // Autonomous AI Showrunner decides optimal layout (1-panel splash, 2-panel split, 3-panel strip, or 4-panel spread)
-        activeWorld,
-        priorEpisodes
-      );
+      let generatedPanels: ComicPanel[] = [];
+      let layoutStyle: ComicStrip['layoutStyle'] = '4-panel';
+      let freshImageUrl: string | undefined = '';
+      const effectiveProvider = apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api';
 
-      // Re-draw fresh artwork for the newly regenerated episode
-      let freshImageUrl = generated.pageImageUrl;
-      if (!freshImageUrl) {
+      if (directPanels && directPanels.length > 0) {
+        // Direct panels supplied (e.g. directly locked from AI Director Chat)
+        generatedPanels = directPanels;
+        layoutStyle = directPanels.length === 1 ? '1-panel' : directPanels.length === 2 ? '2-panel' : directPanels.length === 3 ? '3-panel' : '4-panel';
+
         try {
-          const effectiveProvider = apiConfig?.provider === 'fireworks' ? 'fireworks' : 'meta-api';
-
           const imgRes = await fetch('/api/generate-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               prompt: effectivePremise,
+              customPrompt: effectivePremise,
               artStyle: activeWorld.artStyle,
               characters: activeWorld.characters,
               worldTitle: activeWorld.title,
               genre: activeWorld.genre,
-              episodeTitle: generated.title,
+              episodeTitle: activeEpisode.title,
               provider: effectiveProvider,
               apiKey: apiConfig?.apiKey,
               baseUrl: apiConfig?.baseUrl,
-              layoutStyle: generated.layoutStyle || (generated.panels?.length === 1 ? '1-panel' : generated.panels?.length === 2 ? '2-panel' : generated.panels?.length === 3 ? '3-panel' : '4-panel'),
-              panels: generated.panels,
+              layoutStyle,
+              panels: generatedPanels,
             })
           });
 
@@ -584,18 +562,79 @@ export default function Home() {
             }
           }
         } catch (imgErr) {
-          console.warn('Re-draw artwork fetch warning:', imgErr);
+          console.warn('Direct panels artwork fetch warning:', imgErr);
+        }
+      } else {
+        // 1. Only include episodes strictly PRIOR to the current episode being regenerated
+        const priorEpisodes = activeWorld.episodes.filter(
+          (ep) => ep.id !== activeEpisode.id && (ep.episodeNumber ?? 0) < (activeEpisode.episodeNumber ?? 1)
+        );
+
+        const regenContext = buildStoryContext(
+          activeWorld,
+          effectivePremise,
+          priorEpisodes
+        );
+        const generated = await generateMindStrip(
+          effectivePremise,
+          activeWorld.artStyle,
+          'candid',
+          apiConfig,
+          activeWorld.characters,
+          activeWorld.title,
+          activeWorld.genre,
+          regenContext,
+          'auto',
+          activeWorld,
+          priorEpisodes
+        );
+
+        generatedPanels = generated.panels;
+        layoutStyle = generated.layoutStyle;
+        freshImageUrl = generated.pageImageUrl;
+
+        if (!freshImageUrl) {
+          try {
+            const imgRes = await fetch('/api/generate-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: effectivePremise,
+                customPrompt: effectivePremise,
+                artStyle: activeWorld.artStyle,
+                characters: activeWorld.characters,
+                worldTitle: activeWorld.title,
+                genre: activeWorld.genre,
+                episodeTitle: generated.title,
+                provider: effectiveProvider,
+                apiKey: apiConfig?.apiKey,
+                baseUrl: apiConfig?.baseUrl,
+                layoutStyle: layoutStyle || (generated.panels?.length === 1 ? '1-panel' : generated.panels?.length === 2 ? '2-panel' : generated.panels?.length === 3 ? '3-panel' : '4-panel'),
+                panels: generated.panels,
+              })
+            });
+
+            if (imgRes.ok) {
+              const imgData = await imgRes.json();
+              if (imgData.pageImageUrl) {
+                freshImageUrl = imgData.pageImageUrl;
+              }
+            }
+          } catch (imgErr) {
+            console.warn('Re-draw artwork fetch warning:', imgErr);
+          }
         }
       }
 
       const updatedEpisode: ComicStrip = {
-        ...generated,
-        ...writeRecap(generated),
-        id: activeEpisode.id,
+        ...activeEpisode,
+        panels: generatedPanels,
+        layoutStyle,
         rawBrainDump: effectivePremise,
         episodeNumber: activeEpisode.episodeNumber || 1,
         title: activeEpisode.title || `${activeWorld.title}: Episode #${activeEpisode.episodeNumber || 1}`,
-        pageImageUrl: freshImageUrl || activeEpisode.pageImageUrl
+        pageImageUrl: freshImageUrl || activeEpisode.pageImageUrl,
+        generationNotice: freshImageUrl ? `Synthesized with Meta Muse Image (${activeWorld.artStyle})` : activeEpisode.generationNotice,
       };
 
       const updatedEpisodes = activeWorld.episodes.map((ep) =>

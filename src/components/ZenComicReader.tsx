@@ -12,6 +12,7 @@ import {
   CustomWorldAttribute,
   ArtStyle,
   SpeechBubble,
+  ComicPanel,
   CoDirectorChatMessage,
 } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
@@ -92,7 +93,7 @@ interface ZenComicReaderProps {
   onOpenSettings: () => void;
   onSelectEpisode?: (episode: ComicStrip) => void;
   onUpdatePanelPrompt?: (panelNumber: number, newPrompt: string) => void;
-  onRegenerateEpisode?: (overridePremise?: string) => void;
+  onRegenerateEpisode?: (overridePremise?: string, directPanels?: ComicPanel[]) => void;
   onGenerateArtwork?: (options?: GranularArtworkOptions) => void;
   isGeneratingArtwork?: boolean;
   artworkError?: string | null;
@@ -1871,14 +1872,94 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                             >
                               {msg.content}
 
-                              {/* Director Suggested Premise & Action Buttons */}
-                              {isAssistant && msg.synthesizedPremise && (
-                                <div className="mt-2.5 pt-2 border-t border-purple-200/50 dark:border-white/10 space-y-2">
-                                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-900 dark:text-purple-200 font-serif italic">
-                                    &ldquo;{msg.synthesizedPremise}&rdquo;
+                              {/* Expandable 4-Panel Storyboard Breakdown if generated */}
+                              {isAssistant && msg.suggestedPanels && msg.suggestedPanels.length > 0 && (
+                                <details className="mt-3 pt-2.5 border-t border-purple-200/50 dark:border-white/10 text-xs" open>
+                                  <summary className="font-bold cursor-pointer text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 select-none">
+                                    <span>🎬 Director's 4-Panel Breakdown ({msg.suggestedPanels.length} Panels)</span>
+                                  </summary>
+                                  <div className="mt-2 space-y-1.5 pl-1">
+                                    {msg.suggestedPanels.map((p) => (
+                                      <div key={p.panelNumber} className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px]">
+                                        <span className="font-bold text-blue-600 dark:text-blue-400 mr-1.5">Beat {p.panelNumber}:</span>
+                                        <span>{p.description}</span>
+                                        {p.dialogue && (
+                                          <div className="mt-1 text-zinc-500 dark:text-zinc-400 italic">
+                                            "{p.dialogue}"
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
+                                </details>
+                              )}
+
+                              {/* Director Suggested Premise & Action Buttons */}
+                              {isAssistant && (msg.synthesizedPremise || (msg.suggestedPanels && msg.suggestedPanels.length > 0)) && (
+                                <div className="mt-2.5 pt-2 border-t border-purple-200/50 dark:border-white/10 space-y-2">
+                                  {msg.synthesizedPremise && (
+                                    <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-900 dark:text-purple-200 font-serif italic">
+                                      &ldquo;{msg.synthesizedPremise}&rdquo;
+                                    </div>
+                                  )}
                                   <div className="flex flex-wrap gap-1.5">
-                                    {onRegenerateEpisode && (
+                                    {msg.suggestedPanels && msg.suggestedPanels.length > 0 && onRegenerateEpisode && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const directPanels = (msg.suggestedPanels || []).map((p, idx) => {
+                                            const bubbles: ComicPanel['bubbles'] = [];
+                                            if (p.dialogue) {
+                                              const parts = p.dialogue.split(/\s*[\/|\n]\s*/);
+                                              parts.forEach((part, bIdx) => {
+                                                const colonIdx = part.indexOf(':');
+                                                if (colonIdx > 0 && colonIdx < 25) {
+                                                  const rawSpeaker = part.slice(0, colonIdx).trim().replace(/\s*\(.*?\)/, '');
+                                                  const rawText = part.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
+                                                  const isCaption = /narrator|caption/i.test(part.slice(0, colonIdx));
+                                                  bubbles.push({
+                                                    id: `b${p.panelNumber}-${bIdx + 1}`,
+                                                    speaker: rawSpeaker,
+                                                    text: rawText,
+                                                    type: isCaption ? 'caption' : 'speech',
+                                                    position: bIdx === 0 ? 'top-left' : 'bottom-right'
+                                                  });
+                                                } else if (part.trim()) {
+                                                  bubbles.push({
+                                                    id: `b${p.panelNumber}-${bIdx + 1}`,
+                                                    speaker: world.characters[0]?.name || 'Namita',
+                                                    text: part.trim().replace(/^["']|["']$/g, ''),
+                                                    type: 'speech',
+                                                    position: 'top-right'
+                                                  });
+                                                }
+                                              });
+                                            }
+                                            const sfxMatch = p.description.match(/\bSFX:\s*([A-Z0-9\-\.!]+)/i);
+                                            return {
+                                              panelNumber: p.panelNumber || (idx + 1),
+                                              title: `Beat ${p.panelNumber || (idx + 1)}`,
+                                              sceneDescription: p.description,
+                                              characters: [world.characters[0]?.name || 'Namita'],
+                                              bubbles,
+                                              soundEffect: sfxMatch ? sfxMatch[1].trim() : '',
+                                              soundEffectPosition: { x: 70, y: 30 },
+                                              visualMetaphor: p.description,
+                                              mood: 'determined',
+                                              imagePrompt: p.description
+                                            } as ComicPanel;
+                                          });
+
+                                          onRegenerateEpisode(msg.synthesizedPremise, directPanels);
+                                        }}
+                                        disabled={isLoading || isGeneratingArtwork}
+                                        className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 shadow-xs cursor-pointer disabled:opacity-50"
+                                      >
+                                        <Sparkles className="w-3 h-3 text-amber-300" />
+                                        <span>🎬 Apply 4-Panel Script & Draw</span>
+                                      </button>
+                                    )}
+                                    {onRegenerateEpisode && !msg.suggestedPanels && (
                                       <button
                                         type="button"
                                         onClick={() => onRegenerateEpisode(msg.synthesizedPremise)}

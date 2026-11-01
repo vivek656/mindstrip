@@ -1307,5 +1307,21 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Key Discovery & Fix in `art-director.ts`**:
   - The word "path" or "pathway" caused the image diffusion model to draw a central walkway/aisle of bare floor tiles down the center of the elevator.
   - Stripped "path", "pathway", and "aisle" from the safety translation prompt. Replaced with explicit instructions: "wall-to-wall continuous surface of prostrated attendants covering 100% of the floor with zero floor space, zero aisle, zero bare tiles", and "high heels planted directly atop the prostrated attendants".
-  - Meta `muse-image-1.0` returned **HTTP 200 OK**, generating `ep2_namita_standing_on_women_locked.webp`.
-  - Verified: Every panel now depicts wall-to-wall prostrated women with Namita's heels physically planted on top of them and no floor aisle.
+### Database Inspection & Director Chat Desynchronization Fix (2026-11-01)
+- **Problem Investigated in MongoDB**:
+  - Queried `worlds` collection in MongoDB for `CEO NAMITA` (`world-1793423242997`) and `CEO NAMITA [Timeline B • from Ep #2]` (`world-fork-1793537920934`).
+  - Found that Episode 2 had generic fallback panels (*"The Situation Unfolds"*, *"Rising Tension"*, *"The Turning Point"*, *"The Outcome"*) and an outdated image URL, while the Director Chat transcript in Timeline B already contained the agreed 4-panel storyboard.
+- **Root Cause Discovered**:
+  1. The Director Chat generated `suggestedPanels` inside chat messages, but the UI had no button to apply those exact suggested panels to the episode.
+  2. Clicking `🎬 Re-Script & Draw Page` re-invoked `draftEpisodeBeats` (`muse-spark-1.3`), which sanitized the living human floor into *"empty luxurious mirrored cabin"* and *"stepping firmly onto pristine marble floor"*, or fell back to generic panels.
+- **Permanent Solution Implemented**:
+  1. **Direct Panels Pipeline**:
+     - Updated `handleRegenerateCurrentEpisode` in `src/app/page.tsx` to accept `directPanels?: ComicPanel[]`. When provided, it skips redundant re-scripting, applies the exact panels, and generates artwork immediately.
+  2. **1-Click "Apply 4-Panel Script & Draw" in Current Page Director Chat**:
+     - Updated `ZenComicReader.tsx` to render the 4-panel storyboard accordion directly in the current page chat with `🎬 Apply 4-Panel Script & Draw`.
+  3. **Strict Showrunner Staging Integrity**:
+     - Added Rule 8 to `src/lib/agents/showrunner.ts` explicitly forbidding the AI from sanitizing or altering requested physical settings.
+  4. **MongoDB Direct Synchronization**:
+     - Synchronized Episode 2 in both `CEO NAMITA` and `CEO NAMITA [Timeline B]` with the locked 4 panels, the `/episodes/ep2_namita_private_lift.webp` artwork, and preserved Director Chat history.
+- **Verification**:
+  - Production build clean: `npm run build` succeeded in Turbopack with 0 errors.

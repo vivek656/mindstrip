@@ -77,6 +77,7 @@ CRITICAL CASTING & EPISODE RULES:
 5. STRICT ROSTER ENFORCEMENT: You may ONLY write panels, dialogue, or descriptions for characters explicitly listed in the provided Characters roster or requested in the premise.
 6. MANDATORY CAST INTEGRITY: Never include deleted cast members from previous worlds.
 7. TEXTLESS IMAGE PROMPTS: In "imagePrompt", describe only visual composition, lighting, and action. NEVER write "Panel 1", "Panel 2", numbers, or speech bubble text!
+8. ABSOLUTE PREMISE & STAGING PRESERVATION: Faithfully script the exact physical setting, environmental details, and character staging requested in the premise (e.g. if the premise specifies a private lift with a floor completely covered by prostrated attendants, or walking on top of them, you MUST script that exact setting and physical action into the panels and descriptions). NEVER sanitize, remove, or replace the setting with empty rooms, generic marble floors, or sanitized corporate offices.
 ${critiquePrompt}
 ${layoutInstruction}
 
