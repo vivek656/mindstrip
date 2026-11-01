@@ -63,9 +63,36 @@ export function stripSystemMetadataTags(raw: string): string {
 }
 
 /**
- * Enforces canonical character visual metadata (wardrobe, appearance) across frame descriptions.
- * Scrubs contradictory legacy clothing mentions (e.g. saree when western attire is defined)
- * so image generation models strictly follow the character's latest saved wardrobe.
+ * Detects if a scene description or prompt already contains explicit attire or clothing
+ * specified for a character (or for the scene in general), allowing page-specific outfits
+ * (e.g. gala gown, tracksuit, wedding saree, lab coat, armor, pajamas) to take precedence.
+ */
+export function hasSceneSpecificAttire(sceneText: string, characterName?: string): boolean {
+  if (!sceneText) return false;
+
+  if (characterName) {
+    const escapedName = characterName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Pattern 1: Character name near clothing/attire keywords
+    const charAttireRegex = new RegExp(
+      `\\b${escapedName}\\b[^.,;!?]{0,60}\\b(wearing|dressed in|clad in|sporting|draped in|attire|outfit|costume|gown|dress|uniform|suit|tuxedo|scrubs|robe|swimsuit|bikini|pajamas|pyjamas|armor|armour|jacket|hoodie|coat|sweater|tshirt|t-shirt|lehenga|saree|sari|kurta|sherwani|kimono|hanbok|wetsuit|spacesuit)\\b`,
+      'i'
+    );
+    if (charAttireRegex.test(sceneText)) return true;
+  }
+
+  // Pattern 2: General explicit attire clauses in the text
+  const generalAttireRegex = /\b(wearing|dressed in|clad in|sporting|draped in|costumed as|dressed as|outfit:|attire:)\s+[a-zA-Z\s]+/i;
+  return generalAttireRegex.test(sceneText);
+}
+
+/**
+ * Applies character visual continuity to a frame description.
+ * CRITICAL RULE: Page-specific attire takes absolute precedence!
+ * If the scene description already specifies what a character is wearing on this page
+ * (e.g. "Namita wearing an evening gown", "dressed in lab scrubs", "in athletic gear"),
+ * that page attire is 100% PRESERVED and NOT overwritten.
+ * The character's signature dossier wardrobe is ONLY appended as a fallback default
+ * when no clothing is specified for that character on that page.
  */
 export function applyCanonicalCharacterAttire(
   sceneText: string,
@@ -76,17 +103,19 @@ export function applyCanonicalCharacterAttire(
 
   for (const c of characters) {
     if (!c.name) continue;
-    const charRegex = new RegExp(`\\b${c.name}\\b`, 'i');
+    const escapedName = c.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const charRegex = new RegExp(`\\b${escapedName}\\b`, 'i');
     if (!charRegex.test(updated)) continue;
 
+    // If the scene ALREADY specifies attire for this character or scene, leave it untouched!
+    if (hasSceneSpecificAttire(updated, c.name)) {
+      continue;
+    }
+
+    // Only apply the dossier wardrobe as a fallback default when no clothing is mentioned
     if (c.wardrobe && c.wardrobe.trim()) {
-      // Enforce the character's exact canonical wardrobe without rigid category assumptions
-      updated = updated.replace(
-        /(?:wearing|in|clad in|draped in)\s+[^,.;]*/gi,
-        `wearing ${c.wardrobe}`
-      );
       if (!updated.toLowerCase().includes(c.wardrobe.toLowerCase())) {
-        updated += `, ${c.name} is wearing ${c.wardrobe}`;
+        updated += `, ${c.name} is wearing ${c.wardrobe.trim()}`;
       }
     }
   }
@@ -177,21 +206,31 @@ export function directVisualArtwork(
   // Fallback: If no character matched, take only the single primary character
   const targetCharacters = activeEpisodeCharacters.length > 0 ? activeEpisodeCharacters : [characters[0]].filter(Boolean);
 
+  // 2. Check if the scene or draft already specifies attire for characters
+  const allSceneText = [
+    context.rawDump || '',
+    draft.title || '',
+    ...draft.panels.map((p) => `${p.sceneDescription || ''} ${p.imagePrompt || ''}`)
+  ].join(' ');
+
   // Compile Character Visual Anchors (with Character Visual RAG) strictly for featured characters
   const visualAnchors: string[] = [];
   const charDescriptions = targetCharacters.map((c) => {
-    const role = (c.role || '').toLowerCase();
-    const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
     const anchors: string[] = [];
     if (c.appearance) anchors.push(c.appearance);
-    if (c.wardrobe) anchors.push(`wearing ${c.wardrobe}`);
-    if (isCivilian) anchors.push('civilian everyday citizen, regular modern office/casual clothing, non-combatant, NOT wearing tactical combat gear, NOT performing martial arts');
+    
+    // Page/scene-specific attire takes precedence: only inject signature wardrobe if scene has none
+    const hasSceneAttire = hasSceneSpecificAttire(allSceneText, c.name);
+    if (c.wardrobe && !hasSceneAttire) {
+      anchors.push(`default attire: ${c.wardrobe}`);
+    }
+    
     if (c.iconicItem) anchors.push(`signature ${c.iconicItem}`);
     if (c.imageUrl) anchors.push(`canonical model sheet match: ${c.imageUrl}`);
     if (c.portraitRefUrl) anchors.push(`face & eyes anchor: ${c.portraitRefUrl}`);
-    if (c.fullBodyRefUrl) anchors.push(`legs & costume silhouette anchor: ${c.fullBodyRefUrl}`);
-    if (c.backViewRefUrl) anchors.push(`rear turnaround anchor: ${c.backViewRefUrl}`);
-    if (c.actionPoseRefUrl) anchors.push(`${isCivilian ? 'signature pose and attitude' : 'signature action posture'} anchor: ${c.actionPoseRefUrl}`);
+    if (c.fullBodyRefUrl) anchors.push(`silhouette anchor: ${c.fullBodyRefUrl}`);
+    if (c.backViewRefUrl) anchors.push(`turnaround anchor: ${c.backViewRefUrl}`);
+    if (c.actionPoseRefUrl) anchors.push(`signature posture anchor: ${c.actionPoseRefUrl}`);
     const anchorStr = anchors.length > 0 ? anchors.join(', ') : 'distinct expressive comic design';
     visualAnchors.push(`${c.name}${c.imageUrl ? ' (Model Sheet Locked)' : ''}: ${anchorStr}`);
     return `${c.name} (${anchorStr})`;

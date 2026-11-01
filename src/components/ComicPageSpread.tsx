@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, forwardRef } from 'react';
 import { ComicWorld, ComicStrip, ComicPanel, SpeechBubble, ArtStyle, ComicCharacter } from '@/types/comic';
 import { ApiConfig } from '@/lib/meta-models';
-import { cleanPromptForWordlessArtwork, formatFrameWithRagDialogue } from '@/lib/agents/art-director';
+import { cleanPromptForWordlessArtwork, formatFrameWithRagDialogue, hasSceneSpecificAttire } from '@/lib/agents/art-director';
 import { SamVisionOverlay } from './SamVisionOverlay';
 import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
 import {
@@ -237,13 +237,19 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
   }, [activePageCharacters, episode.guestCharacters]);
 
   // Scoped characters summary for prompt synthesis (strictly excludes uninvited heroes/antagonists)
+  const allPageText = useMemo(() => {
+    return [
+      episode.rawBrainDump || '',
+      ...panels.map((p) => `${p.sceneDescription || ''} ${p.imagePrompt || ''}`)
+    ].join(' ');
+  }, [episode.rawBrainDump, panels]);
+
   const charsSummary = allPageCharacters
     .map((c) => {
-      const role = (c.role || '').toLowerCase();
-      const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
-      let desc = `${c.name} (${c.appearance || c.role}`;
-      if (c.wardrobe) desc += `, wearing ${c.wardrobe}`;
-      if (isCivilian) desc += `, everyday civilian citizen in casual/work attire, NOT in tactical armor or combat gear`;
+      let desc = `${c.name} (${c.appearance || c.role || 'character'}`;
+      if (c.wardrobe && !hasSceneSpecificAttire(allPageText, c.name)) {
+        desc += `, default attire: ${c.wardrobe}`;
+      }
       desc += `)`;
       return desc;
     })
@@ -251,11 +257,11 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
 
   const buildSequentialPrompt = () => {
     const layout = selectedLayout || episode.layoutStyle || (panels.length === 1 ? '1-panel' : panels.length === 2 ? '2-panel' : panels.length === 3 ? '3-panel' : '4-panel');
-    const mandatoryAttire = allPageCharacters
-      .filter((c) => c.wardrobe && c.wardrobe.trim())
-      .map((c) => `${c.name} MUST be wearing: ${c.wardrobe} (DO NOT render in saree or battle armor)`)
+    const fallbackAttire = allPageCharacters
+      .filter((c) => Boolean(c.wardrobe && c.wardrobe.trim() && !hasSceneSpecificAttire(allPageText, c.name)))
+      .map((c) => `${c.name} default attire: ${c.wardrobe!.trim()}`)
       .join('; ');
-    const attirePrefix = mandatoryAttire ? ` [MANDATORY ATTIRE: ${mandatoryAttire}].` : '';
+    const attirePrefix = fallbackAttire ? ` [DEFAULT ATTIRE: ${fallbackAttire}].` : '';
 
     if ((layout === '1-panel' || panels.length === 1) && panels[0]) {
       const s1 = formatFrameWithRagDialogue(panels[0], allPageCharacters);

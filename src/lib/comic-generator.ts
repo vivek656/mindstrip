@@ -1,4 +1,5 @@
 import { ComicStrip, ComicPanel, CognitiveAnalysis, ArtStyle, PerspectiveLens, ComicCharacter } from '@/types/comic';
+import { hasSceneSpecificAttire } from '@/lib/agents/art-director';
 
 export function generateComicStripMock(
   rawDump: string,
@@ -26,7 +27,8 @@ export function generateComicStripMock(
   const leadName = leadChar?.name || 'Protagonist';
   const leadAppearance = leadChar?.appearance || 'Expressive comic character design';
   const leadGender = leadChar?.gender && leadChar.gender !== 'unspecified' ? leadChar.gender : '';
-  const leadAttire = leadChar?.wardrobe ? `, strictly wearing ${leadChar.wardrobe}` : '';
+  const hasPremiseAttire = hasSceneSpecificAttire(cleanPrompt, leadName);
+  const leadAttire = leadChar?.wardrobe && !hasPremiseAttire ? `, wearing ${leadChar.wardrobe}` : '';
 
   // 2. DETECT EPISODIC GUEST CHARACTERS DYNAMICALLY (e.g. "a client", "the detective", "a customer")
   const guestMatch = cleanPrompt.match(/(?:a|the|new)\s+(client|customer|investor|buyer|partner|stranger|visitor|rival|detective|merchant|boss|guest)\b/i);

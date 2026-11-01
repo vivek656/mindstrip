@@ -4,6 +4,7 @@ import {
   cleanPromptForWordlessArtwork,
   formatFrameWithRagDialogue,
   applyCanonicalCharacterAttire,
+  hasSceneSpecificAttire,
   stripSystemMetadataTags,
   COMIC_PAGE_PUBLICATION_DIRECTIVE
 } from '@/lib/agents/art-director';
@@ -133,13 +134,12 @@ export async function POST(req: NextRequest) {
     const cleanBase = targetBaseUrl.replace(/\/+$/, '');
     const validNames = (characters || []).map((c: { name: string }) => c.name.toLowerCase().trim());
 
+    const hasPromptAttire = (charName: string) => hasSceneSpecificAttire(rawClean, charName);
+
     const charsListArray = targetCharacters.map((c: { name: string; appearance?: string; role?: string; wardrobe?: string }) => {
-      const role = (c.role || '').toLowerCase();
-      const isCivilian = !role.includes('hero') && !role.includes('vigilante') && !role.includes('warrior') && !role.includes('fighter') && !role.includes('super');
       let desc = `${c.name} (${c.appearance || c.role || 'character'}`;
-      if (c.wardrobe) desc += `, wearing ${c.wardrobe}`;
-      if (isCivilian) {
-        desc += `, civilian everyday citizen, dressed in normal modern office/casual clothing, NOT a superhero, NOT wearing tactical battle armor, NOT performing martial arts`;
+      if (c.wardrobe && !hasPromptAttire(c.name)) {
+        desc += `, default signature attire: ${c.wardrobe}`;
       }
       desc += `)`;
       return desc;
@@ -155,9 +155,9 @@ export async function POST(req: NextRequest) {
 
     const charsList = charsListArray.join(' and ');
 
-    const mandatoryWardrobe = targetCharacters
-      .filter((c: any) => c.wardrobe && c.wardrobe.trim())
-      .map((c: any) => `${c.name} signature attire: ${c.wardrobe.trim()}`)
+    const fallbackWardrobe = targetCharacters
+      .filter((c: any) => c.wardrobe && c.wardrobe.trim() && !hasPromptAttire(c.name))
+      .map((c: any) => `${c.name} default attire: ${c.wardrobe.trim()}`)
       .join('; ');
 
     // Pure visual layout descriptions without the word "panel" or numbers that trigger diffusion models to paint text labels
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
     }
 
     const publicationDirective = COMIC_PAGE_PUBLICATION_DIRECTIVE;
-    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${mandatoryWardrobe ? ` [MANDATORY ATTIRE]: ${mandatoryWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+    const pagePrompt = `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
 
     if (isFireworks) {
       const imgRes = await fetch('https://api.fireworks.ai/inference/v1/workflows/accounts/fireworks/models/flux-1-schnell/text_to_image', {
