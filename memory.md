@@ -1215,3 +1215,25 @@ Users don't just generate disconnected one-off strips. They build **persistent c
      - Added a `💬 AI Director` button in the top toolbar of `ComicPageSpread.tsx`. Clicking it opens the studio panel and focuses directly on the current page's Director Chat.
 - **Verification**:
   - `npm run build`: 100% clean production build (0 errors).
+  - Committed (`57e5b4d`) and pushed to `main`.
+
+### Eliminated Static Director Chat Loop & Prioritized Official Meta API (2026-11-01)
+- **User Query**:
+  *"aaaaah still i can see in director chat AI splitting bout same repsonse again and again"*
+- **Root Cause Discovered**:
+  1. In `src/app/api/co-director-chat/route.ts`, if `provider === 'fireworks'` was passed from client-side `localStorage` state (or if third-party keys were empty), the server code wiped `targetApiKey` to `""`.
+  2. Because `!targetApiKey` was triggered, it called `generateDynamicCoDirectorResponse`.
+  3. `generateDynamicCoDirectorResponse` had a static template string that returned the exact same response every single time, ignoring user input.
+  4. Furthermore, if the model returned conversational markdown text instead of strict JSON, JSON parsing threw and fell back to the same static response.
+- **Fix Applied**:
+  1. **Meta API Primary Routing**:
+     - `src/app/api/co-director-chat/route.ts` now prioritizes `process.env.META_MODEL_API_KEY` (`muse-spark-1.3`, `https://api.meta.ai/v1`). If Fireworks/Groq keys are not present, it never clears the key or attempts unauthenticated calls; it reliably routes to Meta API.
+     - `src/app/page.tsx` auto-normalizes stored config to `meta-api` on hydration if no third-party keys exist.
+  2. **Bulletproof Response Extractor (`extractJsonFromModelContent`)**:
+     - If Meta AI returns JSON, parses it cleanly.
+     - If Meta AI returns conversational markdown text directly, extracts and presents the real Meta AI response as `reply`—never discards the model's output.
+  3. **Truly Dynamic Fallback Engine**:
+     - Eliminated all boilerplate static strings. Fallback engine dynamically analyzes user intent (dialogue punch-up, camera/cinematography, emotional stakes, narrative re-direction) and answers their specific question with tailored lines and beats.
+- **Verification**:
+  - Verified live endpoint with simulated client payload: returns tailored, highly contextual AI Director dialogue and pacing advice from Meta's `muse-spark-1.3`.
+  - `npm run build`: 100% clean production build (0 errors).

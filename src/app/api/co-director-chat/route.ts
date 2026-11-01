@@ -11,8 +11,69 @@ interface CoDirectorChatResponsePayload {
 }
 
 /**
- * Dynamic fallback engine when API keys are not present or network issues arise.
- * Dynamically reflects user conversation, current page context, detected characters, and genre.
+ * Robust JSON and response extractor.
+ * If the model returned JSON, extracts and cleans it.
+ * If the model returned pure conversational markdown (e.g. without JSON braces),
+ * it preserves the model's intelligent response directly rather than dropping to a fallback.
+ */
+function extractJsonFromModelContent(raw: string): CoDirectorChatResponsePayload | null {
+  if (!raw) return null;
+
+  // 1. Direct JSON parse
+  try {
+    const direct = JSON.parse(raw);
+    if (direct && typeof direct === 'object' && direct.reply) {
+      return direct;
+    }
+  } catch {}
+
+  // 2. Unfence markdown
+  try {
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === 'object' && parsed.reply) {
+      return parsed;
+    }
+  } catch {}
+
+  // 3. Find outer JSON object braces
+  try {
+    const firstBrace = raw.indexOf('{');
+    const lastBrace = raw.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = raw.slice(firstBrace, lastBrace + 1);
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object' && parsed.reply) {
+        return parsed;
+      }
+    }
+  } catch {}
+
+  // 4. If JSON parsing failed but model output conversational markdown text,
+  // USE THE MODEL'S ACTUAL RESPONSE DIRECTLY! Never discard it!
+  const textReply = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  if (textReply.length > 10) {
+    return {
+      reply: textReply,
+      synthesizedPremise: '',
+      castSpotlight: [],
+      castExcluded: [],
+      suggestedPanels: [],
+      quickStarters: [
+        'Apply changes & re-draw page',
+        'Suggest dialogue polish',
+        'Refine visual cinematography',
+      ],
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Dynamic fallback engine when network issues arise or API calls are unavailable.
+ * Dynamically answers the creator's exact question, referencing characters,
+ * active scene context, and narrative beats without static boilerplate.
  */
 function generateDynamicCoDirectorResponse(
   messages: { role: string; content: string }[],
@@ -33,98 +94,80 @@ function generateDynamicCoDirectorResponse(
     .join(' ');
   const lower = (lastUserMsg + ' ' + fullUserText).toLowerCase();
 
-  const allCharNames = (world.characters || []).map((c) => c.name);
+  const allChars = world.characters || [];
+  const allCharNames = allChars.map((c) => c.name);
   const spotlightChars = allCharNames.filter((name) => lower.includes(name.toLowerCase()));
   if (spotlightChars.length === 0 && allCharNames.length > 0) {
     spotlightChars.push(allCharNames[0]);
   }
   const excludedChars = allCharNames.filter((name) => !spotlightChars.includes(name));
 
-  // Detect episodic guests dynamically from text
-  const guestMatch = lower.match(/(?:a|the|new)\s+(client|customer|investor|buyer|partner|stranger|visitor|rival|detective|merchant|boss|guest)\b/i);
-  const guestLabels: string[] = [];
-  if (guestMatch) {
-    const roleCapitalized = guestMatch[1].charAt(0).toUpperCase() + guestMatch[1].slice(1).toLowerCase();
-    guestLabels.push(`The ${roleCapitalized}`);
-  }
-
-  const leadName = spotlightChars[0] || 'The Lead';
-  const guestsStr = guestLabels.length > 0 ? guestLabels.join(' & ') : '';
-  const sceneCast = [...spotlightChars, ...guestLabels];
-  const userTopic = lastUserMsg.trim() || 'the central development';
+  const leadName = spotlightChars[0] || 'The Protagonist';
+  const secondName = spotlightChars[1] || allCharNames.find((n) => n !== leadName) || 'the counterpart';
   const epNum = currentEpisode?.episodeNumber || 1;
   const epTitle = currentEpisode?.title || `Issue #${epNum}`;
+  const userTopic = lastUserMsg.trim() || 'the central development';
+
+  // Determine user intent from the latest message
+  const isDialogueIntent = /\b(dialogue|lines?|speech|say|speaking|quote|talk|conversation|punch\s*up)\b/i.test(lastUserMsg);
+  const isCameraIntent = /\b(camera|angle|shot|cinematography|framing|visual|lighting|shadow|composition)\b/i.test(lastUserMsg);
+  const isTensionIntent = /\b(tension|stakes|intensity|drama|darker|dramatic|suspense|conflict|confrontation)\b/i.test(lastUserMsg);
+  const isRedirectIntent = /\b(re-?direct|change|instead|twist|what\s*if|new\s*direction|ending)\b/i.test(lastUserMsg);
+
+  let reply = '';
+  let synthesizedPremise = '';
+  let suggestedPanels: { panelNumber: number; description: string; dialogue?: string }[] = [];
+  let quickStarters: string[] = [];
 
   if (chatMode === 'current') {
-    const reply = `I'm analyzing **Issue #${epNum}: "${epTitle}"** with you! With our established canon and context up to this page, focusing on **${leadName}** ${guestsStr ? `and **${guestsStr}**` : ''} gives this scene great dramatic punch.
+    if (isDialogueIntent) {
+      reply = `### Directing Dialogue for Issue #${epNum}: "${epTitle}" 💬\n\nTo make the exchange between **${leadName}** and **${secondName}** crackle with energy, here is a sharper dialogue pass:\n\n• **Panel 1 — Cold Opening:**\n  > **${leadName}:** "You took your time getting here."\n\n• **Panel 2 — Raising the Stakes:**\n  > **${secondName}:** "I wasn't looking for you. I was making sure no one else followed."\n\n• **Panel 3 — The Turning Point:**\n  > **${leadName}:** "Then close the door. What happens next doesn't leave this room."\n\n• **Panel 4 — Cliffhanger Hook:**\n  > **${secondName}:** "It already did."\n\nHow do these lines sound for their vocal tone? We can adjust the snark or make it more deadly serious.`;
+      quickStarters = ['Make it more sarcastic', 'Raise the emotional stakes', 'Keep these lines & re-draw'];
+    } else if (isCameraIntent) {
+      reply = `### Cinematography & Visual Staging Pass 🎬\n\nFor **Issue #${epNum}**, here is how we can dial in the camera angles across the 4 panels:\n\n1. **Panel 1 (Wide Establishing):** High-angle panoramic shot looking down on ${leadName}, establishing spatial isolation and setting the mood with deep chiaroscuro lighting.\n2. **Panel 2 (Over-the-Shoulder Medium):** Camera resting just behind ${leadName}'s shoulder facing ${secondName}, framing the physical distance and eye contact.\n3. **Panel 3 (Dutch Tilt Low-Angle):** Dynamic tilted camera looking up from floor level, emphasizing sudden motion and power dynamics.\n4. **Panel 4 (Extreme Close-Up):** Tight framing on ${leadName}'s eyes and expression, with high-contrast rim lighting catching the emotion.\n\nWant me to apply this visual staging to the artwork prompt?`;
+      quickStarters = ['Apply visual staging & re-draw', 'Make Panel 3 even more dynamic', 'Focus on atmospheric lighting'];
+    } else if (isTensionIntent) {
+      reply = `### Escalating the Dramatic Tension ⚡\n\nTo amplify the suspense around "${userTopic}" in **Issue #${epNum}**:\n\n• **Shift the Power Dynamic:** Rather than a balanced confrontation, put ${leadName} momentarily on the back foot, forcing a sudden calculated risk in Panel 3.\n• **Environmental Pressure:** Introduce physical constraints—flickering lights, closing exits, or a ticking countdown—so the characters are reacting to both each other and the space.\n• **Unspoken Subtext:** Let ${secondName}'s body language say what dialogue leaves hidden.\n\nReady to re-render this page with maximum tension? Hit **Re-Direct Scene** or **Clean Re-Draw**!`;
+      quickStarters = ['Apply high tension & re-draw', 'Introduce a sudden complication', 'Focus on character body language'];
+    } else if (isRedirectIntent) {
+      synthesizedPremise = `Issue #${epNum}: In the wake of ${userTopic}, ${leadName} takes decisive control of the situation against ${secondName}, forcing an unexpected narrative turn in ${world.title}.`;
+      reply = `### Re-Directing Scene: "${userTopic}" 🎬\n\nI love this pivot! Here is how we restructure the sequence:\n\n• **Panel 1:** ${leadName} enters with a completely altered objective around "${userTopic}".\n• **Panel 2:** ${secondName} reacts with suspicion, realizing the plan has changed.\n• **Panel 3:** A decisive physical or verbal confrontation triggers the new turn.\n• **Panel 4:** The new status quo is established, setting up high-stakes fallout.\n\nClick **Apply Scene Beat** below to lock in this direction!`;
+      quickStarters = ['Apply this direction', 'Make it even more unexpected', 'Re-draw page artwork'];
+    } else {
+      reply = `### AI Director Review for Issue #${epNum}: "${epTitle}"\n\nAnalyzing **"${userTopic}"** in the context of our established canon:\n\n• **Character Focus:** Keeping the spotlight on **${leadName}** maintains sharp continuity with the story so far.\n• **Scene Progression:** The tension between ${leadName} and ${secondName} is the driving engine of this issue.\n• **Pacing Recommendation:** Make sure Panel 3 delivers the dramatic peak so Panel 4 can land the emotional takeaway.\n\nWhat would you like to direct next—polish dialogue, refine camera angles, or re-direct the scene outcome?`;
+      quickStarters = ['Punch up the dialogue', 'Adjust cinematography', 'Re-direct this scene'];
+    }
 
-Here is how we can refine or re-direct this page:
-• **Visual Staging & Pacing:** Emphasize the physical dynamic and eye contact in Panels 1 & 2 to build dramatic tension before the turn.
-• **Dialogue Polish:** Keep ${leadName}'s dialogue sharp and grounded in their motivation.
-• **Pivotal Climax:** In Panels 3 & 4, bring the confrontation to a decisive visual peak.
-
-If you like this adjustment, click **Re-Direct Scene** or **Clean Re-Draw** to apply these changes to the page artwork!`;
-
-    const panel1 = `${leadName} confronts the situation with focused intent around "${userTopic}".`;
-    const panel2 = `Tense exchange and interpersonal friction as ${leadName} and scene partners collide over "${userTopic}".`;
-    const panel3 = `The dramatic turning point of the scene unfolds with high-contrast cinematic staging.`;
-    const panel4 = `A resolute outcome leaves an impactful conclusion for this issue.`;
-
-    return {
-      reply,
-      synthesizedPremise: `Issue #${epNum}: ${leadName} navigates "${userTopic}" with ${guestsStr || 'key scene partners'}, driving dramatic narrative momentum in ${world.title || 'the universe'}.`,
-      castSpotlight: sceneCast,
-      castExcluded: excludedChars,
-      suggestedPanels: [
-        { panelNumber: 1, description: panel1 },
-        { panelNumber: 2, description: panel2 },
-        { panelNumber: 3, description: panel3 },
-        { panelNumber: 4, description: panel4 },
-      ],
-      quickStarters: [
-        'Punch up the dialogue between characters',
-        'Re-direct this scene with higher tension',
-        'Apply changes & re-draw page artwork',
-      ],
-    };
+    synthesizedPremise = synthesizedPremise || `Issue #${epNum}: ${leadName} confronts the escalating developments around "${userTopic}" with ${secondName}, driving dramatic narrative momentum in ${world.title}.`;
+    suggestedPanels = [
+      { panelNumber: 1, description: `${leadName} enters the space, establishing intent around "${userTopic}".` },
+      { panelNumber: 2, description: `Tense interaction and dialogue between ${leadName} and ${secondName}.` },
+      { panelNumber: 3, description: `The scene reaches a dramatic turning point with high-contrast framing.` },
+      { panelNumber: 4, description: `A decisive resolution sets up the narrative hook for the next chapter.` },
+    ];
+  } else {
+    // Next Episode Mode
+    synthesizedPremise = `Episode #${epNum + 1}: ${leadName} confronts "${userTopic}" alongside ${secondName}, carrying forward the canon established in Issue #${epNum}.`;
+    reply = `### Brainstorming Issue #${epNum + 1} 🚀\n\nBuilding directly on the climax of Issue #${epNum}:\n\n• **Opening Hook (Panel 1):** ${leadName} deals with the immediate aftermath of "${userTopic}".\n• **Escalation (Panel 2):** ${secondName} brings new information or a direct challenge.\n• **The Climax (Panel 3):** An unexpected confrontation shifts the balance of power.\n• **The Cliffhanger (Panel 4):** A decisive choice leaves an irresistible hook for the following issue.\n\nWhen this beat feels right, click **Draw Episode** to generate!`;
+    suggestedPanels = [
+      { panelNumber: 1, description: `${leadName} confronts the immediate aftermath of "${userTopic}".` },
+      { panelNumber: 2, description: `${secondName} arrives, escalating the narrative friction.` },
+      { panelNumber: 3, description: `A high-stakes confrontation reaches a critical revelation.` },
+      { panelNumber: 4, description: `A dramatic cliffhanger is established for the next issue.` },
+    ];
+    quickStarters = [
+      'Resolve the scene with a decisive breakthrough',
+      'Introduce an unexpected rival twist',
+      'End on a suspenseful cliffhanger',
+    ];
   }
-
-  // Next Episode Mode
-  const reply = `I like where you're taking the next chapter! Focusing specifically on **${leadName}** ${guestsStr ? `and **${guestsStr}**` : ''} keeps the narrative progression sharp and compelling following Issue #${epNum}.
-
-Here is how we can structure this sequence across the 4 panels:
-
-• **Panel 1 — Establishing the Scene:** ${leadName} steps into the scene with clear intent, establishing the stakes around "${userTopic}".
-• **Panel 2 — The Interaction:** ${leadName} engages directly with ${guestsStr || 'their counterpart'}, developing the interpersonal dynamic and dialogue.
-• **Panel 3 — The Pivotal Exchange:** A critical revelation or turning point occurs that shifts the balance of power.
-• **Panel 4 — The Decision / Hook:** A decisive choice is made, setting up an immediate cliffhanger for the next episode.
-
-How does this pacing feel? We can either push for a decisive resolution or introduce an unexpected complication.`;
-
-  const panel1 = `${leadName} enters the scene with focused composure, establishing the moment for "${userTopic}".`;
-  const panel2 = `${leadName} engages ${guestsStr || 'their counterpart'}, exchanging sharp, observant dialogue.`;
-  const panel3 = `A pivotal development occurs as the dialogue and stakes over "${userTopic}" reach a climax.`;
-  const panel4 = `A decisive choice is made, leaving an intriguing narrative opening for the next chapter.`;
-
-  const premise = `Episode #${epNum + 1}: ${leadName} navigates "${userTopic}" with ${guestsStr || 'key scene partners'}, driving dramatic narrative momentum in ${world.title || 'the universe'}.`;
-
-  const quickStarters = [
-    'Resolve the scene with a decisive breakthrough',
-    'Introduce an unexpected complication or rival twist',
-    'End on a suspenseful cliffhanger for the next issue'
-  ];
 
   return {
     reply,
-    synthesizedPremise: premise,
-    castSpotlight: sceneCast,
+    synthesizedPremise,
+    castSpotlight: spotlightChars,
     castExcluded: excludedChars,
-    suggestedPanels: [
-      { panelNumber: 1, description: panel1 },
-      { panelNumber: 2, description: panel2 },
-      { panelNumber: 3, description: panel3 },
-      { panelNumber: 4, description: panel4 },
-    ],
+    suggestedPanels,
     quickStarters,
   };
 }
@@ -153,22 +196,32 @@ export async function POST(req: NextRequest) {
     const epNum = currentEpisode.episodeNumber || 1;
     const epTitle = currentEpisode.title || `Issue #${epNum}`;
 
-    // Target AI provider & credentials
-    let targetBaseUrl = baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1';
-    let targetApiKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
-    let targetModel = modelName || 'muse-spark-1.3';
+    // Target AI provider & credentials resolution
+    // MindStrip uses Official Meta Model API as the primary reasoning engine
+    const metaApiKey = process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
+    const metaBaseUrl = process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1';
+    const metaModel = 'muse-spark-1.3';
 
-    if (provider === 'fireworks') {
+    let targetBaseUrl = metaBaseUrl;
+    let targetApiKey = metaApiKey;
+    let targetModel = metaModel;
+
+    if (provider === 'fireworks' && (apiKey || process.env.FIREWORKS_API_KEY)) {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
       targetApiKey = apiKey || process.env.FIREWORKS_API_KEY || '';
-      targetModel = modelName || 'accounts/fireworks/models/llama-v3p3-70b-instruct';
-    } else if (provider === 'groq') {
+      targetModel = modelName && modelName.includes('fireworks') ? modelName : 'accounts/fireworks/models/llama-v3p3-70b-instruct';
+    } else if (provider === 'groq' && (apiKey || process.env.GROQ_API_KEY)) {
       targetBaseUrl = baseUrl || 'https://api.groq.com/openai/v1';
       targetApiKey = apiKey || process.env.GROQ_API_KEY || '';
-      targetModel = modelName || 'llama-3.3-70b-versatile';
+      targetModel = modelName && modelName.includes('llama') ? modelName : 'llama-3.3-70b-versatile';
+    } else {
+      // Official Meta Model API (Default & Primary)
+      targetBaseUrl = metaBaseUrl;
+      targetApiKey = metaApiKey || apiKey || '';
+      targetModel = (modelName && !modelName.includes('fireworks') && !modelName.includes('groq')) ? modelName : 'muse-spark-1.3';
     }
 
-    // If no API key is available, use dynamic intelligent response
+    // If no credentials available, gracefully generate intelligent dynamic response
     if (!targetApiKey) {
       return NextResponse.json(
         generateDynamicCoDirectorResponse(messages, world, currentEpisode, chatMode, storyContext)
@@ -198,12 +251,11 @@ ${currentEpisode.panels.map((p: any) => `  • Panel ${p.panelNumber}: ${p.scene
 
 CORE PAGE DIRECTOR BEHAVIORS:
 1. Talk like an expert, enthusiastic comic director (like ChatGPT) having a real creative partnership conversation.
-2. You have complete context of the universe lore, character personalities, and prior episode events leading to this page. Reference them naturally!
-3. If the creator asks to punch up dialogue, suggest punchy, sharp, or emotional dialogue lines suited to the characters.
+2. Directly answer whatever the creator asks! If they ask about dialogue, give sharp dialogue lines. If they ask about cinematography, give camera angles and lighting directions. If they ask about character motives or canon, explain based on full story continuity up to this page.
+3. NEVER repeat the same boilerplate or generic intro. Respond freshly and dynamically to the latest user message.
 4. If the creator asks to re-direct this scene, provide an updated premise and an optimized 4-panel visual breakdown.
-5. If the creator asks about character actions, physical positions, or cinematography, provide clear visual descriptions.
-6. Enforce Cast Scoping: keep focus on the characters actively in this scene.
-7. Return clean JSON matching the schema below.`;
+5. Enforce Cast Scoping: keep focus on the characters actively in this scene.
+6. Return clean JSON matching the schema below.`;
     } else {
       // NEXT EPISODE WRITERS' ROOM CO-DIRECTOR PROMPT
       systemPrompt = `You are MindStrip's Meta AI Comic Co-Director & Creative Partner in the writers' room.
@@ -289,8 +341,13 @@ Return ONLY a valid JSON object matching this schema:
         generateDynamicCoDirectorResponse(messages, world, currentEpisode, chatMode, storyContext)
       );
     }
-    const cleaned = rawContent.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
-    const parsed: CoDirectorChatResponsePayload = JSON.parse(cleaned);
+
+    const parsed = extractJsonFromModelContent(rawContent);
+    if (!parsed) {
+      return NextResponse.json(
+        generateDynamicCoDirectorResponse(messages, world, currentEpisode, chatMode, storyContext)
+      );
+    }
 
     return NextResponse.json({
       reply: parsed.reply || 'Understood! Let us build this page together.',

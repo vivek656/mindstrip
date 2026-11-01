@@ -227,16 +227,20 @@ export default function Home() {
       const savedConfig = localStorage.getItem('mindstrip_api_config');
       if (savedConfig) {
         const parsed = JSON.parse(savedConfig);
-        const isOfficialMeta = parsed.provider === 'meta-api' || parsed.baseUrl?.includes('api.meta.ai');
-        const normalizedModel = isOfficialMeta && (!parsed.modelName || parsed.modelName === 'llama-3.3-70b-instruct')
+        const isFireworks = parsed.provider === 'fireworks';
+        const effectiveProvider = (isFireworks && (!parsed.apiKey || parsed.apiKey.startsWith('LLM_')))
+          ? 'meta-api'
+          : (parsed.provider === 'simulation' ? 'meta-api' : (parsed.provider || 'meta-api'));
+        const effectiveBaseUrl = effectiveProvider === 'meta-api' ? 'https://api.meta.ai/v1' : parsed.baseUrl;
+        const normalizedModel = effectiveProvider === 'meta-api'
           ? 'muse-spark-1.3'
           : (parsed.modelName || 'muse-spark-1.3');
 
         setApiConfig({
-          mode: parsed.provider === 'simulation' ? 'meta' : (parsed.mode || 'meta'),
-          provider: parsed.provider === 'simulation' ? 'meta-api' : (parsed.provider || 'meta-api'),
+          mode: 'meta',
+          provider: effectiveProvider,
           apiKey: parsed.apiKey,
-          baseUrl: parsed.baseUrl,
+          baseUrl: effectiveBaseUrl,
           modelName: normalizedModel,
         });
       }
@@ -246,8 +250,7 @@ export default function Home() {
         .then((r) => r.json())
         .then((status) => {
           setApiConfig((prev) => {
-            if (prev.apiKey) return prev;
-            if (status.hasMetaKey) {
+            if (status.hasMetaKey && (!prev.apiKey || prev.provider === 'fireworks' || prev.provider === 'simulation')) {
               return {
                 ...prev,
                 mode: 'meta',
@@ -256,6 +259,7 @@ export default function Home() {
                 modelName: 'muse-spark-1.3',
               };
             }
+            if (prev.apiKey) return prev;
             if (status.hasFireworksKey) {
               return {
                 ...prev,
