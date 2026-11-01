@@ -90,12 +90,33 @@ export async function POST(req: NextRequest) {
     const rawClean = sanitizeDiffusionSafetyTriggers(cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt || prompt || episodeTitle || 'dynamic comic scene')));
     let sanitizedPrompt = applyCanonicalCharacterAttire(rawClean, targetCharacters);
 
-    // 1. Check if the user/director provided an explicit custom prompt
+    const hasPanelDialogue = Array.isArray(panels) && panels.some((p: any) => p.bubbles && p.bubbles.length > 0);
     const hasCustomPrompt = Boolean(customPrompt && customPrompt.trim().length > 0);
     const targetFrameCount = effectiveLayout === '1-panel' ? 1 : effectiveLayout === '2-panel' ? 2 : effectiveLayout === '3-panel' ? 3 : 4;
 
-    if (hasCustomPrompt) {
-      // User or Director provided an explicit prompt. What the user wrote MUST take absolute precedence!
+    if (hasPanelDialogue) {
+      // Scripted panels with dialogue bubbles MUST take precedence to ensure speech balloons are always painted!
+      if (effectiveLayout === '1-panel' && panels.length >= 1) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        sanitizedPrompt = `Full-page cinematic splash illustration: ${p1}. Panoramic dramatic composition.`;
+      } else if (effectiveLayout === '2-panel' && panels.length >= 2) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+        sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+      } else if (effectiveLayout === '3-panel' && panels.length >= 3) {
+        const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
+        const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
+        const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
+        sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+      } else {
+        const p1 = formatFrameWithRagDialogue(panels[0] || {}, targetCharacters);
+        const p2 = formatFrameWithRagDialogue(panels[1] || panels[0] || {}, targetCharacters);
+        const p3 = formatFrameWithRagDialogue(panels[2] || panels[0] || {}, targetCharacters);
+        const p4 = formatFrameWithRagDialogue(panels[3] || panels[1] || {}, targetCharacters);
+        sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+      }
+    } else if (hasCustomPrompt) {
+      // User or Director provided an explicit prompt.
       const parsedBeats = parseCustomPromptBeats(customPrompt!, targetFrameCount);
 
       if (parsedBeats && parsedBeats.length >= 2) {

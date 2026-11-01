@@ -1399,3 +1399,18 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Generated with Meta Muse Image 1.0 (`ep3_forgiveness_rendered.webp`, Status 200 OK).
   - Saved to `public/episodes/ep3_namita_forgiveness.webp`.
   - Synced to MongoDB Atlas for `CEO NAMITA` (`world-1793423242997`) and `CEO NAMITA [Timeline B]` (`world-fork-1793537920934`). Production build verified clean.
+
+### Episode 4: The Sovereign Order & Preservation of Speech Bubbles in Realism (2026-11-01)
+- **Root Cause of Missing Bubbles & Dialogue in Ep 4**:
+  1. In `REALISTIC_PHOTO_DIRECTIVE`, the phrase `"Strictly no speech bubbles, no text captions"` ordered Meta Muse Image not to paint any speech bubbles or dialogue text on the page.
+  2. In `src/app/api/generate-image/route.ts`, when `customPrompt` was present, the pipeline previously took only `customPrompt` and omitted the scripted dialogue from `panels[i].bubbles`.
+- **Architectural Fix**:
+  1. Updated `REALISTIC_PHOTO_DIRECTIVE` in `src/lib/agents/art-director.ts` to explicitly retain speech balloons: `"clean white comic gutters separating sequential frames, expressive comic speech balloons with dialogue, photorealistic live-action photography. Strictly zero 2D cartoon cel-shading, zero sketch outlines."`
+  2. In `src/app/api/generate-image/route.ts`, prioritized `hasPanelDialogue` so that whenever `panels` contains dialogue bubbles, each frame is formatted with `formatFrameWithRagDialogue` (`featuring Namita speech balloon saying "..."`), ensuring speech bubbles are ALWAYS painted into the image.
+- **Episode 4 Live Render**:
+  - Generated `ep4_namita_office_ritual.webp` (Status 200 OK) with 4K editorial realism + full comic speech bubbles:
+    - Panel 1: *"Sit on the floor, Priya."*
+    - Panel 2: *"Come closer... you know what you did wrong."*
+    - Panel 3: *"Good... show your respect."* (Macro shot of stiletto heel with subordinate bowing low)
+    - Panel 4: *"From tomorrow, your department reports to me. Understood?"* (Namita applying red lipstick, looking away with cold bored eyes)
+  - Synced to MongoDB Atlas for both `CEO NAMITA` universes. Clean production build verified.

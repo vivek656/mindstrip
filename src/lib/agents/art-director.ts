@@ -326,10 +326,10 @@ export const COMIC_PAGE_PUBLICATION_DIRECTIVE =
 
 /**
  * Authentic 4K photo directive: instructs diffusion models to generate pure camera photography
- * and cinematic movie stills, strictly eliminating comic ink, cel-shading, and drawings.
+ * and cinematic movie stills WITH authentic comic speech balloons and dialogue.
  */
 export const REALISTIC_PHOTO_DIRECTIVE =
-  'raw cinematic 35mm photography, Kodak Portra 400 film look, realistic human skin pores, optical lens bokeh, real life natural lighting, authentic documentary photo. Strictly zero drawings, zero cartoon cel-shading, zero comic ink, zero hand-drawn text, zero illustrations.';
+  'ultra-realistic 4K editorial photography comic page, live-action cinematic movie stills, Hasselblad portrait, natural skin textures, photorealistic cinematic lighting, clean white comic gutters separating sequential frames, expressive comic speech balloons with dialogue, photorealistic live-action photography. Strictly zero 2D cartoon cel-shading, zero sketch outlines, zero cartoon drawings.';
 
 export function isPhotorealisticStyle(style: string): boolean {
   if (!style) return false;
