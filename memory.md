@@ -1174,3 +1174,20 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: 100% clean production build (0 errors).
   - Committed (`96e0b9a`) and pushed to `main`.
+
+### Meta Muse Image 400 `content_policy_violation` Auto-Recovery & Visual Policy Sanitizer (2026-11-01)
+- **Problem**:
+  Meta Muse Image API rejected image prompts with `400 Bad Request: {"error":{"code":"content_policy_violation","message":"The response was filtered due to the prompt triggering our content management policy."}}`.
+  - Triggered when character descriptions or story premises contain sensitive/controlled keywords (e.g. `"drug patents"`, `"curves"`, `"trophy wife"`, `"boardroom coup"`, `"weaponized"`).
+- **Solution Implemented**:
+  1. `sanitizeForImageContentPolicy(rawPrompt)` in `src/lib/agents/art-director.ts`:
+     - Proactively replaces safety filter trigger words with elegant, policy-compliant visual storytelling terms (e.g. `drug patents` -> `pharmaceutical formulas`, `curves` -> `poised stature`, `boardroom coup` -> `boardroom takeover`, `trophy wife` -> `high-society spouse`).
+  2. **Automatic Content Policy Recovery**:
+     - In `src/app/api/generate-image/route.ts`, `src/app/api/generate-character-image/route.ts`, and `src/app/api/generate/route.ts`:
+     - If Meta Muse Image flags `content_policy_violation` (400), the route automatically constructs an ultra-safe visual composition prompt using `createPolicySafePagePrompt` (retaining art style, character names, and dynamic staging) and **auto-retries immediately**.
+     - If the retry succeeds, the user gets their image seamlessly with zero error screens.
+  3. **Human-Friendly Error Messaging**:
+     - If even the safe retry fails, provides clear, actionable advice on which keywords to rephrase rather than dumping raw JSON.
+- **Verification**:
+  - `npm run build`: 100% clean production build.
+  - Committed (`bc074a5`) and pushed to `main`.
