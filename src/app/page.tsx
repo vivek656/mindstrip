@@ -247,6 +247,15 @@ export default function Home() {
         .then((status) => {
           setApiConfig((prev) => {
             if (prev.apiKey) return prev;
+            if (status.hasMetaKey) {
+              return {
+                ...prev,
+                mode: 'meta',
+                provider: 'meta-api',
+                baseUrl: 'https://api.meta.ai/v1',
+                modelName: 'muse-spark-1.3',
+              };
+            }
             if (status.hasFireworksKey) {
               return {
                 ...prev,
@@ -254,14 +263,6 @@ export default function Home() {
                 provider: 'fireworks',
                 baseUrl: 'https://api.fireworks.ai/inference/v1',
                 modelName: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-              };
-            }
-            if (status.hasMetaKey) {
-              return {
-                ...prev,
-                mode: 'meta',
-                provider: prev.provider === 'simulation' ? 'meta-api' : prev.provider,
-                modelName: prev.modelName || 'muse-spark-1.3',
               };
             }
             return prev;
@@ -585,9 +586,9 @@ export default function Home() {
       const dynamicPanelLayout = activeEpisode.panels?.length === 1 ? '1-panel' : activeEpisode.panels?.length === 2 ? '2-panel' : activeEpisode.panels?.length === 3 ? '3-panel' : '4-panel';
       const targetLayoutStyle = options?.layoutStyle || activeEpisode.layoutStyle || dynamicPanelLayout;
       const targetArtStyle = options?.artStyle || activeWorld.artStyle || 'webcomic';
-      const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel || 'flux-1-schnell';
+      const targetImageModel = options?.imageModel || activeEpisode.imageModel || activeWorld.imageModel || 'muse-image-1.0';
       
-      const effectiveProvider = options?.provider || (targetImageModel === 'flux-1-schnell' ? 'fireworks' : apiConfig?.provider) || 'fireworks';
+      const effectiveProvider = options?.provider || (targetImageModel === 'flux-1-schnell' ? 'fireworks' : (apiConfig?.provider || 'meta-api')) || 'meta-api';
 
       const response = await fetch('/api/generate-image', {
         method: 'POST',

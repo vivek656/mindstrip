@@ -13,8 +13,8 @@ export async function GET() {
     hasFireworksKey,
     hasGroqKey,
     isMongo,
-    defaultProvider: hasFireworksKey ? 'fireworks' : (hasMetaKey ? 'meta-api' : (hasGroqKey ? 'groq' : 'meta-api')),
-    defaultImageModel: 'flux-1-schnell',
+    defaultProvider: hasMetaKey ? 'meta-api' : (hasFireworksKey ? 'fireworks' : (hasGroqKey ? 'groq' : 'meta-api')),
+    defaultImageModel: hasMetaKey ? 'muse-image-1.0' : (hasFireworksKey ? 'flux-1-schnell' : 'muse-image-1.0'),
   });
 }
 

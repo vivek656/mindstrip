@@ -109,7 +109,7 @@ Return ONLY valid JSON matching this exact schema:
               tagline: parsed.tagline || 'A new serialized universe',
               genre: parsed.genre || genre || 'Modern Graphic Novel',
               artStyle: parsed.artStyle || artStyle || 'webcomic',
-              imageModel: 'flux-1-schnell',
+              imageModel: 'muse-image-1.0',
               lore: parsed.lore,
               environmentRules: parsed.environmentRules || [],
               characters: parsed.characters.map((c: Record<string, unknown>, i: number) => ({
@@ -145,7 +145,7 @@ Return ONLY valid JSON matching this exact schema:
       tagline: `Where extraordinary decisions collide with everyday reality`,
       genre: genre || 'Urban Sci-Fi & Adventure',
       artStyle: artStyle || 'webcomic',
-      imageModel: 'flux-1-schnell',
+      imageModel: 'muse-image-1.0',
       lore: `In a world where everyday routines hide extraordinary secrets, unlikely allies unite to maintain balance against rising friction.`,
       environmentRules: [
         'Actions have compounding narrative consequences',

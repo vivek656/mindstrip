@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
       worldLore = '',
       viewType = 'model_sheet', // 'portrait' | 'full_body' | 'back_view' | 'model_sheet' | 'action_pose'
       customPrompt = '',
-      provider = 'fireworks',
+      provider = 'meta-api',
       apiKey = '',
       baseUrl = '',
-      imageModel = 'flux-1-schnell'
+      imageModel = 'muse-image-1.0'
     } = body;
 
     const charGender = gender && gender !== 'unspecified' ? `(${gender})` : '';
@@ -86,21 +86,23 @@ export async function POST(req: NextRequest) {
     const cleanBase = (baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1').replace(/\/+$/, '');
 
     // Determine effective provider:
-    // Prioritize Fireworks FLUX.1 Schnell for high-speed, cost-efficient character generation (~$0.003)
+    // Prioritize official Meta Model API (muse-image-1.0)
     let effectiveProvider = provider;
-    if ((provider === 'fireworks' || imageModel === 'flux-1-schnell') && targetFireworksKey) {
+    if (provider === 'fireworks' && targetFireworksKey) {
       effectiveProvider = 'fireworks';
-    } else if (targetFireworksKey) {
+    } else if (imageModel === 'flux-1-schnell' && targetFireworksKey) {
       effectiveProvider = 'fireworks';
     } else if (targetMetaKey) {
       effectiveProvider = 'meta-api';
+    } else if (targetFireworksKey) {
+      effectiveProvider = 'fireworks';
     } else {
       effectiveProvider = 'none';
     }
 
     if (effectiveProvider === 'none') {
       return NextResponse.json({
-        error: 'Image API key not detected. Please ensure FIREWORKS_API_KEY or META_MODEL_API_KEY is configured in .env.local to generate character concept art.'
+        error: 'Meta Model API Key not detected. Please ensure META_MODEL_API_KEY is configured in .env.local to generate official character concept art with Meta Muse Image 1.0.'
       }, { status: 401 });
     }
 

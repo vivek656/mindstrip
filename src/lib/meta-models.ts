@@ -125,7 +125,7 @@ export async function generateMindStrip(
         layoutPreference,
         world,
         pastEpisodes: pastEpisodes || world?.episodes,
-        imageModel: world?.imageModel || 'flux-1-schnell',
+        imageModel: world?.imageModel || 'muse-image-1.0',
         provider: config.provider || 'meta-api',
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,

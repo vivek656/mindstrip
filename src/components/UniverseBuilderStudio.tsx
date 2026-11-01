@@ -250,7 +250,7 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
       tagline: tagline.trim() || 'A new serialized comic universe in the making',
       genre: finalGenre,
       artStyle: finalArtStyle,
-      imageModel: 'flux-1-schnell',
+      imageModel: 'muse-image-1.0',
       characters,
       episodes: [],
       createdAt: new Date().toISOString(),

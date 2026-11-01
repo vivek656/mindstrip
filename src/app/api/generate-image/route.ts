@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
     let targetBaseUrl = 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || '';
 
-    const effectiveImageModel = imageModel || (process.env.FIREWORKS_API_KEY ? 'flux-1-schnell' : 'muse-image-1.0');
-    const isFireworks = provider === 'fireworks' || effectiveImageModel === 'flux-1-schnell';
+    const effectiveImageModel = imageModel || (process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY ? 'muse-image-1.0' : (process.env.FIREWORKS_API_KEY ? 'flux-1-schnell' : 'muse-image-1.0'));
+    const isFireworks = (provider === 'fireworks' || effectiveImageModel === 'flux-1-schnell') && Boolean(process.env.FIREWORKS_API_KEY || (provider === 'fireworks' && apiKey));
 
     if (isFireworks) {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
         targetApiKey = process.env.FIREWORKS_API_KEY;
       } else {
         return NextResponse.json(
-          { error: `Image API key not detected. Please configure FIREWORKS_API_KEY or META_MODEL_API_KEY in .env.local to generate comic page artwork.` },
+          { error: `Meta Model API Key not detected. Please configure META_MODEL_API_KEY in .env.local to generate official comic page artwork with Meta Muse Image 1.0.` },
           { status: 401 }
         );
       }

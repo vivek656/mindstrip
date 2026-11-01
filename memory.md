@@ -1106,3 +1106,29 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Verification**:
   - `npm run build`: clean production compilation in ~3s.
   - Pushed to `origin/main`.
+
+### Restore Official Meta Model API (`muse-spark-1.3` & `muse-image-1.0`) as Default Everywhere (2026-11-01)
+- **User Clarification**:
+  *"why you made usage of fireworks??? aside from meta i d ont have api keys for any ohte ropaetner"*
+- **Corrective Action**:
+  - The creator only has the official **Meta Model API Key** (`META_MODEL_API_KEY`).
+  - Switched the entire platform back to **100% official Meta Model API defaults**:
+    - Script / Text / Co-Director Engine: **`muse-spark-1.3`** via `https://api.meta.ai/v1` (with `max_tokens: 8192` and uncapped context).
+    - Artwork / Visual Engine: **`muse-image-1.0`** via `https://api.meta.ai/v1/images/generations`.
+    - Default Provider: **`meta-api`**.
+  - Updated all files to default to `muse-image-1.0` and `meta-api`:
+    - `src/app/api/auth/route.ts` (`defaultProvider: 'meta-api'`, `defaultImageModel: 'muse-image-1.0'`)
+    - `src/lib/meta-models.ts` (`DEFAULT_CONFIG` and `generateMindStrip`)
+    - `src/lib/worlds.ts` (`INITIAL_WORLDS`)
+    - `src/components/ComicPageSpread.tsx` (`MODEL_ENGINES` and `resolveInitialEngine`)
+    - `src/components/CharacterDossierModal.tsx` (`meta-api` and `muse-image-1.0`)
+    - `src/components/UniverseBuilderStudio.tsx` (`muse-image-1.0`)
+    - `src/app/api/build-world/route.ts` (`muse-image-1.0`)
+    - `src/app/api/generate-character-image/route.ts` (`meta-api` and `muse-image-1.0`)
+    - `src/app/api/generate-image/route.ts` (`meta-api` and `muse-image-1.0`)
+    - `src/app/api/generate/route.ts` (`meta-api` and `muse-image-1.0`)
+    - `src/app/page.tsx` (`meta-api` and `muse-image-1.0`)
+  - Fireworks and other partner endpoints remain strictly optional alternatives for users who explicitly supply those keys.
+- **Verification**:
+  - `npm run build`: clean production build with zero errors.
+  - Committed and pushed to `main`.

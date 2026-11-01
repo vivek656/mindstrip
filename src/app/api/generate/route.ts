@@ -99,10 +99,10 @@ export async function POST(req: NextRequest) {
     let generatedPageImage: string | undefined = undefined;
     let imageGenerationNotice = 'Artwork generation not requested';
 
-    const effectiveImageModel = imageModel || (process.env.FIREWORKS_API_KEY ? 'flux-1-schnell' : 'muse-image-1.0');
+    const effectiveImageModel = imageModel || (process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY ? 'muse-image-1.0' : (process.env.FIREWORKS_API_KEY ? 'flux-1-schnell' : 'muse-image-1.0'));
     const fireworksKey = (provider === 'fireworks' ? targetApiKey : '') || process.env.FIREWORKS_API_KEY || '';
     const metaImgKey = (provider === 'meta-api' ? targetApiKey : '') || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
-    const isFireworksImage = effectiveImageModel === 'flux-1-schnell' || (provider === 'fireworks' && Boolean(fireworksKey));
+    const isFireworksImage = effectiveImageModel === 'flux-1-schnell' && Boolean(fireworksKey);
 
     if (isFireworksImage && fireworksKey) {
       try {
