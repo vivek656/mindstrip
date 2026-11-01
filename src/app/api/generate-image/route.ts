@@ -85,25 +85,29 @@ export async function POST(req: NextRequest) {
     let sanitizedPrompt = applyCanonicalCharacterAttire(rawClean, targetCharacters);
 
     // If multi-panel layout and panel objects are provided, build an explicit sequential frame prompt with RAG dialogue
-    const hasExplicitCustom = Boolean(customPrompt && customPrompt.trim().length > 0 && !customPrompt.includes('sequential narrative frames'));
-    if (!hasExplicitCustom && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
+    const hasPreformattedFrames = Boolean(customPrompt && (customPrompt.includes('sequential narrative frames') || customPrompt.includes('Top frame') || customPrompt.includes('Frame 1')));
+    const sceneContextPrefix = (customPrompt && customPrompt.trim().length > 0 && !hasPreformattedFrames)
+      ? `${cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt))}. `
+      : '';
+
+    if (!hasPreformattedFrames && effectiveLayout === '1-panel' && Array.isArray(panels) && panels.length >= 1) {
       const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-      sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
-    } else if (!hasExplicitCustom && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
+      sanitizedPrompt = `${sceneContextPrefix}Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
+    } else if (!hasPreformattedFrames && effectiveLayout === '2-panel' && Array.isArray(panels) && panels.length >= 2) {
       const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
       const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
-      sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
-    } else if (!hasExplicitCustom && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
+      sanitizedPrompt = `${sceneContextPrefix}Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+    } else if (!hasPreformattedFrames && effectiveLayout === '3-panel' && Array.isArray(panels) && panels.length >= 3) {
       const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
       const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
       const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
-      sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
-    } else if (!hasExplicitCustom && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
+      sanitizedPrompt = `${sceneContextPrefix}Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+    } else if (!hasPreformattedFrames && effectiveLayout === '4-panel' && Array.isArray(panels) && panels.length >= 4) {
       const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
       const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
       const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
       const p4 = formatFrameWithRagDialogue(panels[3], targetCharacters);
-      sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+      sanitizedPrompt = `${sceneContextPrefix}Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
     }
 
     let targetBaseUrl = 'https://api.meta.ai/v1';
@@ -250,7 +254,8 @@ export async function POST(req: NextRequest) {
             artStyle,
             layoutDescriptor,
             charsList,
-            `${worldTitle || 'Graphic novel'} sequential scene with dramatic staging, expressive interaction, and cinematic graphic novel lighting`
+            sanitizedPrompt || `${worldTitle || 'Graphic novel'} sequential scene with dramatic staging, expressive interaction, and cinematic graphic novel lighting`,
+            panels
           );
 
           imgRes = await fetch(`${cleanBase}/images/generations`, {

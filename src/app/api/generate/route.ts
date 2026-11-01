@@ -171,7 +171,8 @@ export async function POST(req: NextRequest) {
               artStyle,
               comicStrip.layoutStyle || '4-panel',
               (characters || []).map((c: any) => c.name).join(' and '),
-              `${worldTitle || 'Comic'} graphic novel scene with dramatic visual storytelling and cinematic lighting`
+              pagePrompt || `${worldTitle || 'Comic'} graphic novel scene with dramatic visual storytelling and cinematic lighting`,
+              comicStrip.panels
             );
 
             imgRes = await fetch(`${cleanBase}/images/generations`, {
