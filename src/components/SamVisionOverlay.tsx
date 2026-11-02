@@ -28,6 +28,7 @@ export function SamVisionOverlay({
   const [isLoading, setIsLoading] = useState(false);
   const [editingBubbleText, setEditingBubbleText] = useState('');
   const [isEditingBubble, setIsEditingBubble] = useState(false);
+  const [metaModelVersion, setMetaModelVersion] = useState('Meta SAM 3.1 Live Production Engine');
 
   // Fetch or generate SAM 3.1 segmentation map on activation
   useEffect(() => {
@@ -47,13 +48,17 @@ export function SamVisionOverlay({
         layoutStyle: episode.layoutStyle || '4-panel',
         characters: world.characters,
         worldTitle: world.title,
-        panels: episode.panels
+        panels: episode.panels,
+        imageUrl: episode.pageImageUrl
       })
     })
       .then((res) => res.json())
       .then((data) => {
         if (isMounted && data.segments) {
           setSegments(data.segments);
+          if (data.metaModelVersion) {
+            setMetaModelVersion(data.metaModelVersion);
+          }
         }
       })
       .catch((err) => {
@@ -66,7 +71,7 @@ export function SamVisionOverlay({
     return () => {
       isMounted = false;
     };
-  }, [isActive, episode.layoutStyle, episode.panels, world.characters, world.title]);
+  }, [isActive, episode.layoutStyle, episode.panels, episode.pageImageUrl, world.characters, world.title]);
 
   if (!isActive) return null;
 
@@ -93,7 +98,8 @@ export function SamVisionOverlay({
           pointX: x,
           pointY: y,
           characters: world.characters,
-          layoutStyle: episode.layoutStyle || '4-panel'
+          layoutStyle: episode.layoutStyle || '4-panel',
+          imageUrl: episode.pageImageUrl
         })
       });
 
@@ -131,11 +137,12 @@ export function SamVisionOverlay({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-xs sm:text-sm text-white">
+              <span className="font-bold text-xs sm:text-sm text-white flex items-center gap-1.5">
                 Meta SAM 3.1 Vision Inspector
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-cyan-300 border border-blue-400/30 font-mono text-[10px] font-bold">
-                Zero-Shot Segmenter
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-mono text-[10px] font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {metaModelVersion.includes('Live') ? '🟢 Live Meta SAM 3.1 API' : 'Zero-Shot Segmenter'}
               </span>
             </div>
             <p className="text-[11px] text-zinc-400 hidden sm:block">

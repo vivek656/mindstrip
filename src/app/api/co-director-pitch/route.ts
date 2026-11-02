@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     // Target AI provider & credentials
     let targetBaseUrl = baseUrl || process.env.META_MODEL_BASE_URL || 'https://api.meta.ai/v1';
     let targetApiKey = apiKey || process.env.META_MODEL_API_KEY || process.env.MODEL_API_KEY || process.env.META_API_KEY || '';
-    let targetModel = modelName || 'muse-spark-1.3';
+    let targetModel = modelName || (provider === 'meta-api' ? 'muse-spark-1.3-contributor' : 'muse-spark-1.3');
 
     if (provider === 'fireworks') {
       targetBaseUrl = baseUrl || 'https://api.fireworks.ai/inference/v1';

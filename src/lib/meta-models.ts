@@ -43,7 +43,17 @@ export const META_PRESETS: MetaPreset[] = [
     baseUrl: 'https://api.meta.ai/v1',
     modelName: 'muse-wonder-1.0',
     description: 'Official Meta AI Model API for Muse Wonder 1.0 (Creative Comic Narrative & Dialogue) and Muse Image 1.0',
-    badge: 'Official Hackathon API',
+    badge: 'Creative Dialogue Tuned',
+    placeholderKey: 'Paste your Meta Model API Key'
+  },
+  {
+    id: 'meta-contributor',
+    name: 'Meta Model API (Muse Spark Contributor)',
+    provider: 'meta-api',
+    baseUrl: 'https://api.meta.ai/v1',
+    modelName: 'muse-spark-1.3-contributor',
+    description: 'Official Meta AI Model for collaborative storytelling, branching decision forks, and co-director iteration',
+    badge: 'Co-Director Tuned',
     placeholderKey: 'Paste your Meta Model API Key'
   },
   {

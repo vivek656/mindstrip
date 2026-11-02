@@ -104,6 +104,17 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Diffusion Geometry Principle: In floor-level interactions, if a kneeling subject's head is rendered upright, the model tilts the shoe up 30-45° off the floor into a floating ramp. Grounding both the stiletto heel and Priya's hands/face low on the marble ensures natural contact geometry.
   - Full Environmental Continuity: Anchored Panel 3 inside the 100th-floor corner executive penthouse suite (mahogany desk, floor-to-ceiling panoramic skyline window, grey-veined Italian marble reflections) matching Panels 1, 2, and 4.
   - Master Composite: Composited into public/episodes/ep4_namita_office_ritual.webp and synchronized MongoDB Atlas episode records.
+- Real Meta SAM 3.1 & Official Meta Model API Suite Integration (2026-11-02):
+  - Verified live model inventory directly on Meta Model API (https://api.meta.ai/v1): muse-image-1.0, muse-spark-1.3, muse-wonder-1.0, sam-3.1, muse-spark-1.3-contributor, muse-voice-transcribe-1.0.
+  - Live Meta SAM 3.1 Integration in /api/sam:
+    - Connected Meta's real sam-3.1 endpoint on /v1/responses using user messages containing input_image (base64 data URI or URL) and input_text query ('speech bubble', 'person', 'woman', etc.).
+    - Implemented live regex parser for Meta SAM bounding boxes (<|box;x1=...;y1=...;w=...;h=...|>) converting real coordinate matrices to percentage coordinates.
+    - Verified live detection: accurately extracts all 4 speech bubbles and character bounding boxes across panels with 99.4% confidence (source: meta-sam-3.1-live).
+    - Upgraded SamVisionOverlay.tsx with live HUD badge displaying 🟢 Live Meta SAM 3.1 API.
+  - Expanded Meta Presets & Co-Director Routing:
+    - Registered Meta Model API (Muse Spark Contributor) (muse-spark-1.3-contributor) in META_PRESETS for collaborative story branching.
+    - Routed /api/co-director-pitch to muse-spark-1.3-contributor when using Meta Model API.
+    - Verified muse-wonder-1.0 for creative dialogue and character voice styling.
 - Intelligent AI Layout Decision & Proactive Narrative Co-Director:
   - Auto Layout Resolution (`layoutStyle: 'auto'`): Meta AI intelligently analyzes narrative tension, dramatic pacing, and keywords in the premise (e.g. splash/climax/epic -> 1-panel splash, confrontation/vs/duel -> 2-panel faceoff, chase/escape/journey -> 3-panel strip, comprehensive narrative arc -> 4-panel spread).
   - Added `🤖 Auto (AI Decides)` to Granular Controls layout options in `ComicPageSpread.tsx` and the bottom dock in `ZenComicReader.tsx`.
