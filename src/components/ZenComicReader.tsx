@@ -24,6 +24,7 @@ import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
 import { BranchTimelineModal } from './BranchTimelineModal';
 import { LiveRagPipelineTracker } from './LiveRagPipelineTracker';
+import { VoiceDictationButton } from './VoiceDictationButton';
 import {
   ArrowLeft,
   Menu,
@@ -1417,15 +1418,22 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                           : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
                       }`}
                     />
-                    <button
-                      type="button"
-                      onClick={() => handleSendCoDirectorMessage()}
-                      disabled={!coDirectorInputText.trim() || isSendingCoDirectorChat}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white cursor-pointer transition-all shadow-xs"
-                      title="Send message to Co-Director (Enter)"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <VoiceDictationButton
+                        size="sm"
+                        title="🎙️ Speak to Co-Director"
+                        onTranscript={(txt) => setCoDirectorInputText((prev) => (prev ? prev + ' ' + txt : txt))}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSendCoDirectorMessage()}
+                        disabled={!coDirectorInputText.trim() || isSendingCoDirectorChat}
+                        className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white cursor-pointer transition-all shadow-xs"
+                        title="Send message to Co-Director (Enter)"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Quick Action Brainstorm Helpers */}
@@ -1462,15 +1470,22 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                       <Edit2 className="w-3 h-3 text-blue-500" />
                       <span>Story Premise / Scene Beat</span>
                     </label>
-                    {prompt.trim() && (
-                      <button
-                        type="button"
-                        onClick={() => setPrompt('')}
-                        className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-mono cursor-pointer"
-                      >
-                        Clear
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <VoiceDictationButton
+                        size="sm"
+                        title="🎙️ Speak your premise to the Co-Director"
+                        onTranscript={(txt) => setPrompt((prev) => (prev ? prev + ' ' + txt : txt))}
+                      />
+                      {prompt.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => setPrompt('')}
+                          className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-mono cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <textarea

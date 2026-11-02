@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { ComicFlipPreview } from './ComicFlipPreview';
+import { VoiceDictationButton } from './VoiceDictationButton';
 
 import { ApiConfig } from '@/lib/meta-models';
 
@@ -557,9 +558,16 @@ export function ZenLanding({
               className="space-y-4"
             >
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-800">
-                  Enter your creative spark or world concept:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-800">
+                    Enter your creative spark or world concept:
+                  </label>
+                  <VoiceDictationButton
+                    size="sm"
+                    title="🎙️ Speak your story concept (Voice Dictation)"
+                    onTranscript={(txt) => setSparkInput((prev) => (prev ? prev + ' ' + txt : txt))}
+                  />
+                </div>
                 <textarea
                   value={sparkInput}
                   onChange={(e) => setSparkInput(e.target.value)}

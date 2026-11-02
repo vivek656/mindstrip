@@ -10,6 +10,7 @@ import {
   CustomWorldAttribute
 } from '@/types/comic';
 import { CharacterDossierModal } from './CharacterDossierModal';
+import { VoiceDictationButton } from './VoiceDictationButton';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -387,9 +388,16 @@ export function UniverseBuilderStudio({ onBack, onCreateWorld }: UniverseBuilder
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-zinc-600 mb-1.5">
-                    Premise / Logline *
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-mono font-semibold uppercase tracking-wider text-zinc-600">
+                      Premise / Logline *
+                    </label>
+                    <VoiceDictationButton
+                      size="sm"
+                      title="🎙️ Speak your premise (Voice-to-Text)"
+                      onTranscript={(txt) => setTagline((prev) => (prev ? prev + ' ' + txt : txt))}
+                    />
+                  </div>
                   <textarea
                     rows={2}
                     value={tagline}

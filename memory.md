@@ -115,6 +115,12 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     - Registered Meta Model API (Muse Spark Contributor) (muse-spark-1.3-contributor) in META_PRESETS for collaborative story branching.
     - Routed /api/co-director-pitch to muse-spark-1.3-contributor when using Meta Model API.
     - Verified muse-wonder-1.0 for creative dialogue and character voice styling.
+  - Voice Dictation & Multimodal Spoken Brain Dump Engine:
+    - Implemented VoiceDictationButton.tsx using browser Web Speech API (webkitSpeechRecognition/SpeechRecognition).
+    - Integrated across all core creative entry points: ZenLanding.tsx quick prompt dock, ZenComicReader.tsx Co-Director prompt dock & Writers' Room chat input, and UniverseBuilderStudio.tsx universe launchpad.
+    - Features real-time voice-to-text dictation with pulsing recording ripple and seamless transcript appending.
+  - Diffusion Safety Vocabulary Sanitization:
+    - Updated art-director.ts to eliminate triggers ('submission', 'ankle', 'bare feet') from AI Art Director rewriter guidelines, enforcing safe cinematography vocabulary ('deep respect', 'corporate reverence', 'stiletto resting flat on marble').
 - Intelligent AI Layout Decision & Proactive Narrative Co-Director:
   - Auto Layout Resolution (`layoutStyle: 'auto'`): Meta AI intelligently analyzes narrative tension, dramatic pacing, and keywords in the premise (e.g. splash/climax/epic -> 1-panel splash, confrontation/vs/duel -> 2-panel faceoff, chase/escape/journey -> 3-panel strip, comprehensive narrative arc -> 4-panel spread).
   - Added `🤖 Auto (AI Decides)` to Granular Controls layout options in `ComicPageSpread.tsx` and the bottom dock in `ZenComicReader.tsx`.
