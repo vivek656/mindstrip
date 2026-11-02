@@ -302,24 +302,51 @@ export async function POST(req: NextRequest) {
       // Official Meta Model API (muse-image-1.0) with AI Art Director Auto-Recovery (Zero hardcoding)
       const modelToUse = imageModel || process.env.META_IMAGE_MODEL || 'muse-image-1.0';
 
-      let imgRes = await fetch(`${cleanBase}/images/generations`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${targetApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          prompt: pagePrompt,
-          n: 1,
-          size: '1024x1024'
-        })
-      });
+      let imgRes: Response | null = null;
+      let errText = '';
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        try {
+          imgRes = await fetch(`${cleanBase}/images/generations`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${targetApiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: modelToUse,
+              prompt: pagePrompt,
+              n: 1,
+              size: '1024x1024'
+            })
+          });
+
+          if (imgRes.ok) break;
+
+          errText = await imgRes.text();
+          // If 503 or 502 (Meta temporary service spike), wait and retry
+          if ((imgRes.status === 503 || imgRes.status === 502 || imgRes.status === 429) && attempts < maxAttempts) {
+            console.warn(`Meta Muse Image temporary service spike (${imgRes.status}). Retrying attempt ${attempts + 1} of ${maxAttempts} in 3s...`);
+            await new Promise((r) => setTimeout(r, 3000));
+            continue;
+          }
+          break;
+        } catch (fetchErr) {
+          console.warn(`Fetch attempt ${attempts} to Meta API failed:`, fetchErr);
+          if (attempts < maxAttempts) {
+            await new Promise((r) => setTimeout(r, 2000));
+            continue;
+          }
+          return NextResponse.json({ error: 'Connection to Meta AI image server timed out. Please try again.' }, { status: 504 });
+        }
+      }
 
       // If Meta's automated safety filter flags the prompt (content_policy_violation),
       // dynamically reformulate using Meta's reasoning AI (muse-spark-1.3)
-      if (!imgRes.ok) {
-        const errText = await imgRes.text();
+      if (imgRes && !imgRes.ok) {
         if (imgRes.status === 400 && errText.includes('content_policy_violation')) {
           console.warn('Meta Muse Image flagged content_policy_violation. Engaging AI Art Director to dynamically rephrase into visual direction...');
           
@@ -351,20 +378,39 @@ export async function POST(req: NextRequest) {
               size: '1024x1024'
             })
           });
+
+          if (!imgRes.ok) {
+            errText = await imgRes.text();
+          }
         }
 
         if (!imgRes.ok) {
-          const finalErr = await imgRes.text();
-          if (finalErr.includes('content_policy_violation')) {
+          if (errText.includes('content_policy_violation')) {
             return NextResponse.json({
               error: 'Meta AI content safety filter flagged this prompt (often triggered by words like "drugs", "weapons", or provocative phrasing). MindStrip attempted an automatic safe recovery, but Meta filter remained active. Please rephrase sensitive story words into neutral visual terms.'
             }, { status: 400 });
           }
-          return NextResponse.json({ error: `Meta Muse Image API error (${imgRes.status}): ${finalErr.slice(0, 180)}` }, { status: 502 });
+          if (imgRes.status === 503 || imgRes.status === 502) {
+            return NextResponse.json({
+              error: 'The image generation service is temporarily busy. Please wait a few moments and try generating again.'
+            }, { status: 503 });
+          }
+          return NextResponse.json({ error: `Meta Muse Image API error (${imgRes.status}): ${errText.slice(0, 180)}` }, { status: 502 });
         }
       }
 
-      const imgData = await imgRes.json();
+      if (!imgRes) {
+        return NextResponse.json({ error: 'Image generation service did not respond' }, { status: 500 });
+      }
+
+      let imgData: any = {};
+      try {
+        imgData = await imgRes.json();
+      } catch (parseErr) {
+        console.error('Failed to parse Meta Muse Image response as JSON:', parseErr);
+        return NextResponse.json({ error: 'Image generation service returned an invalid response' }, { status: 502 });
+      }
+
       const rawImg = imgData.data?.[0]?.b64_json || imgData.data?.[0]?.url;
       if (!rawImg) {
         return NextResponse.json({ error: 'Meta Muse Image did not return image data' }, { status: 500 });

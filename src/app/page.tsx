@@ -444,7 +444,8 @@ export default function Home() {
           });
 
           if (imgRes.ok) {
-            const imgData = await imgRes.json();
+            const ct = imgRes.headers.get('content-type') || '';
+            const imgData = ct.includes('application/json') ? await imgRes.json().catch(() => ({})) : {};
             if (imgData.pageImageUrl) {
               freshImageUrl = imgData.pageImageUrl;
             }
@@ -556,15 +557,24 @@ export default function Home() {
             })
           });
 
-          if (imgRes.ok) {
-            const imgData = await imgRes.json();
-            if (imgData.pageImageUrl) {
-              freshImageUrl = imgData.pageImageUrl;
-              setArtworkError(null);
-            }
+          let imgData: any = {};
+          const ct = imgRes.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            imgData = await imgRes.json().catch(() => ({}));
           } else {
-            const errData = await imgRes.json().catch(() => ({}));
-            const errMsg = errData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
+            const text = await imgRes.text().catch(() => '');
+            imgData = {
+              error: text.includes('An error occurred') || imgRes.status >= 500
+                ? 'The AI image generator is temporarily busy. Please wait a moment and try again.'
+                : (text.slice(0, 180) || `Artwork synthesis failed (HTTP ${imgRes.status})`)
+            };
+          }
+
+          if (imgRes.ok && imgData.pageImageUrl) {
+            freshImageUrl = imgData.pageImageUrl;
+            setArtworkError(null);
+          } else {
+            const errMsg = imgData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
             console.error('Direct panels artwork fetch failed:', errMsg);
             setArtworkError(errMsg);
           }
@@ -623,15 +633,24 @@ export default function Home() {
               })
             });
 
-            if (imgRes.ok) {
-              const imgData = await imgRes.json();
-              if (imgData.pageImageUrl) {
-                freshImageUrl = imgData.pageImageUrl;
-                setArtworkError(null);
-              }
+            let imgData: any = {};
+            const ct = imgRes.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+              imgData = await imgRes.json().catch(() => ({}));
             } else {
-              const errData = await imgRes.json().catch(() => ({}));
-              const errMsg = errData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
+              const text = await imgRes.text().catch(() => '');
+              imgData = {
+                error: text.includes('An error occurred') || imgRes.status >= 500
+                  ? 'The AI image generator is temporarily busy. Please wait a moment and try again.'
+                  : (text.slice(0, 180) || `Artwork synthesis failed (HTTP ${imgRes.status})`)
+              };
+            }
+
+            if (imgRes.ok && imgData.pageImageUrl) {
+              freshImageUrl = imgData.pageImageUrl;
+              setArtworkError(null);
+            } else {
+              const errMsg = imgData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
               console.error('Re-draw artwork fetch failed:', errMsg);
               setArtworkError(errMsg);
             }
@@ -708,7 +727,19 @@ export default function Home() {
         })
       });
 
-      const data = await response.json();
+      let data: any = {};
+      const ct = response.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        data = await response.json().catch(() => ({}));
+      } else {
+        const text = await response.text().catch(() => '');
+        if (text.includes('An error occurred') || text.includes('FUNCTION_INVOCATION_TIMEOUT') || response.status >= 500) {
+          data = { error: 'The AI image generator is temporarily busy or timed out. Please wait a moment and try clicking Re-Draw again.' };
+        } else {
+          data = { error: text.slice(0, 180) || `Artwork synthesis failed (HTTP ${response.status})` };
+        }
+      }
+
       if (!response.ok || data.error) {
         throw new Error(data.error || `HTTP ${response.status}`);
       }

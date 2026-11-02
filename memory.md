@@ -1433,3 +1433,12 @@ Users don't just generate disconnected one-off strips. They build **persistent c
     `"Namita's foot in a towering pointed red stiletto high heel planted firmly on polished marble floor. Subordinate woman kneeling low, gently kissing the pointed toe of the red stiletto shoe in deep respect and obedience. Featuring Namita speech balloon saying 'Good... show your respect.'"`
   - Successfully passed Meta Muse Image (`200 OK`) and accurately captured Priya's lips touching the pointed tip of the red stiletto shoe.
   - Composited the verified macro frame directly into Panel 3 of the master 1600x1600 spread (`public/episodes/ep4_namita_office_ritual.webp`). Production build clean.
+
+### Artwork Synthesis Alert: Non-JSON Response & Server Stream Consumption Fix (2026-11-02)
+- **Root Cause of Alert (`Unexpected token 'A', "An error o"... is not valid JSON`)**:
+  1. In `src/app/api/generate-image/route.ts`, when Meta API returned a 503 (temporary service unavailable) or 504, `imgRes.text()` was called at line 322 and then called a second time on the same consumed stream at line 357 (`finalErr = await imgRes.text()`), throwing `TypeError: Body has already been consumed`.
+  2. In production Next.js/Vercel, unhandled server route errors return plain text/HTML error pages starting with `"An error occurred in the Server Components render..."` or `"An error occurred with your deployment..."`.
+  3. In `src/app/page.tsx`, `await response.json()` was called unconditionally on the raw fetch response without checking `response.headers.get('content-type')`. When `response.json()` parsed `"An error occurred..."`, it threw `SyntaxError: Unexpected token 'A'`, displaying the raw syntax error in the UI.
+- **Architectural Fix**:
+  1. Updated `src/app/api/generate-image/route.ts` with an automatic 3-attempt exponential backoff retry loop for 503/502/429 transient Meta API spikes, prevented double body consumption on error streams, and ensured valid JSON error payloads are always returned.
+  2. Updated `src/app/page.tsx` (`handleReDrawArtwork`, `handleRegenerateEpisode`, `handleGenerateNextEpisode`) to inspect `content-type` before calling `.json()`, cleanly capturing HTML/text server errors and displaying human-readable guidance (`"The AI image generator is temporarily busy. Please wait a moment and try clicking Re-Draw again."`). Production build verified clean.
