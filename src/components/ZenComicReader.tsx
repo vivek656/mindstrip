@@ -74,6 +74,7 @@ import {
   HelpCircle,
   Wand2,
   ChevronDown,
+  MoreHorizontal,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -161,11 +162,14 @@ export function ZenComicReader({
   const [readerTheme, setReaderTheme] = useState<'cinema' | 'studio'>('studio');
   const [readerWidth, setReaderWidth] = useState<'standard' | 'wide' | 'cinema'>('wide');
 
-  // Dedicated Desktop Right Studio Panel States
+  // Dedicated Desktop Right Studio Panel States (Apple-Style Persistent Assistant)
+  type AssistantContext = 'current' | 'next' | 'universe';
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [assistantContext, setAssistantContext] = useState<AssistantContext>(episode ? 'current' : 'next');
   const [rightPanelTab, setRightPanelTab] = useState<'next' | 'current'>(episode ? 'current' : 'next');
   const [currentPageViewMode, setCurrentPageViewMode] = useState<'chat' | 'controls'>('chat');
   const [mobileDrawerTab, setMobileDrawerTab] = useState<'sidebar' | 'studio'>('sidebar');
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
@@ -967,13 +971,16 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
         {/* World Header Info */}
         <div className="pb-4 border-b border-black/[0.08] flex items-start justify-between gap-2">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-800 text-xs font-mono font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+              <span
+                className="px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-700 text-[10px] font-mono font-bold uppercase tracking-wider max-w-[200px] truncate border border-black/5"
+                title={world.genre}
+              >
                 {world.genre}
               </span>
-              <span className="text-xs text-zinc-500 capitalize font-medium">• {world.artStyle} style</span>
+              <span className="text-[11px] text-zinc-400 capitalize font-medium">• {world.artStyle}</span>
             </div>
-            <h2 className="font-black text-xl text-zinc-950 leading-tight">
+            <h2 className="font-bold text-lg text-zinc-950 leading-snug tracking-tight">
               {world.title}
             </h2>
             <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed font-sans">
@@ -1153,86 +1160,193 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
     </div>
   );
 
-  // Dedicated Desktop Right Studio Panel (Co-Director & Page Controls)
+  // Dedicated Desktop Right Studio Panel (Apple Intelligence Unified Co-Director)
   const renderRightStudioPanel = () => (
     <div className="flex flex-col h-full overflow-hidden select-none">
-      {/* 1. STUDIO HEADER */}
-      <div className={`p-4 border-b flex items-center justify-between shrink-0 ${
+      {/* 1. APPLE INTELLIGENCE STUDIO HEADER */}
+      <div className={`p-3.5 border-b flex items-center justify-between shrink-0 ${
         readerTheme === 'cinema' && activeTab === 'comic'
-          ? 'border-white/10 bg-zinc-900/60'
-          : 'border-black/[0.08] bg-zinc-50/70'
+          ? 'border-white/10 bg-zinc-900/80 text-white'
+          : 'border-black/[0.06] bg-zinc-50/80 text-zinc-900 backdrop-blur-md'
       }`}>
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-500 via-indigo-500 to-cyan-400 p-[1.5px] shadow-xs">
+            <div className="w-full h-full bg-white dark:bg-zinc-900 rounded-[5px] flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-300" />
+            </div>
+          </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-xs uppercase tracking-wider font-mono">
-                Co-Director Studio
+              <span className="font-bold text-xs">
+                Meta AI Co-Director
               </span>
-              <span className={`text-[10px] font-mono px-2 py-0.2 rounded-full border ${
-                readerTheme === 'cinema' && activeTab === 'comic'
-                  ? 'bg-zinc-800 text-zinc-300 border-white/15'
-                  : 'bg-white text-zinc-700 border-black/10'
-              }`}>
-                {episode ? `Ep #${episode.episodeNumber || 1}` : 'Ep #1'}
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
           </div>
         </div>
 
-        {/* Tab Switcher: Next Episode vs Current Page */}
-        <div className="flex items-center gap-1">
-          <div className={`flex items-center p-0.5 rounded-lg border text-xs font-bold ${
-            readerTheme === 'cinema' && activeTab === 'comic'
-              ? 'bg-zinc-900 border-white/10'
-              : 'bg-zinc-200/80 border-black/5'
-          }`}>
-            <button
-              type="button"
-              onClick={() => setRightPanelTab('next')}
-              className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
-                rightPanelTab === 'next'
-                  ? 'bg-blue-600 text-white shadow-2xs'
-                  : readerTheme === 'cinema' && activeTab === 'comic'
-                  ? 'text-zinc-400 hover:text-white'
-                  : 'text-zinc-600 hover:text-zinc-950'
-              }`}
-              title="Direct Next Episode & Story Continuation"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Next Ep</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRightPanelTab('current')}
-              className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
-                rightPanelTab === 'current'
-                  ? 'bg-purple-600 text-white shadow-2xs'
-                  : readerTheme === 'cinema' && activeTab === 'comic'
-                  ? 'text-zinc-400 hover:text-white'
-                  : 'text-zinc-600 hover:text-zinc-950'
-              }`}
-              title="Current Episode Artwork, Script & Style"
-            >
-              <Sliders className="w-3 h-3" />
-              <span>Current Ep</span>
-            </button>
-          </div>
+        <button
+          type="button"
+          onClick={() => setIsRightPanelOpen(false)}
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+          title="Collapse Co-Director Panel"
+        >
+          <PanelRightClose className="w-4 h-4" />
+        </button>
+      </div>
 
+      {/* 2. APPLE-STYLE CONTEXT SWITCHER (This Page | Next Ep | World & Lore) */}
+      <div className="px-3.5 pt-3 pb-1 shrink-0">
+        <div className="grid grid-cols-3 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-800/90 border border-black/[0.04] dark:border-white/[0.06] text-xs font-semibold">
           <button
             type="button"
-            onClick={() => setIsRightPanelOpen(false)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer ml-1"
-            title="Collapse Co-Director Panel"
+            onClick={() => {
+              setAssistantContext('current');
+              setRightPanelTab('current');
+            }}
+            className={`py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] ${
+              assistantContext === 'current'
+                ? 'bg-white dark:bg-zinc-700 text-purple-900 dark:text-purple-100 shadow-2xs font-bold ring-1 ring-black/5'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <PanelRightClose className="w-4 h-4" />
+            <span>🎯</span>
+            <span>This Page</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAssistantContext('next');
+              setRightPanelTab('next');
+            }}
+            className={`py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] ${
+              assistantContext === 'next'
+                ? 'bg-white dark:bg-zinc-700 text-blue-900 dark:text-blue-100 shadow-2xs font-bold ring-1 ring-black/5'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <span>🔮</span>
+            <span>Next Ep</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAssistantContext('universe');
+            }}
+            className={`py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] ${
+              assistantContext === 'universe'
+                ? 'bg-white dark:bg-zinc-700 text-emerald-900 dark:text-emerald-100 shadow-2xs font-bold ring-1 ring-black/5'
+                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            <span>🌐</span>
+            <span>World & Lore</span>
           </button>
         </div>
       </div>
 
       {/* 2. SCROLLABLE STUDIO BODY */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-        {rightPanelTab === 'next' ? (
+        {assistantContext === 'universe' ? (
+          /* =========================================================
+             TAB 3: UNIVERSE BIBLE & CANON INTELLIGENCE
+          ========================================================= */
+          <div className="space-y-4 select-text animate-in fade-in duration-200">
+            {/* World Context Pill */}
+            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1 text-xs">
+              <div className="flex items-center justify-between font-mono font-bold text-[10px] text-emerald-700 dark:text-emerald-300 uppercase">
+                <span className="flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Canon Lore & Continuity Brain</span>
+                </span>
+                <span className="text-emerald-800 dark:text-emerald-200 font-bold">
+                  {world.episodes?.length || 0} Issues Active
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-600 dark:text-zinc-300 font-medium">
+                Universe: &ldquo;{world.title}&rdquo; • {world.artStyle} style
+              </p>
+            </div>
+
+            {/* Quick Universe Laws Overview */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                  <Scale className="w-3.5 h-3.5 text-zinc-700" />
+                  <span>Universal Laws & Rules ({world.laws?.length || 0})</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsAddLawOpen(true)}
+                  className="text-[10px] text-purple-700 dark:text-purple-300 hover:underline font-bold cursor-pointer"
+                >
+                  + Add Law
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {(!world.laws || world.laws.length === 0) ? (
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-dashed border-zinc-200 dark:border-zinc-700 text-center">
+                    <span className="text-[11px] text-zinc-500 font-mono">No custom laws added yet</span>
+                  </div>
+                ) : (
+                  world.laws.map((law) => (
+                    <div key={law.id} className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 text-xs">
+                      <div className="flex items-center justify-between font-bold text-zinc-900 dark:text-zinc-100">
+                        <span>{law.title}</span>
+                        <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200">
+                          {law.category}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-300 mt-1">{law.rule}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Character Roster Overview */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-zinc-700" />
+                  <span>Character Cast ({world.characters.length})</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMidStoryIntro(false);
+                    setIsAddCharOpen(true);
+                  }}
+                  className="text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
+                >
+                  + Add Character
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {world.characters.map((char) => (
+                  <div key={char.id} className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <span>{char.avatarEmoji || '👤'}</span>
+                      <div className="truncate">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100">@{char.name}</span>
+                        <span className="text-[10px] text-zinc-500 ml-1.5 capitalize font-mono">({char.role})</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDossier(char)}
+                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-2xs cursor-pointer shrink-0"
+                    >
+                      Visuals
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : assistantContext === 'next' ? (
           /* =========================================================
              TAB 1: NEXT EPISODE CO-DIRECTOR
           ========================================================= */
@@ -2050,7 +2164,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                           </div>
                         </div>
                       )}
-                      <div className="relative">
+                      <div className="relative flex items-center">
                         <input
                           type="text"
                           value={currentEpInputText}
@@ -2062,21 +2176,28 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                             }
                           }}
                           placeholder="Ask AI Director about dialogue, staging, or re-draws..."
-                          className={`w-full py-2.5 pl-3.5 pr-10 rounded-xl text-xs sm:text-sm font-medium border outline-none transition-all focus:ring-2 focus:ring-purple-500 ${
+                          className={`w-full py-2.5 pl-3.5 pr-20 rounded-xl text-xs sm:text-sm font-medium border outline-none transition-all focus:ring-2 focus:ring-purple-500 ${
                             readerTheme === 'cinema' && activeTab === 'comic'
                               ? 'bg-zinc-900 border-white/15 text-white placeholder:text-zinc-500'
                               : 'bg-white border-black/15 text-zinc-900 placeholder:text-zinc-400 shadow-2xs'
                           }`}
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleSendCurrentEpChatMessage()}
-                          disabled={!currentEpInputText.trim() || isSendingCurrentEpChat}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white cursor-pointer transition-all shadow-xs"
-                          title="Send message to Page Director (Enter)"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <VoiceDictationButton
+                            size="sm"
+                            title="🎙️ Speak to Director"
+                            onTranscript={(txt) => setCurrentEpInputText((prev) => (prev ? prev + ' ' + txt : txt))}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSendCurrentEpChatMessage()}
+                            disabled={!currentEpInputText.trim() || isSendingCurrentEpChat}
+                            className="p-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white cursor-pointer transition-all shadow-xs"
+                            title="Send message to Page Director (Enter)"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Quick Suggestion Prompts */}
@@ -2429,77 +2550,61 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
         : 'bg-[#faf8f5] text-[#181716]'
     }`}>
       {/* =========================================================================
-          TOP NAVIGATION BAR (FULL WIDTH WIDESCREEN)
+          TOP NAVIGATION BAR (APPLE / GOOGLE FLOW MINIMALIST DESIGN)
       ========================================================================= */}
-      <header className={`w-full border-b sticky top-0 z-30 transition-colors backdrop-blur-md ${
+      <header className={`w-full border-b sticky top-0 z-30 transition-colors backdrop-blur-xl ${
         readerTheme === 'cinema' && activeTab === 'comic'
-          ? 'border-white/10 bg-zinc-950/85 text-white'
-          : 'border-black/[0.08] bg-white/80 text-zinc-900'
+          ? 'border-white/10 bg-zinc-950/80 text-white'
+          : 'border-black/[0.06] bg-white/80 text-zinc-900 shadow-2xs'
       }`}>
-        <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
-          {/* Breadcrumbs & Navigation */}
+        <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          {/* Left: Breadcrumbs & Universe Identity */}
           <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={onBackToWorlds}
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors py-1.5 px-2.5 rounded-lg cursor-pointer ${
+              className={`flex items-center gap-1.5 text-xs font-medium transition-all py-1.5 px-2 rounded-xl cursor-pointer ${
                 readerTheme === 'cinema' && activeTab === 'comic'
                   ? 'text-zinc-400 hover:text-white hover:bg-white/10'
-                  : 'text-zinc-500 hover:text-zinc-950 hover:bg-black/[0.04]'
+                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04]'
               }`}
+              title="Return to Universes"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Universes</span>
+              <span className="hidden sm:inline">Universes</span>
             </button>
 
-            <span className="text-zinc-400">/</span>
+            <span className="text-zinc-300 dark:text-zinc-700">/</span>
 
-            <span className={`font-bold text-sm truncate max-w-[140px] sm:max-w-xs ${
-              readerTheme === 'cinema' && activeTab === 'comic' ? 'text-white' : 'text-zinc-950'
-            }`}>
+            <span className="font-bold text-sm tracking-tight truncate max-w-[150px] sm:max-w-xs">
               {world.title}
             </span>
 
-            <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold hidden md:inline border ${
-              readerTheme === 'cinema' && activeTab === 'comic'
-                ? 'bg-zinc-900 text-zinc-300 border-white/15'
-                : 'bg-zinc-100 text-zinc-700 border-black/10'
-            }`}>
-              {episode ? `Ep #${episode.episodeNumber || 1}` : 'World Bible Mode'}
-            </span>
+            {episode && (
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-black/5 dark:border-white/10 hidden sm:inline">
+                Issue #{episode.episodeNumber || 1}
+              </span>
+            )}
 
-            {/* Sidebar Toggle / Cinema Mode Button */}
+            {/* Sidebar Toggle (Cinema / Reader focus) */}
             <button
               type="button"
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                isSidebarOpen
-                  ? readerTheme === 'cinema' && activeTab === 'comic'
-                    ? 'bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border-white/20'
-                    : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
-                  : 'bg-blue-600 text-white border-blue-500 shadow-sm'
-              }`}
-              title={isSidebarOpen ? 'Hide Sidebar (Full-Width Cinema Mode)' : 'Show Studio Sidebar'}
+              className="hidden lg:flex p-1.5 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+              title={isSidebarOpen ? 'Hide Sidebar (Full-Width Focus)' : 'Show Sidebar'}
             >
-              {isSidebarOpen ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeftOpen className="w-3.5 h-3.5 text-white" />}
-              <span>{isSidebarOpen ? 'Cinema' : 'Sidebar'}</span>
+              {isSidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
             </button>
           </div>
 
-          {/* Center Studio View Switcher */}
-          <div className={`hidden sm:flex items-center gap-1 p-1 rounded-full border ${
-            readerTheme === 'cinema' && activeTab === 'comic'
-              ? 'bg-zinc-900 border-white/10'
-              : 'bg-zinc-100 border-black/[0.06]'
-          }`}>
+          {/* Center: Apple-style Segmented View Switcher */}
+          <div className="hidden md:flex items-center p-1 rounded-full bg-zinc-100/90 dark:bg-zinc-900/90 border border-black/[0.06] dark:border-white/10 shadow-2xs">
             <button
               type="button"
               onClick={() => setActiveTab('comic')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'comic'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : readerTheme === 'cinema'
-                  ? 'text-zinc-400 hover:text-white'
-                  : 'text-zinc-600 hover:text-zinc-950'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -2509,137 +2614,39 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
             <button
               type="button"
               onClick={() => setActiveTab('universe')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'universe'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : readerTheme === 'cinema'
-                  ? 'text-zinc-400 hover:text-white'
-                  : 'text-zinc-600 hover:text-zinc-950'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               <Globe className="w-3.5 h-3.5 text-blue-600" />
-              <span>World Bible & Cast ({world.characters.length})</span>
+              <span>World Bible ({world.characters.length})</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('agent')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'agent'
-                  ? 'bg-white text-zinc-950 shadow-xs'
-                  : readerTheme === 'cinema'
-                  ? 'text-zinc-400 hover:text-white'
-                  : 'text-zinc-600 hover:text-zinc-950'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs font-bold'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               <Brain className="w-3.5 h-3.5 text-purple-600" />
-              <span>AI Director Brain</span>
+              <span>Multi-Agent Trace</span>
             </button>
           </div>
 
-          {/* Action Buttons & Dual Mode Switcher */}
+          {/* Right: Actions, More Menu & AI Co-Director Toggle */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Reading Width Controls (Only in Comic view) */}
-            {activeTab === 'comic' && (
-              <div className={`hidden xl:flex items-center gap-0.5 p-0.5 rounded-full border ${
-                readerTheme === 'cinema' ? 'bg-zinc-900 border-white/10' : 'bg-zinc-100 border-black/10'
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => setReaderWidth('standard')}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
-                    readerWidth === 'standard'
-                      ? 'bg-white text-zinc-950 shadow-xs'
-                      : readerTheme === 'cinema'
-                      ? 'text-zinc-400 hover:text-white'
-                      : 'text-zinc-500 hover:text-zinc-900'
-                  }`}
-                  title="Standard Width (896px)"
-                >
-                  Standard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReaderWidth('wide')}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
-                    readerWidth === 'wide'
-                      ? 'bg-white text-zinc-950 shadow-xs'
-                      : readerTheme === 'cinema'
-                      ? 'text-zinc-400 hover:text-white'
-                      : 'text-zinc-500 hover:text-zinc-900'
-                  }`}
-                  title="Wide View (1150px) — Eliminates Side Margins"
-                >
-                  Wide
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReaderWidth('cinema')}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
-                    readerWidth === 'cinema'
-                      ? 'bg-white text-zinc-950 shadow-xs'
-                      : readerTheme === 'cinema'
-                      ? 'text-zinc-400 hover:text-white'
-                      : 'text-zinc-500 hover:text-zinc-900'
-                  }`}
-                  title="Full Cinema Canvas (1400px)"
-                >
-                  Cinema
-                </button>
-              </div>
-            )}
-
-            {/* Dual Mode Switcher */}
-            {apiConfig?.mode === 'meta' ? (
-              <div className="flex items-center gap-1 p-0.5 rounded-full bg-blue-50/90 border border-blue-200">
-                <button
-                  type="button"
-                  onClick={onToggleMode}
-                  className="px-2.5 py-1 rounded-full text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-all cursor-pointer"
-                  title="Switch to Local Mode"
-                >
-                  Local
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-xs hover:bg-blue-700 transition-all cursor-pointer"
-                  title="Meta AI Mode Active (Click to configure)"
-                >
-                  <span>♾️</span>
-                  <span>Meta AI</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 p-0.5 rounded-full bg-zinc-100 border border-black/[0.08]">
-                <button
-                  type="button"
-                  onClick={onToggleMode}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-800 text-white shadow-xs transition-all cursor-pointer"
-                  title="Local Mode Active"
-                >
-                  <span>Local</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onToggleMode}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-zinc-600 hover:text-blue-600 transition-all cursor-pointer"
-                  title="Switch to Meta AI Mode"
-                >
-                  <span>♾️</span>
-                  <span>Meta AI</span>
-                </button>
-              </div>
-            )}
-
             {/* Direct Page Art Generation Button if Episode has no page image */}
             {onGenerateArtwork && episode && !episode.pageImageUrl && (
               <button
                 type="button"
                 onClick={() => onGenerateArtwork()}
                 disabled={isGeneratingArtwork}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 title="Synthesize comic page artwork with Meta Muse Image"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
@@ -2647,21 +2654,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
               </button>
             )}
 
-            {/* Re-Direct Story with Co-Director Button */}
-            {episode && (
-              <button
-                type="button"
-                onClick={() => handleStartCoDirectorRedirection(episode.rawBrainDump || episode.title)}
-                disabled={isLoading || isAligningPitch}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 transition-all cursor-pointer shadow-2xs"
-                title="Re-direct this scene with AI Co-Director questions & cast isolation"
-              >
-                <span>🎬</span>
-                <span>Re-Direct Story</span>
-              </button>
-            )}
-
-            {/* Multiverse Story Branch Button (ChatGPT-Style Branching) */}
+            {/* Multiverse Story Branch Button */}
             {episode && onForkBranch && (
               <button
                 type="button"
@@ -2669,86 +2662,113 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                   setBranchTargetEpisode(episode);
                   setIsBranchModalOpen(true);
                 }}
-                className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 transition-all cursor-pointer shadow-2xs"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 transition-all cursor-pointer shadow-2xs"
                 title="Fork an alternate timeline branch from this episode"
               >
                 <GitBranch className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Branch Story</span>
+                <span>Branch</span>
               </button>
             )}
 
-            {/* Meta AI Production Room & Canon Score Pill */}
-            {episode && (
-              <button
-                type="button"
-                onClick={() => setIsTraceModalOpen(true)}
-                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 transition-all cursor-pointer shadow-2xs"
-                title="Inspect Autonomous Multi-Agent Production Room Trace"
-              >
-                <BrainCircuit className="w-3.5 h-3.5 text-purple-600" />
-                <span>Production Room</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-purple-200 text-purple-900 font-mono text-[10px]">
-                  {episode.canonScore ?? 95}%
-                </span>
-                {(episode.correctionsCount ?? 0) > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" title="Auto-corrections applied" />
-                )}
-              </button>
-            )}
-
-            <button
-              onClick={handleShare}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-black/10 text-zinc-700 hover:bg-black/[0.04] transition-all cursor-pointer"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>{copied ? 'Copied!' : 'Share'}</span>
-            </button>
-
-            {/* Creator Profile & Storage Status Badge */}
-            {onOpenAuth && (
-              <button
-                type="button"
-                onClick={onOpenAuth}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white hover:bg-zinc-100 border border-black/15 shadow-2xs transition-all cursor-pointer"
-                title={isDbConnected ? 'Synced to MongoDB Atlas' : 'Saved locally in browser'}
-              >
-                <span>{currentProfile?.avatarEmoji || '👤'}</span>
-                <span className="font-mono text-[11px] font-bold text-zinc-900">
-                  @{currentProfile?.handle || 'guest'}
-                </span>
-                <span
-                  className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-500 shadow-xs' : 'bg-amber-400'}`}
-                />
-              </button>
-            )}
-
+            {/* Export Button */}
             {episode && (
               <button
                 onClick={handleExportPng}
                 disabled={isExporting}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition-all shadow-xs cursor-pointer"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-xs cursor-pointer"
+                title="Export high-resolution comic spread PNG"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+                <span>Export</span>
               </button>
             )}
 
-            {/* Desktop Right Co-Director Studio Toggle */}
+            {/* Apple-style More Menu (...) Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                className="p-1.5 rounded-full border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 transition-all text-zinc-700 dark:text-zinc-300 cursor-pointer shadow-2xs"
+                title="More actions and settings"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {isMoreMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsMoreMenuOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-zinc-900 border border-black/10 dark:border-white/10 shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        handleShare();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-left transition-colors"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>{copied ? 'Copied Link!' : 'Share Universe Link'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        setIsTraceModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-left transition-colors"
+                    >
+                      <BrainCircuit className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Production Room Trace</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMoreMenuOpen(false);
+                        onOpenSettings();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-left transition-colors"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>Meta API Settings</span>
+                    </button>
+
+                    {onOpenAuth && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false);
+                          onOpenAuth();
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-left transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{currentProfile?.avatarEmoji || '👤'}</span>
+                          <span>@{currentProfile?.handle || 'guest'}</span>
+                        </div>
+                        <span className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Apple Intelligence Styled AI Co-Director Toggle */}
             {activeTab === 'comic' && (
               <button
                 type="button"
                 onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer ${
                   isRightPanelOpen
-                    ? readerTheme === 'cinema'
-                      ? 'bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border-purple-500/30'
-                      : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200'
-                    : 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white shadow-purple-500/25 ring-2 ring-purple-400/30'
+                    : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200'
                 }`}
-                title={isRightPanelOpen ? 'Hide Right Co-Director Studio' : 'Show Right Co-Director Studio'}
+                title={isRightPanelOpen ? 'Hide AI Co-Director Studio' : 'Open AI Co-Director Studio'}
               >
-                {isRightPanelOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5 text-white" />}
-                <span>{isRightPanelOpen ? 'Studio Deck' : 'Open Studio'}</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>AI Director</span>
               </button>
             )}
 

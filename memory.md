@@ -1,3 +1,10 @@
+- Apple Intelligence / Google Flow Minimalist UX Overhaul (2026-11-02):
+  - Unified Persistent AI Co-Director: Replaced fragmented sub-tabs (`Next Ep` vs `Current Ep` vs multiple modes) with a persistent Apple Intelligence AI companion featuring a 3-way segmented context switcher: `🎯 This Page` (Episode Director, 4-panel storyboard breakdown, script & art re-draw), `🔮 Next Ep` (Story continuation, conflict pitch, cast scoping, Draw next ep), and `🌐 World & Lore` (World Bible companion, universal laws, character model sheets).
+  - Comic-First Hero Layout: Streamlined `ComicPageSpread.tsx` from a 270px double-masthead down to a 48px minimalist Apple toolbar (`ISSUE #`, title, cast avatars, view mode segment, speech bubbles toggle, SAM 3.1, Granular Studio, Re-Draw). Returned over 200px of vertical space directly to the comic image.
+  - Top Navigation Bar Distillation: Compressed 14 sprawling buttons down to 4 serene clusters (Identity, Segmented View Switcher, Action icons, and an Apple-style `...` More Menu for secondary items like Share, Production Trace, API Settings, and Profile).
+  - Left Sidebar Alignment: Truncated long genre strings and cleaned up typography to prevent line wrapping blowouts.
+  - Production build clean with 0 errors.
+
 - High-Contrast Studio UI & Tailwind v4 Dark Mode Selector Isolation (2026-11-02):
   - Root Cause Diagnosed: In Tailwind CSS v4, `dark:` classes default to `@media (prefers-color-scheme: dark)`. Windows Chrome users with OS dark mode active had browser media queries trigger `dark:` colors (`dark:text-purple-200`) inside light `bg-white` cards, rendering premise text and pills nearly invisible (near 1:1 contrast). Safari on macOS in light mode was unaffected, creating cross-platform inconsistency.
   - Tailwind v4 Fix: Added `@variant dark (&:where(.dark, .dark *));` to `src/app/globals.css` so dark styles are scoped strictly to the `.dark` class toggled by MindStrip's `readerTheme === 'cinema'`.

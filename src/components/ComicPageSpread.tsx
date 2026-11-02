@@ -401,172 +401,118 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
       {/* =========================================================================
           AUTHENTIC GRAPHIC NOVEL ISSUE MASTHEAD & CONSOLIDATED TOOLBAR
       ========================================================================= */}
-      <div className={`p-4 sm:p-5 rounded-2xl mb-4 border transition-all ${
+      <div className={`p-3 sm:p-3.5 rounded-2xl mb-3 border transition-all ${
         isCinemaTheme
           ? 'bg-zinc-900/90 border-white/10 text-white shadow-xl backdrop-blur-md'
-          : 'bg-white border-2 border-zinc-950 text-zinc-900 shadow-md'
+          : 'bg-white/95 border border-black/[0.08] text-zinc-900 shadow-xs backdrop-blur-md'
       }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Left: Issue Eyebrow, Title & Clean Premise */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`font-mono text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full shadow-2xs ${
-                isCinemaTheme ? 'bg-white text-zinc-950' : 'bg-zinc-950 text-white'
-              }`}>
-                ISSUE #{episode.episodeNumber || 1}
-              </span>
-              <span className="text-zinc-400 font-mono text-xs">•</span>
-              <span className="font-mono text-xs font-bold text-blue-500 uppercase tracking-wider">
-                {world.title}
-              </span>
-              <span className="text-zinc-400 font-mono text-xs">•</span>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase">
-                {selectedArtStyle}
-              </span>
-              {episode.layoutStyle && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
-                  {episode.layoutStyle}
-                </span>
-              )}
-              {directorReasoning && (
-                <button
-                  type="button"
-                  onClick={() => setShowPacingDrawer(!showPacingDrawer)}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 uppercase transition-colors cursor-pointer flex items-center gap-1"
-                  title="View director pacing rationale"
-                >
-                  <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                  <span>Pacing: {episode.layoutStyle || '4-panel'} {showPacingDrawer ? '▲' : '▼'}</span>
-                </button>
-              )}
-            </div>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Left: Issue Eyebrow, Title & Cast */}
+          <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+            <span className={`font-mono text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full shrink-0 ${
+              isCinemaTheme ? 'bg-white text-zinc-950' : 'bg-zinc-950 text-white'
+            }`}>
+              ISSUE #{episode.episodeNumber || 1}
+            </span>
 
-            <h1 className="text-2xl sm:text-3xl font-black font-serif tracking-tight leading-tight">
+            <h1 className="text-sm sm:text-base font-bold font-serif tracking-tight truncate max-w-xs sm:max-w-md">
               {episode.title}
             </h1>
 
-            {episode.rawBrainDump && (
-              <p className={`text-xs italic line-clamp-2 max-w-3xl ${
-                isCinemaTheme ? 'text-zinc-400' : 'text-zinc-600'
-              }`}>
-                &ldquo;{episode.rawBrainDump}&rdquo;
-              </p>
-            )}
-
-            {/* Scoped Page Characters & Episodic Guest Badges */}
-            {((episode.pageCharacters && episode.pageCharacters.length > 0) || (episode.guestCharacters && episode.guestCharacters.length > 0)) && (
-              <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
-                <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${
-                  isCinemaTheme ? 'text-zinc-500' : 'text-zinc-400'
-                }`}>
-                  Cast on Page:
-                </span>
-                {episode.pageCharacters?.map((char) => (
+            {/* Quick Cast Avatars */}
+            {episode.pageCharacters && episode.pageCharacters.length > 0 && (
+              <div className="hidden sm:flex items-center gap-1 shrink-0">
+                {episode.pageCharacters.map((char) => (
                   <button
                     key={char.id}
                     type="button"
                     onClick={() => onSelectCharacterForDossier?.(char)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-                      isCinemaTheme
-                        ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
-                        : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-200'
-                    }`}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 transition-colors cursor-pointer"
                     title={`View Dossier for ${char.name}`}
                   >
                     <span>{char.avatarEmoji || '👤'}</span>
                     <span>{char.name}</span>
                   </button>
                 ))}
-                {episode.guestCharacters?.map((guest, idx) => (
-                  <span
-                    key={guest.id || idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30"
-                  >
-                    <span>💼 Guest:</span>
-                    <span className="font-bold">{guest.name}</span>
-                    {guest.role && <span className="text-[10px] opacity-80 font-normal">({guest.role})</span>}
-                    {onPromoteGuestCharacter && (
-                      <button
-                        type="button"
-                        onClick={() => onPromoteGuestCharacter(guest)}
-                        className="ml-1 text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 dark:text-amber-100 font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors shadow-2xs"
-                        title="Promote to recurring core cast in World Bible"
-                      >
-                        ⭐ Promote to Core
-                      </button>
-                    )}
-                  </span>
-                ))}
               </div>
             )}
           </div>
 
-          {/* Right: Consolidated Action Toolbar (Zero Overlap on Artwork!) */}
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
-            {/* Quick Art Style Pill */}
-            <button
-              type="button"
-              onClick={() => setIsGranularOpen(true)}
-              className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5 ${
-                isCinemaTheme
-                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
-                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
-              }`}
-              title="Change Art Style & Rendering Engine"
-            >
-              <span>🎨</span>
-              <span className="capitalize">{selectedArtStyle}</span>
-            </button>
-
-            {/* AI Page Director Chat Trigger */}
-            {onOpenDirectorChat && (
+          {/* Right: Consolidated Controls (View Mode + Tools) */}
+          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+            {/* View Mode Segment: Page vs Script */}
+            <div className="flex items-center p-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-black/5 dark:border-white/10">
               <button
                 type="button"
-                onClick={onOpenDirectorChat}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
-                  isCinemaTheme
-                    ? 'bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 border-purple-500/30'
-                    : 'bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-300'
+                onClick={() => setSpreadViewMode('page')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+                  spreadViewMode === 'page'
+                    ? 'bg-white dark:bg-zinc-700 text-zinc-950 dark:text-white shadow-2xs font-bold'
+                    : 'text-zinc-500 hover:text-zinc-900'
                 }`}
-                title="Chat with Meta AI Director for this page (Full story context loaded)"
               >
-                <MessageSquare className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                <span>AI Director</span>
+                <span>🖼️</span>
+                <span>Page</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpreadViewMode('panels')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+                  spreadViewMode === 'panels'
+                    ? 'bg-white dark:bg-zinc-700 text-zinc-950 dark:text-white shadow-2xs font-bold'
+                    : 'text-zinc-500 hover:text-zinc-900'
+                }`}
+              >
+                <span>📑</span>
+                <span>Beats ({panels.length})</span>
+              </button>
+            </div>
+
+            {/* Speech Bubbles Toggle */}
+            {spreadViewMode === 'page' && pageImage && (
+              <button
+                type="button"
+                onClick={() => setAreBubblesVisible(!areBubblesVisible)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 border shadow-2xs ${
+                  areBubblesVisible
+                    ? 'bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200'
+                    : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-500 border-zinc-200'
+                }`}
+                title="Toggle speech bubbles overlay"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
+                <span>{areBubblesVisible ? 'Bubbles' : 'Mute'}</span>
               </button>
             )}
 
-            {/* Granular Control Deck Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsGranularOpen(!isGranularOpen)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
-                isGranularOpen
-                  ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20 ring-1 ring-blue-400'
-                  : isCinemaTheme
-                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
-                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
-              }`}
-              title="Fine-tune prompt, layout, engine, and modifiers"
-            >
-              <Sliders className="w-3.5 h-3.5 text-blue-400" />
-              <span>Granular Studio</span>
-            </button>
-
-            {/* Meta SAM 3.1 Vision Inspector Toggle */}
+            {/* Meta SAM 3.1 Vision Inspector */}
             <button
               type="button"
               onClick={() => setIsSamActive(!isSamActive)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-2xs cursor-pointer ${
+              className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 border shadow-2xs cursor-pointer ${
                 isSamActive
-                  ? 'bg-cyan-600 text-white border-cyan-500 ring-2 ring-cyan-400/50 shadow-cyan-500/20'
-                  : isCinemaTheme
-                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
-                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
+                  ? 'bg-cyan-600 text-white border-cyan-500 shadow-cyan-500/20'
+                  : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
               }`}
               title="Toggle Meta SAM 3.1 Multi-Modal Visual Segmentation"
             >
-              <Scan className={`w-3.5 h-3.5 ${isSamActive ? 'text-white animate-pulse' : 'text-cyan-400'}`} />
+              <Scan className={`w-3.5 h-3.5 ${isSamActive ? 'text-white animate-pulse' : 'text-cyan-600'}`} />
               <span>SAM 3.1</span>
+            </button>
+
+            {/* Granular Art Studio Deck */}
+            <button
+              type="button"
+              onClick={() => setIsGranularOpen(!isGranularOpen)}
+              className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 border shadow-2xs cursor-pointer ${
+                isGranularOpen
+                  ? 'bg-blue-600 text-white border-blue-500'
+                  : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+              }`}
+              title="Fine-tune prompt, layout, engine, and modifiers"
+            >
+              <Sliders className="w-3.5 h-3.5 text-blue-600" />
+              <span>Studio</span>
             </button>
 
             {/* Re-draw Page Artwork */}
@@ -575,40 +521,31 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
                 type="button"
                 onClick={() => handleExecuteGranularArtwork()}
                 disabled={isGeneratingArtwork}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                title="Re-draw this comic page with clean wordless artwork (no panel numbers or text labels)"
+                className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                title="Re-draw comic page artwork"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
-                <span>{isGeneratingArtwork ? 'Drawing Art...' : '🎨 Clean Re-Draw'}</span>
+                <RefreshCw className={`w-3 h-3 ${isGeneratingArtwork ? 'animate-spin' : ''}`} />
+                <span>{isGeneratingArtwork ? 'Drawing...' : 'Re-Draw'}</span>
               </button>
             )}
 
-            {/* Fullscreen / Height Toggle */}
+            {/* Fullscreen Toggle */}
             <button
               type="button"
               onClick={() => setIsFullscreenZoom(!isFullscreenZoom)}
-              className={`p-2 rounded-xl transition-all cursor-pointer border ${
-                isCinemaTheme
-                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
-                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-black/10'
-              }`}
+              className="p-1.5 rounded-xl transition-all cursor-pointer border bg-zinc-50 hover:bg-zinc-100 text-zinc-600 border-zinc-200"
               title={isFullscreenZoom ? 'Fit normal height' : 'Expand full natural height'}
             >
-              <Maximize2 className="w-4 h-4" />
+              <Maximize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Expandable Pacing Director Notes Drawer */}
-        {showPacingDrawer && directorReasoning && (
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-start gap-2.5 text-xs animate-in fade-in duration-150">
-            <span className="font-mono text-[10px] font-bold uppercase text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded shrink-0">
-              Pacing Rationale:
-            </span>
-            <p className="text-zinc-300 italic font-medium leading-relaxed">
-              &ldquo;{directorReasoning}&rdquo;
-            </p>
-          </div>
+        {/* Subtle 1-line prompt note if present */}
+        {episode.rawBrainDump && (
+          <p className="mt-1.5 pt-1.5 border-t border-black/[0.04] text-[11px] italic text-zinc-500 truncate max-w-4xl">
+            &ldquo;{episode.rawBrainDump}&rdquo;
+          </p>
         )}
       </div>
 
@@ -861,62 +798,6 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
           </div>
         </div>
       )}
-
-      {/* View Mode Pill Deck: Full Page Spread vs Dynamic Sequential Strip */}
-      <div className="flex items-center justify-between gap-3 pb-1 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl border border-zinc-200 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setSpreadViewMode('page')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                spreadViewMode === 'page'
-                  ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
-                  : 'text-zinc-500 hover:text-zinc-900'
-              }`}
-              title="View the completed graphic novel comic page (artwork + dialogue balloons)"
-            >
-              <span>🖼️</span>
-              <span>Full Comic Page</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSpreadViewMode('panels')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                spreadViewMode === 'panels'
-                  ? 'bg-white text-zinc-950 shadow-xs ring-1 ring-black/5'
-                  : 'text-zinc-500 hover:text-zinc-900'
-              }`}
-              title="View & edit scene scripts, dialogue lines, and character actions"
-            >
-              <span>📑</span>
-              <span>Script & Scene Beats ({panels.length})</span>
-            </button>
-          </div>
-
-          {spreadViewMode === 'page' && pageImage && (
-            <button
-              type="button"
-              onClick={() => setAreBubblesVisible(!areBubblesVisible)}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
-                areBubblesVisible
-                  ? 'bg-purple-50 border-purple-200 text-purple-900'
-                  : 'bg-white border-zinc-200 text-zinc-600 hover:text-zinc-900'
-              }`}
-              title="Toggle speech bubbles on the comic page image"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-purple-600" />
-              <span>{areBubblesVisible ? 'Speech Bubbles: ON' : 'Speech Bubbles: OFF'}</span>
-            </button>
-          )}
-        </div>
-
-        <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-2">
-          <span>Format: <strong className="text-zinc-900 uppercase">{episode.layoutStyle || `${panels.length}-panel`}</strong></span>
-          <span>•</span>
-          <span>{panels.length} Story {panels.length === 1 ? 'Scene' : 'Scenes'}</span>
-        </div>
-      </div>
 
       {/* =========================================================================
           PAGE CONTENT: LIVE RAG PIPELINE TRACKER, REAL IMAGE OR DRAFTING STAGE
