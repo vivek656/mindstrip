@@ -1442,3 +1442,11 @@ Users don't just generate disconnected one-off strips. They build **persistent c
 - **Architectural Fix**:
   1. Updated `src/app/api/generate-image/route.ts` with an automatic 3-attempt exponential backoff retry loop for 503/502/429 transient Meta API spikes, prevented double body consumption on error streams, and ensured valid JSON error payloads are always returned.
   2. Updated `src/app/page.tsx` (`handleReDrawArtwork`, `handleRegenerateEpisode`, `handleGenerateNextEpisode`) to inspect `content-type` before calling `.json()`, cleanly capturing HTML/text server errors and displaying human-readable guidance (`"The AI image generator is temporarily busy. Please wait a moment and try clicking Re-Draw again."`). Production build verified clean.
+
+### HTTP 504 Gateway Timeout Optimization (2026-11-02)
+- **Root Cause**:
+  - Meta Muse Image 1.0 requires ~14-16s per generation call. When coupled with 3 attempts and 3-second delays, cumulative request duration reached 45-50+ seconds, exceeding edge proxy / serverless execution limits and resulting in `504 Gateway Timeout`.
+- **Architectural Fix**:
+  - Tightened `maxAttempts` to 2 with a fast 1-second backoff delay in `src/app/api/generate-image/route.ts`.
+  - Added `signal: AbortSignal.timeout(25000)` to prevent unbounded request hangs.
+  - Enhanced error handling in `src/app/page.tsx` so that 504 timeouts are caught gracefully with explicit guidance to re-trigger generation. Production build verified clean.

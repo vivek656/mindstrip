@@ -574,7 +574,16 @@ export default function Home() {
             freshImageUrl = imgData.pageImageUrl;
             setArtworkError(null);
           } else {
-            const errMsg = imgData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
+            let errMsg = imgData.error;
+            if (!errMsg) {
+              if (imgRes.status === 504) {
+                errMsg = 'Artwork generation timed out (HTTP 504). Meta AI image servers took longer than expected. Please click Re-Draw to try again.';
+              } else if (imgRes.status === 503 || imgRes.status === 502) {
+                errMsg = 'Meta AI image servers are temporarily overloaded. Please wait a moment and try again.';
+              } else {
+                errMsg = `Artwork synthesis failed (HTTP ${imgRes.status})`;
+              }
+            }
             console.error('Direct panels artwork fetch failed:', errMsg);
             setArtworkError(errMsg);
           }
@@ -650,7 +659,16 @@ export default function Home() {
               freshImageUrl = imgData.pageImageUrl;
               setArtworkError(null);
             } else {
-              const errMsg = imgData.error || `Artwork synthesis failed (HTTP ${imgRes.status})`;
+              let errMsg = imgData.error;
+              if (!errMsg) {
+                if (imgRes.status === 504) {
+                  errMsg = 'Artwork generation timed out (HTTP 504). Meta AI image servers took longer than expected. Please click Re-Draw to try again.';
+                } else if (imgRes.status === 503 || imgRes.status === 502) {
+                  errMsg = 'Meta AI image servers are temporarily overloaded. Please wait a moment and try again.';
+                } else {
+                  errMsg = `Artwork synthesis failed (HTTP ${imgRes.status})`;
+                }
+              }
               console.error('Re-draw artwork fetch failed:', errMsg);
               setArtworkError(errMsg);
             }

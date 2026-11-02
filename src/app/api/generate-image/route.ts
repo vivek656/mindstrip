@@ -305,7 +305,7 @@ export async function POST(req: NextRequest) {
       let imgRes: Response | null = null;
       let errText = '';
       let attempts = 0;
-      const maxAttempts = 3;
+      const maxAttempts = 2;
 
       while (attempts < maxAttempts) {
         attempts++;
@@ -321,26 +321,29 @@ export async function POST(req: NextRequest) {
               prompt: pagePrompt,
               n: 1,
               size: '1024x1024'
-            })
+            }),
+            signal: AbortSignal.timeout(25000)
           });
 
           if (imgRes.ok) break;
 
           errText = await imgRes.text();
-          // If 503 or 502 (Meta temporary service spike), wait and retry
+          // If 503 or 502 (Meta temporary service spike), wait 1s and retry once
           if ((imgRes.status === 503 || imgRes.status === 502 || imgRes.status === 429) && attempts < maxAttempts) {
-            console.warn(`Meta Muse Image temporary service spike (${imgRes.status}). Retrying attempt ${attempts + 1} of ${maxAttempts} in 3s...`);
-            await new Promise((r) => setTimeout(r, 3000));
+            console.warn(`Meta Muse Image temporary service spike (${imgRes.status}). Retrying once in 1s...`);
+            await new Promise((r) => setTimeout(r, 1000));
             continue;
           }
           break;
-        } catch (fetchErr) {
-          console.warn(`Fetch attempt ${attempts} to Meta API failed:`, fetchErr);
-          if (attempts < maxAttempts) {
-            await new Promise((r) => setTimeout(r, 2000));
+        } catch (fetchErr: any) {
+          console.warn(`Fetch attempt ${attempts} to Meta API failed:`, fetchErr?.message || fetchErr);
+          if (attempts < maxAttempts && !fetchErr?.name?.includes('Abort')) {
+            await new Promise((r) => setTimeout(r, 1000));
             continue;
           }
-          return NextResponse.json({ error: 'Connection to Meta AI image server timed out. Please try again.' }, { status: 504 });
+          return NextResponse.json({
+            error: 'Connection to Meta AI image server timed out. Meta servers may be experiencing peak traffic. Please try clicking Re-Draw again.'
+          }, { status: 504 });
         }
       }
 
