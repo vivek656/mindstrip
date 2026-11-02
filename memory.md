@@ -1459,3 +1459,13 @@ Users don't just generate disconnected one-off strips. They build **persistent c
   - Aligned Namita's pointed red patent stiletto and Priya's adult face (max 35yo, dark hair bun, plump cheeks) on the exact same focal plane in true 1:1 natural anatomical scale.
   - Priya's lips touching the pointed red leather tip, with polished marble floor reflections and speech balloon intact (`"Good... show your respect."`).
   - Composited the true-scale macro into Panel 3 of `public/episodes/ep4_namita_office_ritual.webp` and pushed to `main`.
+
+### Episode 4: Panel 3 Physical Realism & Environmental Continuity Fix (2026-11-02)
+- **Problem**:
+  - The close-up side-angle render suffered from diffusion physics glitches: the stiletto shoe was tilted and hovering in mid-air at 45 degrees, Namita's leg appeared as an unnatural diagonal line from the corner, Priya was crouched horizontally in empty space, and the background was a sterile white corridor completely breaking room continuity with the executive penthouse suite.
+- **Solution & Re-Direct**:
+  - Generated an authentic executive POV shot looking down from Namita's mahogany desk:
+    - Namita stands tall in her signature black pencil skirt and pointed red patent stilettos firmly planted flat and solid on the polished marble floor.
+    - Priya is fully prostrated flat on the marble floor at her feet in deep corporate reverence, hands flat on the stone.
+    - The mahogany desk edge, leather executive chair, and panoramic skyline windows carry 100% environmental lighting and room continuity across all 4 panels.
+  - Composited the grounded frame into Panel 3 of `public/episodes/ep4_namita_office_ritual.webp`. Production build verified clean.
