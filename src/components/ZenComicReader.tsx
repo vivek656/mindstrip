@@ -1335,17 +1335,17 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
 
                           {/* Expandable 4-Panel Storyboard Breakdown if generated */}
                           {msg.suggestedPanels && msg.suggestedPanels.length > 0 && (
-                            <details className="mt-3 pt-2.5 border-t border-black/10 dark:border-white/10 text-xs">
-                              <summary className="font-bold cursor-pointer text-purple-600 dark:text-purple-300 hover:underline flex items-center gap-1 select-none">
+                            <details className="mt-3 pt-2.5 border-t border-black/10 dark:border-white/10 text-xs" open>
+                              <summary className="font-bold cursor-pointer text-purple-800 dark:text-purple-300 hover:underline flex items-center gap-1 select-none">
                                 <span>🎬 View 4-Panel Scene Breakdown ({msg.suggestedPanels.length} Panels)</span>
                               </summary>
                               <div className="mt-2 space-y-1.5 pl-1">
                                 {msg.suggestedPanels.map((p) => (
-                                  <div key={p.panelNumber} className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px]">
-                                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1.5">Panel {p.panelNumber}:</span>
-                                    <span>{p.description}</span>
+                                  <div key={p.panelNumber} className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-white/10 text-[11px]">
+                                    <span className="font-bold text-blue-700 dark:text-blue-400 mr-1.5">Panel {p.panelNumber}:</span>
+                                    <span className="text-zinc-900 dark:text-zinc-100 font-medium">{p.description}</span>
                                     {p.dialogue && (
-                                      <div className="mt-0.5 text-zinc-500 dark:text-zinc-400 italic">
+                                      <div className="mt-1 text-zinc-700 dark:text-zinc-300 italic font-serif font-medium">
                                         "{p.dialogue}"
                                       </div>
                                     )}
@@ -1363,7 +1363,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                                   key={sIdx}
                                   type="button"
                                   onClick={() => handleSendCoDirectorMessage(starter)}
-                                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 transition-all cursor-pointer text-left"
+                                  className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-purple-100/90 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-700 transition-all cursor-pointer text-left shadow-2xs"
                                 >
                                   💡 {starter}
                                 </button>
@@ -1569,11 +1569,11 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
             {episode?.directorQuestion && (
               <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-indigo-500/10 to-purple-500/15 border border-purple-500/30 space-y-2.5">
                 <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-purple-400">
-                    <Brain className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-purple-800 dark:text-purple-300">
+                    <Brain className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 animate-pulse" />
                     <span>AI Co-Director Choice</span>
                   </div>
-                  <span className="text-[10px] text-purple-400/80 font-mono">Click to branch</span>
+                  <span className="text-[10px] text-purple-700/80 dark:text-purple-300/80 font-mono">Click to branch</span>
                 </div>
 
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
@@ -1878,11 +1878,11 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                             </div>
 
                             <div
-                              className={`p-3 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed max-w-[92%] shadow-2xs whitespace-pre-line select-text ${
+                              className={`p-3.5 rounded-2xl text-xs sm:text-sm font-medium leading-relaxed max-w-[92%] shadow-2xs whitespace-pre-line select-text ${
                                 isAssistant
                                   ? readerTheme === 'cinema' && activeTab === 'comic'
-                                    ? 'bg-zinc-900 border border-white/10 text-zinc-200'
-                                    : 'bg-white border border-purple-200/80 text-zinc-900'
+                                    ? 'bg-zinc-900 border border-white/10 text-zinc-100'
+                                    : 'bg-white border border-purple-200/90 text-zinc-950 shadow-xs'
                                   : 'bg-purple-600 text-white'
                               }`}
                             >
@@ -1891,16 +1891,16 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                               {/* Expandable 4-Panel Storyboard Breakdown if generated */}
                               {isAssistant && msg.suggestedPanels && msg.suggestedPanels.length > 0 && (
                                 <details className="mt-3 pt-2.5 border-t border-purple-200/50 dark:border-white/10 text-xs" open>
-                                  <summary className="font-bold cursor-pointer text-purple-700 dark:text-purple-300 hover:underline flex items-center gap-1 select-none">
+                                  <summary className="font-bold cursor-pointer text-purple-800 dark:text-purple-300 hover:underline flex items-center gap-1 select-none">
                                     <span>🎬 Director's 4-Panel Breakdown ({msg.suggestedPanels.length} Panels)</span>
                                   </summary>
                                   <div className="mt-2 space-y-1.5 pl-1">
                                     {msg.suggestedPanels.map((p) => (
-                                      <div key={p.panelNumber} className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px]">
-                                        <span className="font-bold text-blue-600 dark:text-blue-400 mr-1.5">Beat {p.panelNumber}:</span>
-                                        <span>{p.description}</span>
+                                      <div key={p.panelNumber} className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-white/10 text-[11px]">
+                                        <span className="font-bold text-blue-700 dark:text-blue-400 mr-1.5">Beat {p.panelNumber}:</span>
+                                        <span className="text-zinc-900 dark:text-zinc-100 font-medium">{p.description}</span>
                                         {p.dialogue && (
-                                          <div className="mt-1 text-zinc-500 dark:text-zinc-400 italic">
+                                          <div className="mt-1 text-zinc-700 dark:text-zinc-300 italic font-serif font-medium">
                                             "{p.dialogue}"
                                           </div>
                                         )}
@@ -1912,9 +1912,9 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
 
                               {/* Director Suggested Premise & Action Buttons */}
                               {isAssistant && (msg.synthesizedPremise || (msg.suggestedPanels && msg.suggestedPanels.length > 0)) && (
-                                <div className="mt-2.5 pt-2 border-t border-purple-200/50 dark:border-white/10 space-y-2">
+                                <div className="mt-3 pt-2.5 border-t border-purple-200/60 dark:border-white/10 space-y-2.5">
                                   {msg.synthesizedPremise && (
-                                    <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-900 dark:text-purple-200 font-serif italic">
+                                    <div className="p-3 rounded-xl bg-purple-50/90 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 text-xs text-purple-950 dark:text-purple-100 font-serif italic leading-relaxed shadow-2xs select-text">
                                       &ldquo;{msg.synthesizedPremise}&rdquo;
                                     </div>
                                   )}
@@ -2010,14 +2010,14 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
 
                               {/* Quick Reply Starters */}
                               {isAssistant && msg.quickStarters && msg.quickStarters.length > 0 && (
-                                <div className="mt-2.5 pt-2 border-t border-black/5 dark:border-white/10 flex flex-wrap gap-1">
+                                <div className="mt-2.5 pt-2 border-t border-purple-200/50 dark:border-white/10 flex flex-wrap gap-1.5">
                                   {msg.quickStarters.map((starter, sIdx) => (
                                     <button
                                       key={sIdx}
                                       type="button"
                                       onClick={() => handleSendCurrentEpChatMessage(starter)}
                                       disabled={isSendingCurrentEpChat}
-                                      className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition-colors cursor-pointer text-left font-sans"
+                                      className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-purple-100/90 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-950 dark:text-purple-200 border border-purple-300 dark:border-purple-700 transition-colors cursor-pointer text-left font-sans shadow-2xs"
                                     >
                                       ↳ {starter}
                                     </button>
@@ -2030,7 +2030,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                       })}
 
                       {isSendingCurrentEpChat && (
-                        <div className="flex items-center gap-2 text-xs text-purple-500 animate-pulse p-2 font-mono">
+                        <div className="flex items-center gap-2 text-xs text-purple-700 dark:text-purple-300 font-semibold animate-pulse p-2 font-mono">
                           <Sparkles className="w-3.5 h-3.5 animate-spin" />
                           <span>Director is analyzing page context & composing...</span>
                         </div>
@@ -2204,7 +2204,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                     <button
                       type="button"
                       onClick={() => setIsTraceModalOpen(true)}
-                      className="p-2.5 rounded-xl text-xs font-bold bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      className="p-2.5 rounded-xl text-xs font-bold bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                     >
                       <BrainCircuit className="w-3.5 h-3.5" />
                       <span>Agent Trace</span>
@@ -2425,7 +2425,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
   return (
     <div className={`min-h-screen flex flex-col selection:bg-zinc-200 w-full transition-colors duration-300 ${
       readerTheme === 'cinema' && activeTab === 'comic'
-        ? 'bg-[#0c0d12] text-zinc-100'
+        ? 'dark bg-[#0c0d12] text-zinc-100'
         : 'bg-[#faf8f5] text-[#181716]'
     }`}>
       {/* =========================================================================

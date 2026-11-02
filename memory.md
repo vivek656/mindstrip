@@ -1,3 +1,9 @@
+- High-Contrast Studio UI & Tailwind v4 Dark Mode Selector Isolation (2026-11-02):
+  - Root Cause Diagnosed: In Tailwind CSS v4, `dark:` classes default to `@media (prefers-color-scheme: dark)`. Windows Chrome users with OS dark mode active had browser media queries trigger `dark:` colors (`dark:text-purple-200`) inside light `bg-white` cards, rendering premise text and pills nearly invisible (near 1:1 contrast). Safari on macOS in light mode was unaffected, creating cross-platform inconsistency.
+  - Tailwind v4 Fix: Added `@variant dark (&:where(.dark, .dark *));` to `src/app/globals.css` so dark styles are scoped strictly to the `.dark` class toggled by MindStrip's `readerTheme === 'cinema'`.
+  - Co-Director Panel Overhaul: Upgraded `msg.synthesizedPremise`, `msg.quickStarters`, `msg.suggestedPanels` (Beats 1-4), and status indicators in `ZenComicReader.tsx` to guaranteed AAA high-contrast colors (`text-purple-950 dark:text-purple-100`, `bg-purple-50/90 dark:bg-purple-950/60`, `border-purple-300 dark:border-purple-700`).
+  - Production build clean with 0 errors.
+
 # Project Memory & Agent Working State: MindStrip
 
 > **Product Vision:** A legitimate, consumer-grade comic creation and world-building platform where users create, customize, and continue their own serialized comic universes.  
