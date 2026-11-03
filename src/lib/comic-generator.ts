@@ -237,17 +237,29 @@ export function generateComicStripMock(
   ];
 
   const cognitiveAnalysis: CognitiveAnalysis = {
-    initialBurdenScore: 80,
-    finalBurdenScore: 20,
+    initialBurdenScore: 82,
+    finalBurdenScore: 18,
     primaryDistortion: 'Narrative Framing & Strategic Resolution',
     antagonistPersonified: partnerName || antagonistName || 'The Central Obstacle',
     coreTruth: 'Every great story is shaped by the decisions made in the heat of conflict.',
-    mentalSpaceFreedMinutes: 120,
+    mentalSpaceFreedMinutes: 90,
     actionBlueprint: [
       {
         id: 'act-1',
-        action: `Build upon "${episodeTitle}" in the next chapter.`,
-        timeRequired: '5 mins',
+        action: `Identify the primary tension or obstacle introduced in "${episodeTitle}".`,
+        timeRequired: '3 mins',
+        completed: false
+      },
+      {
+        id: 'act-2',
+        action: `Execute one low-friction micro-action to defuse the perceived conflict.`,
+        timeRequired: '4 mins',
+        completed: false
+      },
+      {
+        id: 'act-3',
+        action: `Log the grounding takeaway into your personal universe notes.`,
+        timeRequired: '2 mins',
         completed: false
       }
     ]

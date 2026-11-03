@@ -1,3 +1,27 @@
+- Mobile UI Complete Overhaul — Apple-style Bottom Nav (2026-11-03):
+  - Root cause fixed: On mobile (`<lg`) the entire AI Co-Director right panel was `hidden lg:flex`, and the AI Chat was buried inside a hamburger drawer that users never discovered.
+  - Replaced the minimal single-line prompt bar at the bottom with a full Apple-style iOS tab bar with: prompt input + send button row, plus 5 icon-tab buttons: `✦ AI Chat` (opens drawer → studio tab → chat mode), `📖 World` (opens drawer → sidebar/world bible), `☑ Plan` (toggles Action Blueprint, highlights green when active), `🎬 Reel` (opens Motion Comic modal), `⊞ Controls` (opens drawer → studio tab → controls mode).
+  - Added a `h-28` spacer below the main content so comic content isn't hidden behind the fixed bottom nav.
+  - Added `CheckSquare` and `SlidersHorizontal` to lucide-react imports.
+  - All existing mobile drawer tabs (`World Bible & Ep` / `Co-Director Deck`) still work with full content via `renderSidebarContent()` / `renderRightStudioPanel()`.
+  - Production build clean with 0 errors.
+
+- Motion Comic Video Engine & Meta Movie Gen Integration (2026-11-03):
+  - Cinematic Motion Comic Player: Created `MotionComicModal.tsx` providing a full cinematic video playback experience. Animates panels with dynamic Ken Burns camera tracking zooms, speech balloon reveal animations, visual sound effect stamps (*ZOINK!*, *KRAK!*), and progress tracking across panel beats.
+  - Built-in Web Audio Synthesizer: Synthesizes real-time ambient cinematic pad drones (C-minor fifths) and transition chimes via Web Audio API without requiring external audio assets. Includes mute/unmute toggle.
+  - Dual Aspect Ratio Support: 1-click toggle between 16:9 Widescreen (YouTube, desktop display) and 9:16 Vertical Reel (Instagram Reels, TikTok, YouTube Shorts).
+  - In-Browser WebM/MP4 Video Recording & Export: Uses HTML5 `canvas.captureStream(30)` and `MediaRecorder` to record the entire animated motion comic and export a downloadable `.webm` video file directly to the creator's device.
+  - Meta Movie Gen Endpoint: Added `/api/generate-video` generating professional 30B Movie Gen cinematography directives (dramatic push, slow pan, cinematic orbit, action drift) and 13B Movie Gen Foley audio prompts.
+  - Reader Toolbar Integration: Added an Apple-style `[ 🎬 Motion Reel Video ]` button on the floating toolbar in `ComicPageSpread.tsx` and in the `...` More Menu in `ZenComicReader.tsx`.
+  - Production build clean with 0 errors.
+
+- Cognitive Relief Blueprint & Multi-Perspective Reframing Engine (2026-11-03):
+  - Interactive Action Blueprint Mounted: Connected `ActionBlueprint.tsx` directly into `ZenComicReader.tsx` and `ComicPageSpread.tsx` with a sleek `[ 📋 Action Plan ]` toolbar pill. Displays Cognitive Burden Shift gauge (e.g., 85% -> 18%), mental bandwidth freed (+90 mins), deconstructed distortion, identified antagonist, grounding reality quote, and 3-step micro-action checklist with celebratory `canvas-confetti` and 1-click markdown copy for Todoist/Notion/Apple Notes.
+  - 1-Click Multi-Perspective Philosophical Lens Reframing: Integrated one-click lens re-steer chips (`🏛️ Stoic Philosopher`, `🎭 Satirical Comic`, `⚙️ 10x Engineer`, `🌿 Empathetic Sage`) directly into the Page Director chat and Controls deck. Enables instant re-scripting of any dilemma through Marcus Aurelius's dichotomy of control, therapeutic standup satire, or engineering binary tradeoffs.
+  - Interactive SAM 3.1 Speech Bubble Element Editing: Wired point-and-click segmentation in `SamVisionOverlay.tsx` directly to dialogue editing (`onUpdateDialogue`). Clicking a detected speech bubble now opens an inline dialogue editor to rewrite text on the canvas with 1 click.
+  - Meta Muse Spark Agent Integration: Enhanced `showrunner.ts` and `orchestrator.ts` to request and parse full `CognitiveAnalysis` objects in the generation schema, ensuring every episode automatically receives tailored micro-actions.
+  - Production build clean with 0 errors.
+
 - Apple Intelligence / Google Flow Minimalist UX Overhaul (2026-11-02):
   - Unified Persistent AI Co-Director: Replaced fragmented sub-tabs (`Next Ep` vs `Current Ep` vs multiple modes) with a persistent Apple Intelligence AI companion featuring a 3-way segmented context switcher: `🎯 This Page` (Episode Director, 4-panel storyboard breakdown, script & art re-draw), `🔮 Next Ep` (Story continuation, conflict pitch, cast scoping, Draw next ep), and `🌐 World & Lore` (World Bible companion, universal laws, character model sheets).
   - Comic-First Hero Layout: Streamlined `ComicPageSpread.tsx` from a 270px double-masthead down to a 48px minimalist Apple toolbar (`ISSUE #`, title, cast avatars, view mode segment, speech bubbles toggle, SAM 3.1, Granular Studio, Re-Draw). Returned over 200px of vertical space directly to the comic image.

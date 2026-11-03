@@ -108,6 +108,18 @@ Return ONLY valid JSON with this schema:
       { "label": "Action 2", "beat": "Dramatic beat" }
     ]
   },
+  "cognitiveAnalysis": {
+    "initialBurdenScore": 85,
+    "finalBurdenScore": 18,
+    "primaryDistortion": "Deconstructed cognitive distortion or overthinking pattern",
+    "antagonistPersonified": "Personified antagonist or externalized obstacle",
+    "mentalSpaceFreedMinutes": 90,
+    "actionBlueprint": [
+      { "id": "act-1", "action": "Immediate low-friction micro-action (<5 mins)", "timeRequired": "3 mins", "completed": false },
+      { "id": "act-2", "action": "Follow-up clarifying step (<5 mins)", "timeRequired": "5 mins", "completed": false },
+      { "id": "act-3", "action": "Milestone reflection or grounding action (<5 mins)", "timeRequired": "2 mins", "completed": false }
+    ]
+  },
   "panels": [
     {
       "panelNumber": 1,
@@ -166,6 +178,7 @@ Episode Premise / Brain Dump: "${rawDump}"`;
             pageCharacters: parsed.pageCharacters || [],
             guestCharacters: parsed.guestCharacters || [],
             directorQuestion: parsed.directorQuestion,
+            cognitiveAnalysis: parsed.cognitiveAnalysis,
             panels: parsed.panels
           };
         }

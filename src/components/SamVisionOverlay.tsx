@@ -122,6 +122,27 @@ export function SamVisionOverlay({
       )
     : null;
 
+  // Find matching dialogue bubble in episode if segment is speech_bubble
+  const matchingBubble = selectedSegment?.category === 'speech_bubble'
+    ? episode.panels.flatMap((p, pIdx) => (p.bubbles || []).map((b) => ({ ...b, panelNumber: p.panelNumber || pIdx + 1 })))
+        .find((b) =>
+          b.text.toLowerCase().includes(selectedSegment.label.toLowerCase()) ||
+          selectedSegment.label.toLowerCase().includes(b.speaker.toLowerCase()) ||
+          selectedSegment.label.toLowerCase().includes('dialogue') ||
+          selectedSegment.label.toLowerCase().includes('speech')
+        )
+    : null;
+
+  useEffect(() => {
+    if (selectedSegment?.category === 'speech_bubble') {
+      const match = episode.panels.flatMap((p) => p.bubbles || []).find((b) =>
+        b.text.toLowerCase().includes(selectedSegment.label.toLowerCase()) ||
+        selectedSegment.label.toLowerCase().includes(b.speaker.toLowerCase())
+      );
+      setEditingBubbleText(match?.text || selectedSegment.label);
+    }
+  }, [selectedSegment, episode.panels]);
+
   return (
     <div className="absolute inset-0 z-30 pointer-events-auto select-none overflow-hidden">
       {/* Dimmed Isolation Backdrop when a subject is isolated */}
@@ -335,6 +356,41 @@ export function SamVisionOverlay({
               </button>
             </div>
           </div>
+
+          {/* Interactive SAM 3.1 Speech Bubble Edit Field */}
+          {selectedSegment.category === 'speech_bubble' && onUpdateDialogue && (
+            <div className="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="text"
+                value={editingBubbleText}
+                onChange={(e) => setEditingBubbleText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const targetPanel = matchingBubble?.panelNumber || 1;
+                    const targetBubbleId = matchingBubble?.id || episode.panels[targetPanel - 1]?.bubbles?.[0]?.id || 'b1';
+                    onUpdateDialogue(targetPanel, targetBubbleId, editingBubbleText.trim());
+                    setSelectedSegment(null);
+                  }
+                }}
+                placeholder="Edit text for this segmented speech bubble..."
+                className="flex-1 px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/15 text-white text-xs font-medium outline-none focus:border-cyan-400 placeholder:text-zinc-500"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!editingBubbleText.trim()) return;
+                  const targetPanel = matchingBubble?.panelNumber || 1;
+                  const targetBubbleId = matchingBubble?.id || episode.panels[targetPanel - 1]?.bubbles?.[0]?.id || 'b1';
+                  onUpdateDialogue(targetPanel, targetBubbleId, editingBubbleText.trim());
+                  setSelectedSegment(null);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save Dialogue</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

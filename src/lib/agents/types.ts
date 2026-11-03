@@ -1,4 +1,4 @@
-import { ComicCharacter, ComicWorld, ComicStrip, ComicPanel, AgentTraceStep, ArtStyle, PerspectiveLens } from '@/types/comic';
+import { ComicCharacter, ComicWorld, ComicStrip, ComicPanel, AgentTraceStep, ArtStyle, PerspectiveLens, CognitiveAnalysis } from '@/types/comic';
 
 export interface AgentContext {
   rawDump: string;
@@ -35,6 +35,7 @@ export interface ShowrunnerDraft {
       beat: string;
     }[];
   };
+  cognitiveAnalysis?: CognitiveAnalysis;
   panels: ComicPanel[];
 }
 

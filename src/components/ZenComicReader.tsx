@@ -20,6 +20,8 @@ import { CoDirectorPitchResult } from '@/app/api/co-director-pitch/route';
 import { applyCanonicalCharacterAttire, stripSystemMetadataTags } from '@/lib/agents/art-director';
 import { buildStoryContext } from '@/lib/story-context';
 import { ComicPageSpread, GranularArtworkOptions } from './ComicPageSpread';
+import { ActionBlueprint } from './ActionBlueprint';
+import { MotionComicModal } from './MotionComicModal';
 import { CharacterDossierModal } from './CharacterDossierModal';
 import { AgentDirectorTraceModal } from './AgentDirectorTraceModal';
 import { BranchTimelineModal } from './BranchTimelineModal';
@@ -75,6 +77,8 @@ import {
   Wand2,
   ChevronDown,
   MoreHorizontal,
+  CheckSquare,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -156,6 +160,8 @@ export function ZenComicReader({
   const [isTraceModalOpen, setIsTraceModalOpen] = useState(false);
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
   const [branchTargetEpisode, setBranchTargetEpisode] = useState<ComicStrip | null>(null);
+  const [showActionBlueprint, setShowActionBlueprint] = useState(false);
+  const [isMotionComicOpen, setIsMotionComicOpen] = useState(false);
 
   // Studio Reading Experience States (Unified Single Light Theme)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -2221,10 +2227,38 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                           <span>•</span>
                           <button
                             type="button"
-                            onClick={() => handleSendCurrentEpChatMessage('How can we make this scene more dramatic without changing what happens?')}
-                            className="hover:text-purple-500 underline cursor-pointer shrink-0"
+                            onClick={() => {
+                              setSelectedLens('stoic');
+                              handleSendCurrentEpChatMessage('Co-Director, reframe this episode through the Stoic Philosopher lens: focus on the dichotomy of control, strip away catastrophizing, and deliver ancient pragmatic clarity.');
+                            }}
+                            className="hover:text-blue-500 underline cursor-pointer shrink-0 font-semibold text-blue-600 dark:text-blue-400"
+                            title="Re-direct with Stoic Lens"
                           >
-                            ⚡ Amplify Tension
+                            🏛️ Stoic Reframe
+                          </button>
+                          <span>•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLens('satirical');
+                              handleSendCurrentEpChatMessage('Co-Director, reframe this episode through the Satirical Standup Comic lens: highlight human absurdity, use therapeutic laughter, and deflate the tension.');
+                            }}
+                            className="hover:text-purple-500 underline cursor-pointer shrink-0 font-semibold text-purple-600 dark:text-purple-400"
+                            title="Re-direct with Satirical Lens"
+                          >
+                            🎭 Satirical Reframe
+                          </button>
+                          <span>•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedLens('engineer');
+                              handleSendCurrentEpChatMessage('Co-Director, reframe this episode through the Pragmatic 10x Engineer lens: identify binary tradeoffs, eliminate emotional noise, and propose minimal viable fixes.');
+                            }}
+                            className="hover:text-emerald-500 underline cursor-pointer shrink-0 font-semibold text-emerald-600 dark:text-emerald-400"
+                            title="Re-direct with 10x Engineer Lens"
+                          >
+                            ⚙️ 10x Engineer
                           </button>
                         </div>
                         <span className="shrink-0">Enter ↵</span>
@@ -2332,6 +2366,25 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                     </button>
                   </div>
 
+                  {/* Action Blueprint Button */}
+                  {episode.cognitiveAnalysis && (
+                    <button
+                      type="button"
+                      onClick={() => setShowActionBlueprint(!showActionBlueprint)}
+                      className={`w-full p-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                        showActionBlueprint
+                          ? 'bg-emerald-600 text-white border-emerald-500'
+                          : 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-900 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{showActionBlueprint ? 'Hide Action Blueprint' : 'View Action Blueprint'}</span>
+                      <span className="font-mono text-[10px] opacity-80">
+                        (-{Math.max(0, episode.cognitiveAnalysis.initialBurdenScore - episode.cognitiveAnalysis.finalBurdenScore)}% Burden)
+                      </span>
+                    </button>
+                  )}
+
                   {/* Export PNG button */}
                   <button
                     type="button"
@@ -2342,6 +2395,42 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                     <Download className="w-3.5 h-3.5" />
                     <span>{isExporting ? 'Exporting...' : 'Export High-Res PNG'}</span>
                   </button>
+                </div>
+
+                {/* 1-Click Multi-Perspective Lens Reframe */}
+                <div className="space-y-2 pt-2 border-t border-black/[0.06] dark:border-white/10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Philosophical Lens Reframe
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-mono">Meta Muse Spark</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { id: 'stoic', label: '🏛️ Stoic', desc: 'Dichotomy of control' },
+                      { id: 'satirical', label: '🎭 Satirical', desc: 'Therapeutic humor' },
+                      { id: 'engineer', label: '⚙️ 10x Engineer', desc: 'Binary tradeoffs' },
+                      { id: 'empathetic', label: '🌿 Empathetic', desc: 'Burnout relief' },
+                    ].map((lens) => (
+                      <button
+                        key={lens.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedLens(lens.id as PerspectiveLens);
+                          setCurrentPageViewMode('chat');
+                          handleSendCurrentEpChatMessage(`Co-Director, reframe this episode through the ${lens.label} lens: defuse the perceived threat, re-evaluate stakes, and provide an updated dialogue script.`);
+                        }}
+                        className="p-2 rounded-xl text-left border border-black/5 dark:border-white/5 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 transition-all cursor-pointer group"
+                      >
+                        <span className="font-bold text-xs block text-zinc-900 dark:text-zinc-100 group-hover:text-purple-600 dark:group-hover:text-purple-400">
+                          {lens.label}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 block truncate">
+                          {lens.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Episode Cast & Guest Character Promotions */}
@@ -2698,6 +2787,20 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsMoreMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-zinc-900 border border-black/10 dark:border-white/10 shadow-2xl z-50 p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+                    {episode && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false);
+                          setIsMotionComicOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 cursor-pointer text-left transition-colors"
+                      >
+                        <Film className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Play Motion Comic Reel</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => {
@@ -2851,12 +2954,74 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                       setRightPanelTab('current');
                       setCurrentPageViewMode('chat');
                     }}
+                    onToggleActionBlueprint={() => setShowActionBlueprint((prev) => !prev)}
+                    isActionBlueprintOpen={showActionBlueprint}
+                    onOpenMotionComic={() => setIsMotionComicOpen(true)}
                   />
 
-                  {/* Minimal Core Truth Reflection Banner */}
-                  {episode.cognitiveAnalysis?.coreTruth && (
-                    <div className="mt-6 text-center text-xs sm:text-sm text-zinc-500 font-serif italic max-w-2xl mx-auto">
-                      &ldquo;{episode.cognitiveAnalysis.coreTruth}&rdquo;
+                  {/* Interactive Cognitive Action Blueprint & Relief Gauge */}
+                  {episode.cognitiveAnalysis && (
+                    <div className="w-full mt-4 flex flex-col items-center">
+                      {/* Always-visible Apple-style quick summary banner with toggle */}
+                      <div className="w-full max-w-5xl mx-auto px-2 sm:px-4">
+                        <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 rounded-2xl border transition-all ${
+                          readerTheme === 'cinema'
+                            ? 'bg-zinc-900/80 border-zinc-800 text-zinc-300'
+                            : 'bg-white/90 border-zinc-200 text-zinc-700 shadow-xs'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                                Cognitive Relief:
+                              </span>
+                              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                {episode.cognitiveAnalysis.initialBurdenScore}% &rarr; {episode.cognitiveAnalysis.finalBurdenScore}%
+                              </span>
+                              <span className="text-[11px] text-zinc-400 hidden sm:inline">
+                                (+{episode.cognitiveAnalysis.mentalSpaceFreedMinutes || 90} mins bandwidth)
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowActionBlueprint(!showActionBlueprint)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                              showActionBlueprint
+                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                                : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700'
+                            }`}
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>{showActionBlueprint ? 'Hide Action Blueprint' : 'View Action Blueprint'}</span>
+                            <span className="font-mono text-[10px] opacity-75">
+                              ({episode.cognitiveAnalysis.actionBlueprint?.length || 3} steps)
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expandable Action Blueprint Card */}
+                      {showActionBlueprint && (
+                        <div className="w-full mt-2 animate-in fade-in slide-in-from-top-4 duration-200">
+                          <ActionBlueprint
+                            key={episode.id}
+                            analysis={episode.cognitiveAnalysis}
+                            isCinemaTheme={readerTheme === 'cinema'}
+                            onClose={() => setShowActionBlueprint(false)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Minimal Core Truth Quote */}
+                      {episode.cognitiveAnalysis.coreTruth && !showActionBlueprint && (
+                        <div className="mt-4 text-center text-xs sm:text-sm text-zinc-500 font-serif italic max-w-2xl mx-auto">
+                          &ldquo;{episode.cognitiveAnalysis.coreTruth}&rdquo;
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
@@ -3935,14 +4100,19 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
             </div>
           )}
 
-          {/* MOBILE ONLY CO-DIRECTOR DOCK (Hidden on desktop because desktop has the dedicated Right Panel) */}
-          <div className="lg:hidden sticky bottom-3 w-full px-2 z-20 mt-auto pt-4">
+          {/* MOBILE ONLY BOTTOM NAV BAR — Apple-style 4-icon dock */}
+          <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t safe-area-bottom ${
+            readerTheme === 'cinema'
+              ? 'bg-zinc-950/95 border-white/10 backdrop-blur-xl'
+              : 'bg-white/95 border-black/[0.08] backdrop-blur-xl'
+          }`}>
+            {/* Prompt row */}
             <form
               onSubmit={handleSubmit}
-              className={`flex items-center border-2 rounded-full p-1.5 shadow-2xl transition-all ${
-                readerTheme === 'cinema' && activeTab === 'comic'
-                  ? 'bg-zinc-900 border-white/20'
-                  : 'bg-white border-zinc-950'
+              className={`flex items-center mx-3 mt-2.5 mb-1 border rounded-2xl px-3 py-2 gap-2 ${
+                readerTheme === 'cinema'
+                  ? 'bg-zinc-900 border-white/15'
+                  : 'bg-zinc-50 border-zinc-200'
               }`}
             >
               <input
@@ -3951,11 +4121,11 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={
                   episode
-                    ? `Direct Ep #${(episode.episodeNumber || 1) + 1}...`
-                    : `Direct Ep #1: Origin...`
+                    ? `Direct Ep #${(episode.episodeNumber || 1) + 1}…`
+                    : `Start Episode #1…`
                 }
-                className={`flex-1 bg-transparent px-3 text-xs outline-none font-medium ${
-                  readerTheme === 'cinema' && activeTab === 'comic'
+                className={`flex-1 bg-transparent text-sm outline-none font-medium ${
+                  readerTheme === 'cinema'
                     ? 'text-white placeholder:text-zinc-500'
                     : 'text-zinc-900 placeholder:text-zinc-400'
                 }`}
@@ -3963,7 +4133,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
               <button
                 type="submit"
                 disabled={!prompt.trim() || isLoading}
-                className="px-4 py-2 rounded-full text-xs font-bold bg-blue-600 text-white disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-xl flex items-center justify-center bg-blue-600 text-white disabled:opacity-40 shrink-0 cursor-pointer"
               >
                 {isLoading ? (
                   <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -3972,7 +4142,59 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
                 )}
               </button>
             </form>
+            {/* Icon nav row */}
+            <div className={`flex items-center justify-around px-2 pb-3 pt-1 ${
+              readerTheme === 'cinema' ? 'text-zinc-400' : 'text-zinc-500'
+            }`}>
+              {/* AI Chat */}
+              <button
+                type="button"
+                onClick={() => { setMobileDrawerTab('studio'); setCurrentPageViewMode('chat'); setIsMobileDrawerOpen(true); }}
+                className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl active:bg-black/5 cursor-pointer"
+              >
+                <Sparkles className={`w-5 h-5 ${readerTheme === 'cinema' ? 'text-purple-400' : 'text-purple-600'}`} />
+                <span className={`text-[10px] font-semibold ${readerTheme === 'cinema' ? 'text-purple-300' : 'text-purple-700'}`}>AI Chat</span>
+              </button>
+              {/* World Bible */}
+              <button
+                type="button"
+                onClick={() => { setMobileDrawerTab('sidebar'); setIsMobileDrawerOpen(true); }}
+                className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl active:bg-black/5 cursor-pointer"
+              >
+                <BookOpen className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">World</span>
+              </button>
+              {/* Action Blueprint */}
+              <button
+                type="button"
+                onClick={() => setShowActionBlueprint(v => !v)}
+                className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl active:bg-black/5 cursor-pointer"
+              >
+                <CheckSquare className={`w-5 h-5 ${showActionBlueprint ? 'text-emerald-600' : ''}`} />
+                <span className={`text-[10px] font-semibold ${showActionBlueprint ? (readerTheme === 'cinema' ? 'text-emerald-400' : 'text-emerald-700') : ''}`}>Plan</span>
+              </button>
+              {/* Motion Reel */}
+              <button
+                type="button"
+                onClick={() => setIsMotionComicOpen(true)}
+                className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl active:bg-black/5 cursor-pointer"
+              >
+                <Film className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">Reel</span>
+              </button>
+              {/* More / Controls */}
+              <button
+                type="button"
+                onClick={() => { setMobileDrawerTab('studio'); setCurrentPageViewMode('controls'); setIsMobileDrawerOpen(true); }}
+                className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl active:bg-black/5 cursor-pointer"
+              >
+                <SlidersHorizontal className="w-5 h-5" />
+                <span className="text-[10px] font-semibold">Controls</span>
+              </button>
+            </div>
           </div>
+          {/* Spacer so content doesn't hide behind fixed bottom nav on mobile */}
+          <div className="lg:hidden h-28" />
         </main>
 
         {/* DESKTOP RIGHT CO-DIRECTOR STUDIO PANEL (Visible when activeTab === 'comic') */}
@@ -4080,6 +4302,18 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
           if (onRollback) onRollback(epNum);
         }}
       />
+
+      {/* =========================================================================
+          CINEMATIC MOTION COMIC VIDEO REEL MODAL (META MOVIE GEN)
+      ========================================================================= */}
+      {episode && (
+        <MotionComicModal
+          world={world}
+          episode={episode}
+          isOpen={isMotionComicOpen}
+          onClose={() => setIsMotionComicOpen(false)}
+        />
+      )}
     </div>
   );
 }

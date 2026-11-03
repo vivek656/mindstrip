@@ -29,7 +29,9 @@ import {
   Cpu,
   Ratio,
   Scan,
-  Maximize2
+  Maximize2,
+  CheckCircle2,
+  Film
 } from 'lucide-react';
 
 export interface GranularArtworkOptions {
@@ -60,6 +62,9 @@ interface ComicPageSpreadProps {
   directorReasoning?: string;
   onPromoteGuestCharacter?: (guest: ComicCharacter) => void;
   onOpenDirectorChat?: () => void;
+  onToggleActionBlueprint?: () => void;
+  isActionBlueprintOpen?: boolean;
+  onOpenMotionComic?: () => void;
 }
 
 const ART_STYLES: { id: ArtStyle; name: string; desc: string; icon: string }[] = [
@@ -119,6 +124,9 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
     directorReasoning = '',
     onPromoteGuestCharacter,
     onOpenDirectorChat,
+    onToggleActionBlueprint,
+    isActionBlueprintOpen = false,
+    onOpenMotionComic,
   },
   ref
 ) {
@@ -499,6 +507,46 @@ export const ComicPageSpread = forwardRef<HTMLDivElement, ComicPageSpreadProps>(
               <Scan className={`w-3.5 h-3.5 ${isSamActive ? 'text-white animate-pulse' : 'text-cyan-600'}`} />
               <span>SAM 3.1</span>
             </button>
+
+            {/* Cognitive Action Blueprint Button */}
+            {onToggleActionBlueprint && (
+              <button
+                type="button"
+                onClick={onToggleActionBlueprint}
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 border shadow-2xs cursor-pointer ${
+                  isActionBlueprintOpen
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20'
+                    : 'bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200'
+                }`}
+                title="Toggle Cognitive Relief & Action Blueprint"
+              >
+                <CheckCircle2 className={`w-3.5 h-3.5 ${isActionBlueprintOpen ? 'text-white' : 'text-emerald-600'}`} />
+                <span>Action Plan</span>
+                {episode.cognitiveAnalysis && (
+                  <span className={`px-1 py-0.2 rounded-full text-[9px] font-mono font-bold ${
+                    isActionBlueprintOpen ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'
+                  }`}>
+                    -{Math.max(0, episode.cognitiveAnalysis.initialBurdenScore - episode.cognitiveAnalysis.finalBurdenScore)}%
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Motion Comic Video Reel Button */}
+            {onOpenMotionComic && (
+              <button
+                type="button"
+                onClick={onOpenMotionComic}
+                className="px-2.5 py-1 rounded-xl text-xs font-semibold transition-all flex items-center gap-1 border shadow-2xs cursor-pointer bg-gradient-to-r from-purple-500/10 to-indigo-500/10 hover:from-purple-500/20 hover:to-indigo-500/20 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700"
+                title="Play Cinematic Motion Comic Video Reel (Meta Movie Gen)"
+              >
+                <Film className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Motion Reel</span>
+                <span className="px-1 rounded-full text-[9px] font-mono font-bold bg-purple-200/80 dark:bg-purple-800/80 text-purple-900 dark:text-purple-100">
+                  Video
+                </span>
+              </button>
+            )}
 
             {/* Granular Art Studio Deck */}
             <button

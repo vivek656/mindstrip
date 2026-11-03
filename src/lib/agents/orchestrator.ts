@@ -217,21 +217,37 @@ export function buildComicStripFromProduction(
 ): ComicStrip {
   const { draft, trace, canonScore, correctionsCount } = result;
 
+  const defaultActionBlueprint = [
+    {
+      id: `act-${Date.now()}-1`,
+      action: `Isolate the single variable within your control from "${draft.title}".`,
+      timeRequired: '3 mins',
+      completed: false
+    },
+    {
+      id: `act-${Date.now()}-2`,
+      action: `Take one concrete step to reframe or defuse the antagonist's leverage.`,
+      timeRequired: '4 mins',
+      completed: false
+    },
+    {
+      id: `act-${Date.now()}-3`,
+      action: `Log the grounding takeaway into your personal lore notes.`,
+      timeRequired: '2 mins',
+      completed: false
+    }
+  ];
+
   const cognitiveAnalysis: CognitiveAnalysis = {
-    initialBurdenScore: 85,
-    finalBurdenScore: 20,
-    primaryDistortion: 'Narrative Framing & Resolution',
-    antagonistPersonified: (context.characters || []).find((c) => (c.role || '').toLowerCase().includes('antagonist'))?.name || 'The Opposition',
+    initialBurdenScore: draft.cognitiveAnalysis?.initialBurdenScore ?? 85,
+    finalBurdenScore: draft.cognitiveAnalysis?.finalBurdenScore ?? 18,
+    primaryDistortion: draft.cognitiveAnalysis?.primaryDistortion || 'Narrative Framing & Resolution',
+    antagonistPersonified: draft.cognitiveAnalysis?.antagonistPersonified || (context.characters || []).find((c) => (c.role || '').toLowerCase().includes('antagonist'))?.name || 'The Opposition',
     coreTruth: draft.coreTruth,
-    mentalSpaceFreedMinutes: 120,
-    actionBlueprint: [
-      {
-        id: `act-${Date.now()}-1`,
-        action: `Carry forward the momentum from "${draft.title}" into the next episode.`,
-        timeRequired: '5 mins',
-        completed: false
-      }
-    ]
+    mentalSpaceFreedMinutes: draft.cognitiveAnalysis?.mentalSpaceFreedMinutes ?? 90,
+    actionBlueprint: (draft.cognitiveAnalysis?.actionBlueprint && draft.cognitiveAnalysis.actionBlueprint.length >= 3)
+      ? draft.cognitiveAnalysis.actionBlueprint
+      : defaultActionBlueprint
   };
 
   return {
