@@ -73,6 +73,16 @@ export function SamVisionOverlay({
     };
   }, [isActive, episode.layoutStyle, episode.panels, episode.pageImageUrl, world.characters, world.title]);
 
+  useEffect(() => {
+    if (selectedSegment?.category === 'speech_bubble') {
+      const match = episode.panels.flatMap((p) => p.bubbles || []).find((b) =>
+        b.text.toLowerCase().includes(selectedSegment.label.toLowerCase()) ||
+        selectedSegment.label.toLowerCase().includes(b.speaker.toLowerCase())
+      );
+      setEditingBubbleText(match?.text || selectedSegment.label);
+    }
+  }, [selectedSegment, episode.panels]);
+
   if (!isActive) return null;
 
   // Filter segments by active category
@@ -132,16 +142,6 @@ export function SamVisionOverlay({
           selectedSegment.label.toLowerCase().includes('speech')
         )
     : null;
-
-  useEffect(() => {
-    if (selectedSegment?.category === 'speech_bubble') {
-      const match = episode.panels.flatMap((p) => p.bubbles || []).find((b) =>
-        b.text.toLowerCase().includes(selectedSegment.label.toLowerCase()) ||
-        selectedSegment.label.toLowerCase().includes(b.speaker.toLowerCase())
-      );
-      setEditingBubbleText(match?.text || selectedSegment.label);
-    }
-  }, [selectedSegment, episode.panels]);
 
   return (
     <div className="absolute inset-0 z-30 pointer-events-auto select-none overflow-hidden">
