@@ -86,86 +86,112 @@ export async function POST(req: NextRequest) {
       effectiveLayout = layoutStyle;
     }
 
+    // ─── Per-Art-Style RAG Visual Modifier ────────────────────────────────────
+    // Each style produces a distinct visual-direction prefix that forces the diffusion
+    // model into a genuinely different aesthetic space, not just different words.
+    const ART_STYLE_RAG: Record<string, string> = {
+      'webcomic':           'vibrant flat cel-shaded digital illustration, clean bold ink outlines, saturated color fills, modern webcomic aesthetic,',
+      'cinematic-realism':  'ultra-realistic 4K editorial photography, live-action film still, Hasselblad medium format, natural skin textures, cinematic lighting, photorealistic,',
+      'manga':              'dynamic black-and-white manga ink illustration, bold screentone shading, expressive motion lines, high-contrast B&W graphic novel panels,',
+      'noir':               'noir graphic novel, deep dramatic shadow contrast, chiaroscuro rimlight, moody dark palette, stark black ink shadows, brooding cinematic atmosphere,',
+      'cyberpunk':          'neon-drenched cyberpunk illustration, glowing LED neon signs, rain-soaked reflective streets, high-tech dystopian aesthetic, electric cyan and magenta color palette,',
+      'newspaper':          'vintage newspaper comic strip, warm sepia aged paper texture, nostalgic ink crosshatching, halftone dot patterns, classic editorial illustration,',
+      'minimalist':         'crisp minimalist editorial illustration, refined clean linework, restrained muted color palette, whitespace-forward design, sophisticated indie graphic novel tone,',
+    };
+    const styleRag = ART_STYLE_RAG[artStyle] || `${artStyle} style comic illustration,`;
+
     // Thoroughly scrub all metadata, panel numbers, timestamps, and typography triggers so diffusion models never paint text
     const rawClean = sanitizeDiffusionSafetyTriggers(cleanPromptForWordlessArtwork(stripSystemMetadataTags(customPrompt || prompt || episodeTitle || 'dynamic comic scene')));
     let sanitizedPrompt = applyCanonicalCharacterAttire(rawClean, targetCharacters);
 
-    const hasPanelDialogue = Array.isArray(panels) && panels.some((p: any) => p.bubbles && p.bubbles.length > 0);
-    const hasCustomPrompt = Boolean(customPrompt && customPrompt.trim().length > 0);
+    // Slice panels to exactly the number of frames the user selected
     const targetFrameCount = effectiveLayout === '1-panel' ? 1 : effectiveLayout === '2-panel' ? 2 : effectiveLayout === '3-panel' ? 3 : 4;
+    // If customPrompt is provided (from Granular controls), trust it and skip panel-dialogue override
+    const hasCustomPrompt = Boolean(customPrompt && customPrompt.trim().length > 0);
+    // Only use panel-dialogue override when no explicit customPrompt was provided by the user
+    const hasPanelDialogue = !hasCustomPrompt && Array.isArray(panels) && panels.some((p: any) => p.bubbles && p.bubbles.length > 0);
 
     if (hasPanelDialogue) {
-      // Scripted panels with dialogue bubbles MUST take precedence to ensure speech balloons are always painted!
+      // Scripted panels with dialogue bubbles: respect layout selection, slice panels to frame count
       if (effectiveLayout === '1-panel' && panels.length >= 1) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-        sanitizedPrompt = `Full-page cinematic splash illustration: ${p1}. Panoramic dramatic composition.`;
+        sanitizedPrompt = `${styleRag} Full-page cinematic splash illustration: ${p1}. Panoramic dramatic composition.`;
       } else if (effectiveLayout === '2-panel' && panels.length >= 2) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
         const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
-        sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+        sanitizedPrompt = `${styleRag} Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
       } else if (effectiveLayout === '3-panel' && panels.length >= 3) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
         const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
         const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
-        sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+        sanitizedPrompt = `${styleRag} Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
       } else {
         const p1 = formatFrameWithRagDialogue(panels[0] || {}, targetCharacters);
         const p2 = formatFrameWithRagDialogue(panels[1] || panels[0] || {}, targetCharacters);
         const p3 = formatFrameWithRagDialogue(panels[2] || panels[0] || {}, targetCharacters);
         const p4 = formatFrameWithRagDialogue(panels[3] || panels[1] || {}, targetCharacters);
-        sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+        sanitizedPrompt = `${styleRag} Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
       }
     } else if (hasCustomPrompt) {
-      // User or Director provided an explicit prompt.
+      // User or Director provided an explicit prompt — the customPrompt from Granular controls
+      // already encodes the art style + layout via buildSequentialPrompt(). Use it directly.
       const parsedBeats = parseCustomPromptBeats(customPrompt!, targetFrameCount);
 
       if (parsedBeats && parsedBeats.length >= 2) {
-        // Custom prompt contained explicit numbered beats (e.g. 1. THE SHRINE > ... 2. THE STEP > ...)
+        // Custom prompt contained explicit numbered beats
         const b = parsedBeats.map(beat => cleanPromptForWordlessArtwork(beat));
         if (effectiveLayout === '1-panel') {
-          sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${b[0]}. Panoramic dramatic composition.`;
+          sanitizedPrompt = `${styleRag} Full-page cinematic graphic novel splash illustration: ${b[0]}. Panoramic dramatic composition.`;
         } else if (effectiveLayout === '2-panel') {
-          sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${b[0]}. Right frame depicts ${b[1] || b[0]}.`;
+          sanitizedPrompt = `${styleRag} Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${b[0]}. Right frame depicts ${b[1] || b[0]}.`;
         } else if (effectiveLayout === '3-panel') {
-          sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${b[0]}. Middle frame depicts ${b[1] || b[0]}. Bottom frame depicts ${b[2] || b[1] || b[0]}.`;
+          sanitizedPrompt = `${styleRag} Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${b[0]}. Middle frame depicts ${b[1] || b[0]}. Bottom frame depicts ${b[2] || b[1] || b[0]}.`;
         } else {
-          sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${b[0]}. Top-right frame depicts ${b[1] || b[0]}. Bottom-left frame depicts ${b[2] || b[0]}. Bottom-right frame depicts ${b[3] || b[1] || b[0]}.`;
+          sanitizedPrompt = `${styleRag} Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${b[0]}. Top-right frame depicts ${b[1] || b[0]}. Bottom-left frame depicts ${b[2] || b[0]}. Bottom-right frame depicts ${b[3] || b[1] || b[0]}.`;
         }
-      } else if (customPrompt!.includes('sequential narrative frames') || customPrompt!.includes('Top frame') || customPrompt!.includes('Frame 1')) {
-        // Custom prompt was already pre-formatted with frame descriptions
-        sanitizedPrompt = rawClean;
+      } else if (
+        customPrompt!.includes('sequential narrative frames') ||
+        customPrompt!.includes('Top frame') ||
+        customPrompt!.includes('Frame 1') ||
+        customPrompt!.includes('two-panel') ||
+        customPrompt!.includes('three-frame') ||
+        customPrompt!.includes('four-panel')
+      ) {
+        // Custom prompt was already pre-formatted with frame descriptions by buildSequentialPrompt()
+        // Prepend the style RAG modifier so the art style still has full effect
+        sanitizedPrompt = `${styleRag} ${rawClean}`;
       } else {
-        // Single descriptive prompt: frame the action across the layout
+        // Single descriptive prompt: frame the action across the selected layout
         if (effectiveLayout === '1-panel') {
-          sanitizedPrompt = `Full-page cinematic graphic novel splash illustration depicting: ${rawClean}. Panoramic dramatic composition.`;
+          sanitizedPrompt = `${styleRag} Full-page cinematic graphic novel splash illustration depicting: ${rawClean}. Panoramic dramatic composition.`;
         } else if (effectiveLayout === '2-panel') {
-          sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter depicting the progressive action and confrontation of: ${rawClean}. Left frame establishes the scene. Right frame depicts the decisive reaction.`;
+          sanitizedPrompt = `${styleRag} Two sequential narrative frames side by side separated by a vertical white comic gutter depicting: ${rawClean}. Left frame establishes the scene. Right frame depicts the decisive reaction.`;
         } else if (effectiveLayout === '3-panel') {
-          sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters depicting the progressive escalation of: ${rawClean}. Top frame establishes the scene setup. Middle frame shows the central conflict. Bottom frame shows the decisive outcome.`;
+          sanitizedPrompt = `${styleRag} Three sequential narrative vertical frames separated by clean white gutters depicting: ${rawClean}. Top frame establishes the setup. Middle frame shows the conflict. Bottom frame shows the outcome.`;
         } else {
-          sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters depicting the complete progression of: ${rawClean}. Frame 1 setup, Frame 2 escalation, Frame 3 turning point, Frame 4 resolution.`;
+          sanitizedPrompt = `${styleRag} Four sequential narrative frames in a 2x2 comic grid with clean white gutters depicting: ${rawClean}. Frame 1 setup, Frame 2 escalation, Frame 3 turning point, Frame 4 resolution.`;
         }
       }
     } else if (Array.isArray(panels) && panels.length > 0) {
-      // Standard drawing from scripted episode panels
+      // Standard draw from scripted episode panels (no custom prompt, no dialogue)
       if (effectiveLayout === '1-panel' && panels.length >= 1) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
-        sanitizedPrompt = `Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
+        sanitizedPrompt = `${styleRag} Full-page cinematic graphic novel splash illustration: ${p1}. Panoramic dramatic composition.`;
       } else if (effectiveLayout === '2-panel' && panels.length >= 2) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
         const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
-        sanitizedPrompt = `Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
+        sanitizedPrompt = `${styleRag} Two sequential narrative frames side by side separated by a vertical white comic gutter: Left frame depicts ${p1}. Right frame depicts ${p2}.`;
       } else if (effectiveLayout === '3-panel' && panels.length >= 3) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
         const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
         const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
-        sanitizedPrompt = `Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
+        sanitizedPrompt = `${styleRag} Three sequential narrative vertical frames separated by clean white gutters: Top frame depicts ${p1}. Middle frame depicts ${p2}. Bottom frame depicts ${p3}.`;
       } else if (effectiveLayout === '4-panel' && panels.length >= 4) {
         const p1 = formatFrameWithRagDialogue(panels[0], targetCharacters);
         const p2 = formatFrameWithRagDialogue(panels[1], targetCharacters);
         const p3 = formatFrameWithRagDialogue(panels[2], targetCharacters);
         const p4 = formatFrameWithRagDialogue(panels[3], targetCharacters);
-        sanitizedPrompt = `Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
+        sanitizedPrompt = `${styleRag} Four sequential narrative frames in a 2x2 comic grid with clean white gutters: Top-left frame depicts ${p1}. Top-right frame depicts ${p2}. Bottom-left frame depicts ${p3}. Bottom-right frame depicts ${p4}.`;
       }
     }
 
@@ -264,7 +290,7 @@ export async function POST(req: NextRequest) {
     const publicationDirective = isPhoto ? REALISTIC_PHOTO_DIRECTIVE : COMIC_PAGE_PUBLICATION_DIRECTIVE;
     const rawPagePrompt = isPhoto
       ? `ultra-realistic 4K editorial photography, ${layoutDescriptor}, authentic live-action film photography depicting: ${charsList || 'people'}.${fallbackWardrobe ? ` [WARDROBE]: ${fallbackWardrobe}.` : ''} Scene: ${sanitizedPrompt}. ${publicationDirective} Hasselblad medium format portrait, natural skin textures, 8k resolution, photorealistic cinematic lighting.`
-      : `${artStyle} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
+      : `${styleRag} ${layoutDescriptor}, high resolution sequential artwork depicting characters: ${charsList || 'comic heroes'}.${fallbackWardrobe ? ` [DEFAULT ATTIRE]: ${fallbackWardrobe}.` : ''} Narrative scene: ${sanitizedPrompt}. ${publicationDirective} Dynamic composition, cinematic lighting.`;
     const pagePrompt = sanitizeDiffusionSafetyTriggers(rawPagePrompt);
 
     if (isFireworks) {

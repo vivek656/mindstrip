@@ -724,6 +724,17 @@ export default function Home() {
       
       const effectiveProvider = options?.provider || (targetImageModel === 'flux-1-schnell' ? 'fireworks' : (apiConfig?.provider || 'meta-api')) || 'meta-api';
 
+      // Slice panels to the exact frame count the user selected so the API never receives
+      // more panels than the layout requests (prevents 4-panel result when 1-panel is selected)
+      const targetFrameCount =
+        targetLayoutStyle === '1-panel' ? 1 :
+        targetLayoutStyle === '2-panel' ? 2 :
+        targetLayoutStyle === '3-panel' ? 3 :
+        4;
+      const slicedPanels = targetLayoutStyle === 'auto'
+        ? (activeEpisode.panels || [])
+        : (activeEpisode.panels || []).slice(0, targetFrameCount);
+
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -741,7 +752,7 @@ export default function Home() {
           imageModel: targetImageModel,
           layoutStyle: targetLayoutStyle,
           aspectRatio: options?.aspectRatio,
-          panels: activeEpisode.panels
+          panels: slicedPanels
         })
       });
 
