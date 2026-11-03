@@ -1,3 +1,8 @@
+- React Minified Error #310 Fix in SAM 3.1 Vision Overlay (2026-11-04):
+  - Root Cause Diagnosed: In `src/components/SamVisionOverlay.tsx`, an early return `if (!isActive) return null;` was placed above a `useEffect` hook that synchronized `editingBubbleText`. When `isActive` changed from `false` to `true` (clicking SAM 3.1), the number of hooks executed changed between renders, violating React's Rules of Hooks and triggering minified error #310 ("Rendered more hooks than during the previous render").
+  - Resolution: Moved the second `useEffect` hook up before any conditional returns, ensuring identical hook execution order on every render regardless of `isActive` state.
+  - Production build clean with 0 errors.
+
 - Mobile UI Complete Overhaul — Apple-style Bottom Nav (2026-11-03):
   - Root cause fixed: On mobile (`<lg`) the entire AI Co-Director right panel was `hidden lg:flex`, and the AI Chat was buried inside a hamburger drawer that users never discovered.
   - Replaced the minimal single-line prompt bar at the bottom with a full Apple-style iOS tab bar with: prompt input + send button row, plus 5 icon-tab buttons: `✦ AI Chat` (opens drawer → studio tab → chat mode), `📖 World` (opens drawer → sidebar/world bible), `☑ Plan` (toggles Action Blueprint, highlights green when active), `🎬 Reel` (opens Motion Comic modal), `⊞ Controls` (opens drawer → studio tab → controls mode).
