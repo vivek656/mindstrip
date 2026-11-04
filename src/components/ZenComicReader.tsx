@@ -112,6 +112,7 @@ interface ZenComicReaderProps {
   onOpenAuth?: () => void;
   onForkBranch?: (episodeNumber: number, branchTitle?: string, divergencePrompt?: string) => void;
   onRollback?: (episodeNumber: number) => void;
+  serverHasKey?: boolean | null;
 }
 
 const STUDIO_ART_STYLES: { id: ArtStyle; name: string; icon: string; desc: string }[] = [
@@ -148,6 +149,7 @@ export function ZenComicReader({
   onOpenAuth,
   onForkBranch,
   onRollback,
+  serverHasKey,
 }: ZenComicReaderProps) {
   const [activeTab, setActiveTab] = useState<'comic' | 'universe' | 'agent'>(episode ? 'comic' : 'universe');
   const [selectedLayout, setSelectedLayout] = useState<'auto' | '1-panel' | '2-panel' | '3-panel' | '4-panel'>('auto');
@@ -2890,9 +2892,38 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
       </header>
 
       {/* =========================================================================
-          BRING YOUR OWN KEY (BYOK) BANNER — Shown when no user API key is set
+          API KEY STATUS BANNER (NO KEY WARNING or BYOK NOTICE)
       ========================================================================= */}
-      {!isByokDismissed && !apiConfig?.apiKey && (
+      {!apiConfig?.apiKey && serverHasKey === false && (
+        <div className={`w-full px-4 py-2.5 flex items-center justify-between gap-3 text-xs border-b ${
+          readerTheme === 'cinema'
+            ? 'bg-rose-950/60 border-rose-800/50 text-rose-200'
+            : 'bg-rose-50 border-rose-200 text-rose-900'
+        }`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 animate-pulse" />
+            <span className="truncate">
+              <span className="font-bold">No API Key Present:</span>{' '}
+              No Meta API key was detected on the server or in your session. Please configure your Meta API key in Settings to run models and direct episodes.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className={`px-3 py-1 rounded-full font-bold transition-all shadow-xs cursor-pointer ${
+                readerTheme === 'cinema'
+                  ? 'bg-rose-500 text-white hover:bg-rose-400'
+                  : 'bg-rose-600 text-white hover:bg-rose-700'
+              }`}
+            >
+              Add API Key
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!apiConfig?.apiKey && serverHasKey !== false && !isByokDismissed && (
         <div className={`w-full px-4 py-2 flex items-center justify-between gap-3 text-xs border-b ${
           readerTheme === 'cinema'
             ? 'bg-amber-950/40 border-amber-800/30 text-amber-200'
@@ -2902,7 +2933,7 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
             <KeyRound className="w-3.5 h-3.5 shrink-0 text-amber-500" />
             <span className="truncate">
               <span className="font-semibold">Bring Your Own Key:</span>{' '}
-              Add your free Meta API key for unlimited personal usage.
+              Add your Meta API key for personal usage or custom rate limits.
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">

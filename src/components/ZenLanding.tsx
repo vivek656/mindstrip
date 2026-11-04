@@ -15,7 +15,9 @@ import {
   Zap,
   Grid,
   Filter,
-  X
+  X,
+  AlertTriangle,
+  KeyRound,
 } from 'lucide-react';
 import { ComicFlipPreview } from './ComicFlipPreview';
 import { VoiceDictationButton } from './VoiceDictationButton';
@@ -35,6 +37,7 @@ interface ZenLandingProps {
   currentProfile?: CreatorProfile | null;
   isDbConnected?: boolean;
   onOpenAuth?: () => void;
+  serverHasKey?: boolean | null;
 }
 
 export function ZenLanding({
@@ -50,6 +53,7 @@ export function ZenLanding({
   currentProfile,
   isDbConnected = false,
   onOpenAuth,
+  serverHasKey,
 }: ZenLandingProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
@@ -57,6 +61,7 @@ export function ZenLanding({
   const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
   const [sparkInput, setSparkInput] = useState('');
   const [isSubmittingSpark, setIsSubmittingSpark] = useState(false);
+  const [isByokDismissed, setIsByokDismissed] = useState(false);
 
   // Extract unique genres
   const genres = ['all', ...Array.from(new Set(worlds.map((w) => w.genre.split('&')[0].trim())))];
@@ -213,6 +218,59 @@ export function ZenLanding({
           </div>
         </div>
       </header>
+
+      {/* =========================================================================
+          API KEY STATUS BANNER (NO KEY WARNING or BYOK NOTICE)
+      ========================================================================= */}
+      {!apiConfig?.apiKey && serverHasKey === false && (
+        <div className="w-full px-4 sm:px-8 py-2.5 flex items-center justify-between gap-3 text-xs bg-rose-50 border-b border-rose-200 text-rose-900">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500 animate-pulse" />
+            <span className="truncate">
+              <span className="font-bold">No API Key Present:</span>{' '}
+              No Meta API key was detected on the server or in your session. Please configure your Meta API key in Settings to create universes and direct episodes.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="px-3.5 py-1 rounded-full font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-xs cursor-pointer"
+            >
+              Add API Key
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!apiConfig?.apiKey && serverHasKey !== false && !isByokDismissed && (
+        <div className="w-full px-4 sm:px-8 py-2 flex items-center justify-between gap-3 text-xs bg-amber-50 border-b border-amber-200/80 text-amber-900">
+          <div className="flex items-center gap-2 min-w-0">
+            <KeyRound className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+            <span className="truncate">
+              <span className="font-semibold">Bring Your Own Key:</span>{' '}
+              Add your Meta API key for personal usage or custom rate limits.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="px-3 py-1 rounded-full font-bold bg-amber-600 text-white hover:bg-amber-700 transition-all cursor-pointer"
+            >
+              Add Key
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsByokDismissed(true)}
+              className="p-0.5 rounded text-amber-500 hover:text-amber-700 cursor-pointer"
+              title="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           MAIN EXPANSIVE DESKTOP CANVAS

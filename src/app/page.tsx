@@ -75,6 +75,7 @@ export default function Home() {
   const [isGeneratingArtwork, setIsGeneratingArtwork] = useState<boolean>(false);
   const [artworkError, setArtworkError] = useState<string | null>(null);
   const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
+  const [serverHasKey, setServerHasKey] = useState<boolean | null>(null);
   const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
 
   // Helper to persist worlds locally (both user-scoped and global primary)
@@ -249,6 +250,8 @@ export default function Home() {
       fetch('/api/auth')
         .then((r) => r.json())
         .then((status) => {
+          const hasAnyServerKey = Boolean(status.hasMetaKey || status.hasFireworksKey || status.hasGroqKey);
+          setServerHasKey(hasAnyServerKey);
           setApiConfig((prev) => {
             if (status.hasMetaKey && (!prev.apiKey || prev.provider === 'fireworks' || prev.provider === 'simulation')) {
               return {
@@ -1135,6 +1138,7 @@ export default function Home() {
           artworkError={artworkError}
           onUpdateWorld={handleUpdateWorld}
           apiConfig={apiConfig}
+          serverHasKey={serverHasKey}
           onToggleMode={handleToggleMode}
           currentProfile={creatorProfile}
           isDbConnected={isDbConnected}
@@ -1153,6 +1157,7 @@ export default function Home() {
           onAutoBuildWorld={handleAutoBuildWorld}
           isAutoBuilding={isAutoBuilding}
           apiConfig={apiConfig}
+          serverHasKey={serverHasKey}
           onToggleMode={handleToggleMode}
           currentProfile={creatorProfile}
           isDbConnected={isDbConnected}

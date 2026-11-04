@@ -1,3 +1,10 @@
+- Intelligent API Key Verification & Dynamic BYOK Banner (2026-11-04):
+  - Dynamic Server Detection: `/api/auth` response now feeds `serverHasKey` state to both `ZenLanding` and `ZenComicReader`.
+  - Two-Tier Status Banner:
+    1. Critical Warning Banner (`serverHasKey === false` && `!apiConfig?.apiKey`): Informs user that no Meta API key was detected on either server or client session, with a direct 1-click `[Add API Key]` CTA to prevent silent generation failures.
+    2. BYOK Banner (`serverHasKey !== false` && `!apiConfig?.apiKey`): Replaced "free key" phrasing with clean professional copy: *"Bring Your Own Key: Add your Meta API key for personal usage or custom rate limits."* with `[Add Key]` and dismiss `[✕]` controls.
+  - Production build clean with 0 errors.
+
 - React Minified Error #310 Fix in SAM 3.1 Vision Overlay (2026-11-04):
   - Root Cause Diagnosed: In `src/components/SamVisionOverlay.tsx`, an early return `if (!isActive) return null;` was placed above a `useEffect` hook that synchronized `editingBubbleText`. When `isActive` changed from `false` to `true` (clicking SAM 3.1), the number of hooks executed changed between renders, violating React's Rules of Hooks and triggering minified error #310 ("Rendered more hooks than during the previous render").
   - Resolution: Moved the second `useEffect` hook up before any conditional returns, ensuring identical hook execution order on every render regardless of `isActive` state.
