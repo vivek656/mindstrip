@@ -79,6 +79,7 @@ import {
   MoreHorizontal,
   CheckSquare,
   SlidersHorizontal,
+  KeyRound,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
@@ -176,6 +177,7 @@ export function ZenComicReader({
   const [currentPageViewMode, setCurrentPageViewMode] = useState<'chat' | 'controls'>('chat');
   const [mobileDrawerTab, setMobileDrawerTab] = useState<'sidebar' | 'studio'>('sidebar');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isByokDismissed, setIsByokDismissed] = useState(false);
 
   // New character form state for Universe Hub
   const [newCharName, setNewCharName] = useState('');
@@ -2886,6 +2888,46 @@ Who's in the room? What is the conflict, conversation, or twist? You can talk fr
           </div>
         </div>
       </header>
+
+      {/* =========================================================================
+          BRING YOUR OWN KEY (BYOK) BANNER — Shown when no user API key is set
+      ========================================================================= */}
+      {!isByokDismissed && !apiConfig?.apiKey && (
+        <div className={`w-full px-4 py-2 flex items-center justify-between gap-3 text-xs border-b ${
+          readerTheme === 'cinema'
+            ? 'bg-amber-950/40 border-amber-800/30 text-amber-200'
+            : 'bg-amber-50 border-amber-200/80 text-amber-900'
+        }`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <KeyRound className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+            <span className="truncate">
+              <span className="font-semibold">Bring Your Own Key:</span>{' '}
+              Add your free Meta API key for unlimited personal usage.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className={`px-3 py-1 rounded-full font-bold transition-all cursor-pointer ${
+                readerTheme === 'cinema'
+                  ? 'bg-amber-500 text-black hover:bg-amber-400'
+                  : 'bg-amber-600 text-white hover:bg-amber-700'
+              }`}
+            >
+              Add Key
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsByokDismissed(true)}
+              className="p-0.5 rounded text-amber-500 hover:text-amber-700 cursor-pointer"
+              title="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================================
           STUDIO WORKSPACE LAYOUT (PERSISTENT DESKTOP SIDEBAR + EXPANSIVE CANVAS)
